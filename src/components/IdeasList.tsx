@@ -39,7 +39,6 @@ const IdeasList: React.FC<IdeasListProps> = ({ onRefresh }) => {
     try {
       await API.createVideoPrompt(idea.video_prompt_json);
       await API.deleteIdea(idea.video_idea);
-      alert('Video prompt created successfully! Check the Prompts tab.');
       await fetchIdeas();
     } catch (error: any) {
       console.error('Failed to create video prompt:', error);

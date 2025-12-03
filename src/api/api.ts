@@ -56,6 +56,13 @@ class API {
     });
   }
 
+  // Create multiple ideas at once (e.g., "Generate 10 video ideas")
+  static async createMultiplePrompts(promptText: string): Promise<void> {
+    await axios.post(`${API_BASE_URL}/new-video-prompt-ideas`, { 
+      video_idea: promptText
+    });
+  }
+
   static async getIdeas(): Promise<Idea[]> {
     const response = await axios.get(`${API_BASE_URL}/get-all-video-prompt-ideas`);
     return response.data.prompt_ideas || [];

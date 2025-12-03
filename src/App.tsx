@@ -36,6 +36,22 @@ function App() {
     }
   };
 
+  const handleAddMultipleIdeas = async () => {
+    const promptText = window.prompt('Generate Multiple Ideas', 'Generate 10 video ideas');
+    if (!promptText) return;
+
+    try {
+      setLoading(true);
+      await API.createMultiplePrompts(promptText);
+      setRefreshTrigger(prev => prev + 1);
+    } catch (error) {
+      console.error('Failed to create multiple prompts:', error);
+      alert('Failed to create multiple prompts');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-slate-900">
       {/* Header */}
@@ -82,6 +98,15 @@ function App() {
               className="px-8 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-600 text-white rounded-lg font-medium transition-colors disabled:cursor-not-allowed"
             >
               {loading ? '⏳ Creating...' : '➕ Add'}
+            </button>
+            <button
+              type="button"
+              onClick={handleAddMultipleIdeas}
+              disabled={loading}
+              className="px-8 py-3 bg-purple-600 hover:bg-purple-700 disabled:bg-slate-600 text-white rounded-lg font-medium transition-colors disabled:cursor-not-allowed"
+              title="Add Multiple Video Ideas"
+            >
+              {loading ? '⏳' : '📚 Add Multiple'}
             </button>
           </form>
         </div>

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import API, { VideoPrompt, ImagePrompt, constructImageUrl, FrontTextWithMedia, EndText, VidDuration } from '../api/api';
+import VideoPlayer from './VideoPlayer';
 
 interface VideoPromptsListProps {
   onRefresh: number;
@@ -8,9 +9,9 @@ interface VideoPromptsListProps {
 const VideoPromptsList: React.FC<VideoPromptsListProps> = ({ onRefresh }) => {
   const [videoPrompts, setVideoPrompts] = useState<VideoPrompt[]>([]);
   const [loading, setLoading] = useState(true);
-  const [expandedId, setExpandedId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [availableMedia, setAvailableMedia] = useState<string[]>([]);
+  const [activeVideo, setActiveVideo] = useState<string | null>(null);
 
   const fetchVideoPrompts = async () => {
     try {
@@ -162,6 +163,12 @@ const VideoPromptsList: React.FC<VideoPromptsListProps> = ({ onRefresh }) => {
     }
   };
 
+  const handleVideoClick = (vp: VideoPrompt) => {
+    if (vp.file_url && vp.file_url !== '') {
+      setActiveVideo(vp.file_url);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center p-8">
@@ -188,129 +195,147 @@ const VideoPromptsList: React.FC<VideoPromptsListProps> = ({ onRefresh }) => {
     <div className="space-y-4">
       <h2 className="text-2xl font-bold text-white mb-4">🎥 Prompts ({videoPrompts.length})</h2>
       
+      {/* Video Player Modal */}
+      {activeVideo && (
+        <VideoPlayer 
+          fileUrl={activeVideo} 
+          onClose={() => setActiveVideo(null)} 
+        />
+      )}
+
       {videoPrompts.length === 0 ? (
         <div className="text-center p-8 bg-slate-800 rounded-lg">
           <p className="text-slate-400">No prompts yet. Create one from an idea!</p>
         </div>
       ) : (
         <div className="grid gap-4">
-          {videoPrompts.map((vp) => (
-            <div
-              key={vp.id}
-              className="bg-slate-800 rounded-lg p-6"
-            >
-              {/* Header with actions */}
-              <div className="flex gap-2 mb-4 items-center">
-                <button
-                  onClick={() => handleAddImagePrompt(vp.id)}
-                  className="p-2 hover:bg-slate-600 rounded-lg transition-colors"
-                  title="Add an Image Prompt"
-                >
-                  <span className="text-slate-300">🖼️</span>
-                </button>
+          {videoPrompts.map((vp) => {
+            const hasVideo = vp.file_url && vp.file_url !== '';
+            
+            return (
+              <div
+                key={vp.id}
+                className="bg-slate-800 rounded-lg p-6"
+              >
+                {/* Header with actions */}
+                <div className="flex gap-2 mb-4 items-center">
+                  <button
+                    onClick={() => handleAddImagePrompt(vp.id)}
+                    className="p-2 hover:bg-slate-600 rounded-lg transition-colors"
+                    title="Add an Image Prompt"
+                  >
+                    <span className="text-slate-300">🖼️</span>
+                  </button>
 
-                <button
-                  onClick={() => handleEditVideoPrompt(vp)}
-                  className="p-2 hover:bg-slate-600 rounded-lg transition-colors"
-                  title="Edit Video Prompt"
-                >
-                  <span className="text-slate-300">✏️</span>
-                </button>
+                  <button
+                    onClick={() => handleEditVideoPrompt(vp)}
+                    className="p-2 hover:bg-slate-600 rounded-lg transition-colors"
+                    title="Edit Video Prompt"
+                  >
+                    <span className="text-slate-300">✏️</span>
+                  </button>
 
-                <button
-                  onClick={() => handleDelete(vp.id)}
-                  className="p-2 hover:bg-slate-600 rounded-lg transition-colors text-red-400"
-                  title="Delete Video Prompt"
-                >
-                  <span>🗑️</span>
-                </button>
+                  <button
+                    onClick={() => handleDelete(vp.id)}
+                    className="p-2 hover:bg-slate-600 rounded-lg transition-colors text-red-400"
+                    title="Delete Video Prompt"
+                  >
+                    <span>🗑️</span>
+                  </button>
 
-                <span className="flex-1 text-slate-100 font-bold">
-                  {vp.front_text?.frontText.join(', ') || 'No front text'}
-                </span>
+                  <span className="flex-1 text-slate-100 font-bold">
+                    {vp.front_text?.frontText.join(', ') || 'No front text'}
+                  </span>
 
-                <span className="text-slate-500 text-sm">{vp.id}</span>
-              </div>
-
-              {/* Media Grid */}
-              <div className="flex flex-wrap gap-4">
-                {/* Generated Video Preview */}
-                <div className="flex flex-col items-center">
-                  <div className="w-[200px] h-[200px] bg-slate-700 rounded-xl flex items-center justify-center overflow-hidden">
-                    {!vp.file_url || vp.file_url === '' ? (
-                      <span className="text-6xl">⏳</span>
-                    ) : (
-                      <span className="text-6xl cursor-pointer hover:scale-110 transition-transform">▶️</span>
-                    )}
-                  </div>
+                  <span className="text-slate-500 text-sm">{vp.id}</span>
                 </div>
 
-                {/* Image Prompts */}
-                {vp.image_prompts && vp.image_prompts.map((img) => {
-                  const isWaiting = img.file_url === '/assets/_waiting.png';
-                  
-                  return (
-                    <div key={img.id} className="flex flex-col items-center">
-                      <div className="w-[200px] text-center mb-1 text-slate-300 text-sm truncate">
-                        {img.text}
-                      </div>
-                      
-                      <img
-                        src={constructImageUrl(img.file_url)}
-                        alt={img.text}
-                        className="w-[200px] h-[200px] object-cover rounded-xl cursor-pointer hover:scale-105 transition-transform"
-                        onClick={() => {
-                          const modal = document.createElement('div');
-                          modal.className = 'fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50';
-                          modal.onclick = () => modal.remove();
-                          modal.innerHTML = `<img src="${constructImageUrl(img.file_url)}" class="max-h-[90vh] max-w-[90vw] object-contain" />`;
-                          document.body.appendChild(modal);
-                        }}
-                      />
-
-                      <div className="w-[200px] flex justify-end gap-1 mt-1">
-                        <button
-                          onClick={() => handleEditImagePrompt(img)}
-                          disabled={isWaiting}
-                          className={`p-1 rounded text-sm ${isWaiting ? 'text-slate-600' : 'text-slate-300 hover:bg-slate-600'}`}
-                          title="Edit the Prompt"
-                        >
-                          ✏️
-                        </button>
-
-                        <button
-                          onClick={() => handleEditImageText(img)}
-                          disabled={isWaiting}
-                          className={`p-1 rounded text-sm ${isWaiting ? 'text-slate-600' : 'text-slate-300 hover:bg-slate-600'}`}
-                          title="Edit the Text"
-                        >
-                          📝
-                        </button>
-
-                        <button
-                          onClick={() => handleRegenerateImage(img)}
-                          disabled={isWaiting}
-                          className={`p-1 rounded text-sm ${isWaiting ? 'text-slate-600' : 'text-slate-300 hover:bg-slate-600'}`}
-                          title="Regenerate"
-                        >
-                          🔄
-                        </button>
-
-                        <button
-                          onClick={() => handleDeleteImagePrompt(img)}
-                          disabled={isWaiting}
-                          className={`p-1 rounded text-sm ${isWaiting ? 'text-slate-600' : 'text-red-400 hover:bg-slate-600'}`}
-                          title="Delete"
-                        >
-                          🗑️
-                        </button>
-                      </div>
+                {/* Media Grid */}
+                <div className="flex flex-wrap gap-4">
+                  {/* Generated Video Preview */}
+                  <div className="flex flex-col items-center">
+                    <div className="w-[200px] text-center mb-1 text-slate-300 text-sm">
+                      &nbsp;
                     </div>
-                  );
-                })}
+                    <div 
+                      className={`w-[200px] h-[200px] bg-slate-700 rounded-xl flex items-center justify-center overflow-hidden ${hasVideo ? 'cursor-pointer hover:bg-slate-600' : ''} transition-colors`}
+                      onClick={() => handleVideoClick(vp)}
+                    >
+                      {!hasVideo ? (
+                        <span className="text-6xl">⏳</span>
+                      ) : (
+                        <span className="text-6xl hover:scale-110 transition-transform">▶️</span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Image Prompts */}
+                  {vp.image_prompts && vp.image_prompts.map((img) => {
+                    const isWaiting = img.file_url === '/assets/_waiting.png';
+                    
+                    return (
+                      <div key={img.id} className="flex flex-col items-center">
+                        <div className="w-[200px] text-center mb-1 text-slate-300 text-sm truncate">
+                          {img.text}
+                        </div>
+                        
+                        <img
+                          src={constructImageUrl(img.file_url)}
+                          alt={img.text}
+                          className="w-[200px] h-[200px] object-cover rounded-xl cursor-pointer hover:scale-105 transition-transform"
+                          onClick={() => {
+                            const modal = document.createElement('div');
+                            modal.className = 'fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50';
+                            modal.onclick = () => modal.remove();
+                            modal.innerHTML = `<img src="${constructImageUrl(img.file_url)}" class="max-h-[90vh] max-w-[90vw] object-contain" />`;
+                            document.body.appendChild(modal);
+                          }}
+                        />
+
+                        <div className="w-[200px] flex justify-end gap-1 mt-1">
+                          <button
+                            onClick={() => handleEditImagePrompt(img)}
+                            disabled={isWaiting}
+                            className={`p-1 rounded text-sm ${isWaiting ? 'text-slate-600' : 'text-slate-300 hover:bg-slate-600'}`}
+                            title="Edit the Prompt"
+                          >
+                            ✏️
+                          </button>
+
+                          <button
+                            onClick={() => handleEditImageText(img)}
+                            disabled={isWaiting}
+                            className={`p-1 rounded text-sm ${isWaiting ? 'text-slate-600' : 'text-slate-300 hover:bg-slate-600'}`}
+                            title="Edit the Text"
+                          >
+                            📝
+                          </button>
+
+                          <button
+                            onClick={() => handleRegenerateImage(img)}
+                            disabled={isWaiting}
+                            className={`p-1 rounded text-sm ${isWaiting ? 'text-slate-600' : 'text-slate-300 hover:bg-slate-600'}`}
+                            title="Regenerate"
+                          >
+                            🔄
+                          </button>
+
+                          <button
+                            onClick={() => handleDeleteImagePrompt(img)}
+                            disabled={isWaiting}
+                            className={`p-1 rounded text-sm ${isWaiting ? 'text-slate-600' : 'text-red-400 hover:bg-slate-600'}`}
+                            title="Delete"
+                          >
+                            🗑️
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>

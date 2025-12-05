@@ -9,9 +9,8 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
-  // WebSocket connection for real-time updates - refreshes BOTH lists
-  const { isConnected } = useWebSocket('ws://localhost:81/webhook', () => {
-    console.log('WebSocket message received - refreshing both lists');
+  // WebSocket connection for real-time updates
+  useWebSocket('ws://localhost:81/webhook', () => {
     setRefreshTrigger(prev => prev + 1);
   });
 
@@ -27,7 +26,6 @@ function App() {
       setLoading(true);
       await API.createNewPrompt(prompt);
       setPrompt('');
-      setRefreshTrigger(prev => prev + 1);
     } catch (error) {
       console.error('Failed to create prompt:', error);
       alert('Failed to create prompt');
@@ -43,7 +41,6 @@ function App() {
     try {
       setLoading(true);
       await API.createMultiplePrompts(promptText);
-      setRefreshTrigger(prev => prev + 1);
     } catch (error) {
       console.error('Failed to create multiple prompts:', error);
       alert('Failed to create multiple prompts');
@@ -57,25 +54,7 @@ function App() {
       {/* Header */}
       <header className="bg-slate-800 border-b border-slate-700 shadow-lg">
         <div className="max-w-7xl mx-auto px-4 py-6">
-          <div className="flex justify-between items-center">
-            <h1 className="text-3xl font-bold text-white">🎬 Content Generator</h1>
-            
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-slate-400">WebSocket:</span>
-                <span className={`inline-block w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`}></span>
-                <span className="text-xs text-slate-400">{isConnected ? 'Connected' : 'Disconnected'}</span>
-              </div>
-
-              <button
-                onClick={() => setRefreshTrigger(prev => prev + 1)}
-                className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg text-sm flex items-center gap-2"
-              >
-                <span>🔄</span>
-                <span>Refresh</span>
-              </button>
-            </div>
-          </div>
+          <h1 className="text-3xl font-bold text-white">🎬 Content Generator</h1>
         </div>
       </header>
 
@@ -97,7 +76,7 @@ function App() {
               disabled={loading}
               className="px-8 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-600 text-white rounded-lg font-medium transition-colors disabled:cursor-not-allowed"
             >
-              {loading ? '⏳ Creating...' : '➕ Add'}
+              {loading ? '⏳' : '➕ Add'}
             </button>
             <button
               type="button"
@@ -111,14 +90,11 @@ function App() {
           </form>
         </div>
 
-        {/* Two Column Layout - Ideas and Prompts */}
+        {/* Two Column Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Prompts (Left) - matches Flutter's first tab */}
           <div>
             <VideoPromptsList onRefresh={refreshTrigger} />
           </div>
-
-          {/* Ideas (Right) - matches Flutter's second tab */}
           <div>
             <IdeasList onRefresh={refreshTrigger} />
           </div>

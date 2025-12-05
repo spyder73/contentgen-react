@@ -4,26 +4,23 @@ import { constructImageUrl } from '../api/api';
 interface VideoPlayerProps {
   fileUrl: string;
   onClose: () => void;
+  cacheBuster?: number;
 }
 
-const VideoPlayer: React.FC<VideoPlayerProps> = ({ fileUrl, onClose }) => {
+const VideoPlayer: React.FC<VideoPlayerProps> = ({ fileUrl, onClose, cacheBuster }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
-  const [videoExists, setVideoExists] = useState<boolean | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [hasError, setHasError] = useState(false);
 
+  // Reset state when URL or cacheBuster changes
   useEffect(() => {
-    // Check if video exists
-    const checkVideo = async () => {
-      try {
-        const response = await fetch(constructImageUrl(fileUrl), { method: 'HEAD' });
-        setVideoExists(response.ok);
-      } catch {
-        setVideoExists(false);
-      }
-    };
-    checkVideo();
-  }, [fileUrl]);
+    setIsLoading(true);
+    setHasError(false);
+    setIsPlaying(false);
+    setProgress(0);
+  }, [fileUrl, cacheBuster]);
 
   const togglePlayPause = () => {
     if (!videoRef.current) return;
@@ -49,15 +46,9 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ fileUrl, onClose }) => {
     videoRef.current.currentTime = clickPosition * videoRef.current.duration;
   };
 
-  if (videoExists === null) {
-    return (
-      <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50" onClick={onClose}>
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white"></div>
-      </div>
-    );
-  }
+  const videoSrc = constructImageUrl(fileUrl, cacheBuster);
 
-  if (!videoExists) {
+  if (hasError) {
     return (
       <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50" onClick={onClose}>
         <div className="bg-slate-800 p-8 rounded-lg text-center">
@@ -78,17 +69,29 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ fileUrl, onClose }) => {
         onClick={(e) => e.stopPropagation()}
         style={{ aspectRatio: '9/16' }}
       >
+        {isLoading && (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white"></div>
+          </div>
+        )}
+        
         <video
           ref={videoRef}
-          src={constructImageUrl(fileUrl)}
+          key={videoSrc} // Force re-mount when URL changes
+          src={videoSrc}
           className="h-full w-full object-contain rounded-xl"
           onTimeUpdate={handleTimeUpdate}
           onEnded={() => setIsPlaying(false)}
           onClick={togglePlayPause}
+          onLoadedData={() => setIsLoading(false)}
+          onError={() => {
+            setIsLoading(false);
+            setHasError(true);
+          }}
         />
 
         {/* Play/Pause Overlay */}
-        {!isPlaying && (
+        {!isPlaying && !isLoading && (
           <div 
             className="absolute inset-0 flex items-center justify-center cursor-pointer"
             onClick={togglePlayPause}

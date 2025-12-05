@@ -43,9 +43,13 @@ export interface AvailableMedia {
   media_files: string[];
 }
 
-// Helper to construct full image URLs
-export function constructImageUrl(filePath: string): string {
-  return `${API_BASE_URL}${filePath}`;
+// Helper to construct full image URLs with optional cache busting (to reload video if it changed)
+export function constructImageUrl(filePath: string, cacheBuster?: number): string {
+  const url = `${API_BASE_URL}${filePath}`;
+  if (cacheBuster) {
+    return `${url}?t=${cacheBuster}`;
+  }
+  return url;
 }
 
 class API {
@@ -74,13 +78,19 @@ class API {
     });
   }
 
-  // Video Prompts - Create from Idea's JSON
-  static async createVideoPrompt(videoPromptJson: string): Promise<void> {
-    await axios.post(`${API_BASE_URL}/new-prompt`, JSON.parse(videoPromptJson), {
+  // Video Prompts - Create from Idea's JSON (already parsed)
+  static async createVideoPromptFromJson(jsonObject: any): Promise<void> {
+    await axios.post(`${API_BASE_URL}/new-prompt`, jsonObject, {
       headers: {
         'Content-Type': 'application/json'
       }
     });
+  }
+
+  // Legacy: Create from JSON string
+  static async createVideoPrompt(videoPromptJson: string): Promise<void> {
+    const parsed = JSON.parse(videoPromptJson);
+    await this.createVideoPromptFromJson(parsed);
   }
 
   static async getVideoPrompts(): Promise<VideoPrompt[]> {

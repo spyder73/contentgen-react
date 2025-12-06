@@ -43,6 +43,16 @@ export interface AvailableMedia {
   media_files: string[];
 }
 
+export interface Proxy {
+  id: string;
+  host: string;
+  port: string;
+  username?: string;
+  password?: string;
+  type: 'http' | 'https';
+  failure_count: number;
+}
+
 // Helper to construct full image URLs with optional cache busting (to reload video if it changed)
 export function constructImageUrl(filePath: string, cacheBuster?: number): string {
   const url = `${API_BASE_URL}${filePath}`;
@@ -152,6 +162,24 @@ class API {
   static async getAvailableMedia(): Promise<string[]> {
     const response = await axios.get(`${API_BASE_URL}/get-available-media`);
     return response.data.media_files || [];
+  }
+
+  // Proxies
+  static async getProxies(): Promise<Proxy[]> {
+    const response = await axios.get(`${API_BASE_URL}/proxies`);
+    return response.data.proxies || [];
+  }
+
+  static async addProxy(proxyString: string, type: 'http' | 'https'): Promise<Proxy> {
+    const response = await axios.post(`${API_BASE_URL}/proxies`, { 
+      proxy: proxyString,
+      type: type
+    });
+    return response.data;
+  }
+
+  static async deleteProxy(id: string): Promise<void> {
+    await axios.delete(`${API_BASE_URL}/proxies/${id}`);
   }
 }
 

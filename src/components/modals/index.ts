@@ -4,3 +4,4 @@ export { default as EditImagePromptModal } from './EditImagePromptModal';
 export { default as EditImageTextModal } from './EditImageTextModal';
 export { default as AddImagePromptModal } from './AddImagePromptModal';
 export { default as EditVideoPromptModal } from './EditVideoPromptModal';
+export { default as ProxyModal } from './ProxyModal';

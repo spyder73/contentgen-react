@@ -1,118 +1,166 @@
-import React, { useState } from 'react';
-import API from './api/api';
+import React, { useState, useEffect, useCallback } from 'react';
+import API, { User, Account } from './api/api';
 import IdeasList from './components/IdeasList';
 import VideoPromptsList from './components/VideoPromptsList';
 import { useWebSocket } from './hooks/useWebSocket';
-import { ProxyModal } from './components/modals';
+import UserMenu from './components/UserMenu';
+import { ProxyModal, AddUserModal } from './components/modals';
 
 function App() {
-  const [prompt, setPrompt] = useState('');
-  const [loading, setLoading] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [toast, setToast] = useState<string | null>(null);
   const [showProxyModal, setShowProxyModal] = useState(false);
+  const [showAddUserModal, setShowAddUserModal] = useState(false);
+  const [users, setUsers] = useState<User[]>([]);
+  const [activeUser, setActiveUser] = useState<User | null>(null);
+  const [activeAccount, setActiveAccount] = useState<Account | null>(null);
 
-  // WebSocket connection for real-time updates
-  useWebSocket('ws://localhost:81/webhook', () => {
-    setRefreshTrigger(prev => prev + 1);
-  });
+  const handleScheduleUpdate = useCallback((data: any) => {
+    const msg = data.success 
+      ? `✅ ${data.message}` 
+      : `❌ ${data.message}`;
+    setToast(msg);
+    setTimeout(() => setToast(null), 5000);
+  }, []);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!prompt.trim()) {
-      alert('Please enter a prompt');
-      return;
-    }
+  useWebSocket(
+    'ws://localhost:81/webhook',
+    () => setRefreshTrigger(prev => prev + 1),
+    handleScheduleUpdate
+  );
 
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        const response = await API.getUsers();
+        setUsers(response.users || []);
+        setActiveUser(response.active_user);
+
+        if (response.users && response.users.length > 0) {
+          const refreshed = await API.refreshAccounts();
+          setUsers(refreshed.users || []);
+          setActiveUser(refreshed.active_user);
+        }
+
+        const account = await API.getActiveAccount();
+        setActiveAccount(account);
+      } catch (error) {
+        console.error('Failed to fetch users:', error);
+      }
+    };
+    fetchUsers();
+  }, []);
+
+  const handleAddUser = async (username: string, userID: number) => {
     try {
-      setLoading(true);
-      await API.createNewPrompt(prompt);
-      setPrompt('');
-    } catch (error) {
-      console.error('Failed to create prompt:', error);
-      alert('Failed to create prompt');
-    } finally {
-      setLoading(false);
+      await API.addUser(username, userID);
+      const response = await API.getUsers();
+      setUsers(response.users || []);
+      setActiveUser(response.active_user);
+      const account = await API.getActiveAccount();
+      setActiveAccount(account);
+    } catch (error: any) {
+      alert(`Failed to add user: ${error.message}`);
     }
   };
 
-  const handleAddMultipleIdeas = async () => {
-    const promptText = window.prompt('Generate Multiple Ideas', 'Generate 10 video ideas');
-    if (!promptText) return;
-
+  const handleSelectUser = async (userID: number) => {
     try {
-      setLoading(true);
-      await API.createMultiplePrompts(promptText);
-    } catch (error) {
-      console.error('Failed to create multiple prompts:', error);
-      alert('Failed to create multiple prompts');
-    } finally {
-      setLoading(false);
+      const user = await API.setActiveUser(userID);
+      setActiveUser(user);
+      const account = await API.getActiveAccount();
+      setActiveAccount(account);
+    } catch (error: any) {
+      alert(`Failed to select user: ${error.message}`);
+    }
+  };
+
+  const handleRemoveUser = async (userID: number) => {
+    try {
+      await API.removeUser(userID);
+      const response = await API.getUsers();
+      setUsers(response.users || []);
+      setActiveUser(response.active_user);
+      const account = await API.getActiveAccount();
+      setActiveAccount(account);
+    } catch (error: any) {
+      alert(`Failed to remove user: ${error.message}`);
+    }
+  };
+
+  const handleSelectAccount = async (accountID: string) => {
+    try {
+      const account = await API.setActiveAccount(accountID);
+      setActiveAccount(account);
+    } catch (error: any) {
+      alert(`Failed to select account: ${error.message}`);
     }
   };
 
   return (
-    <div className="min-h-screen bg-slate-900">
+    <div className="h-screen flex flex-col bg-slate-900">
+      {/* Toast notification */}
+      {toast && (
+        <div className="fixed top-4 right-4 z-50 px-4 py-3 bg-slate-800 border border-slate-600 rounded-lg shadow-lg text-white">
+          {toast}
+        </div>
+      )}
+
       {/* Header */}
-      <header className="bg-slate-800 border-b border-slate-700 shadow-lg">
-        <div className="max-w-7xl mx-auto px-4 py-6 flex justify-between items-center">
-          <h1 className="text-3xl font-bold text-white">🎬 Content Generator</h1>
-          <button
-            onClick={() => setShowProxyModal(true)}
-            className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg text-sm flex items-center gap-2"
-          >
-            🌐 Proxies
-          </button>
+      <header className="bg-slate-800 border-b border-slate-700 shadow-lg flex-shrink-0">
+        <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
+          <h1 className="text-2xl font-bold text-white">🎬 Content Generator</h1>
+          
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setShowProxyModal(true)}
+              className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-white rounded text-sm"
+            >
+              🌐 Proxies
+            </button>
+
+            <UserMenu
+              users={users}
+              activeUser={activeUser}
+              activeAccount={activeAccount}
+              onAddUser={() => setShowAddUserModal(true)}
+              onSelectUser={handleSelectUser}
+              onRemoveUser={handleRemoveUser}
+              onSelectAccount={handleSelectAccount}
+            />
+          </div>
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 py-8">
-        {/* Prompt Input */}
-        <div className="bg-slate-800 rounded-lg p-6 mb-8 shadow-xl">
-          <h2 className="text-xl font-semibold text-white mb-4">✨ Create an Idea</h2>
-          <form onSubmit={handleSubmit} className="flex gap-4">
-            <input
-              type="text"
-              value={prompt}
-              onChange={(e) => setPrompt(e.target.value)}
-              placeholder="Enter your video idea..."
-              className="flex-1 px-4 py-3 bg-slate-700 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder-slate-400"
-              disabled={loading}
-            />
-            <button
-              type="submit"
-              disabled={loading}
-              className="px-8 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-600 text-white rounded-lg font-medium transition-colors disabled:cursor-not-allowed"
-            >
-              {loading ? '⏳' : '➕ Add'}
-            </button>
-            <button
-              type="button"
-              onClick={handleAddMultipleIdeas}
-              disabled={loading}
-              className="px-8 py-3 bg-purple-600 hover:bg-purple-700 disabled:bg-slate-600 text-white rounded-lg font-medium transition-colors disabled:cursor-not-allowed"
-              title="Add Multiple Video Ideas"
-            >
-              {loading ? '⏳' : '📚 Add Multiple'}
-            </button>
-          </form>
-        </div>
-
-        {/* Two Column Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          <div>
-            <VideoPromptsList onRefresh={refreshTrigger} />
-          </div>
-          <div>
-            <IdeasList onRefresh={refreshTrigger} />
+      {/* Main Content - Scrollable columns */}
+      <main className="flex-1 overflow-hidden">
+        <div className="h-full max-w-7xl mx-auto px-4 py-6">
+          <div className="h-full grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Left Column - Video Prompts */}
+            <div className="h-full overflow-y-auto pr-2">
+              <VideoPromptsList 
+                onRefresh={refreshTrigger} 
+                activeAccount={activeAccount}
+              />
+            </div>
+            
+            {/* Right Column - Ideas */}
+            <div className="h-full overflow-y-auto pr-2">
+              <IdeasList onRefresh={refreshTrigger} />
+            </div>
           </div>
         </div>
       </main>
 
-      {/* Proxy Modal */}
+      {/* Modals */}
       <ProxyModal 
         isOpen={showProxyModal} 
         onClose={() => setShowProxyModal(false)} 
+      />
+      <AddUserModal
+        isOpen={showAddUserModal}
+        onClose={() => setShowAddUserModal(false)}
+        onSubmit={handleAddUser}
       />
     </div>
   );

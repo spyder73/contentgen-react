@@ -1,14 +1,16 @@
 import React, { useState } from 'react';
-import API, { VideoPrompt, FrontTextWithMedia, EndText, VidDuration } from '../api/api';
+import API, { VideoPrompt, FrontTextWithMedia, EndText, VidDuration, Account } from '../api/api';
 import VideoPlayer from './VideoPlayer';
 import ImagePromptItem from './ImagePromptItem';
 import { AddImagePromptModal, EditVideoPromptModal } from './modals';
+import ScheduleButton from './ScheduleButton';
 
 interface VideoPromptItemProps {
   videoPrompt: VideoPrompt;
+  activeAccount: Account | null;
 }
 
-const VideoPromptItem: React.FC<VideoPromptItemProps> = ({ videoPrompt }) => {
+const VideoPromptItem: React.FC<VideoPromptItemProps> = ({ videoPrompt, activeAccount }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [activeVideo, setActiveVideo] = useState<string | null>(null);
   const [showAddImage, setShowAddImage] = useState(false);
@@ -177,7 +179,7 @@ const VideoPromptItem: React.FC<VideoPromptItemProps> = ({ videoPrompt }) => {
         {isExpanded && (
           <div className="mt-4 pt-4 border-t border-slate-700">
             {/* Action Buttons */}
-            <div className="flex gap-2 mb-4">
+            <div className="flex gap-2 mb-4 flex-wrap items-center">
               <button
                 onClick={() => setShowAddImage(true)}
                 className="p-2 hover:bg-slate-600 rounded-lg transition-colors"
@@ -201,6 +203,14 @@ const VideoPromptItem: React.FC<VideoPromptItemProps> = ({ videoPrompt }) => {
               >
                 <span className="text-red-400">🗑️ Delete</span>
               </button>
+
+              {/* Schedule Button - inline with other actions */}
+              <div className="ml-auto">
+                <ScheduleButton 
+                  videoPrompt={videoPrompt}
+                  activeAccount={activeAccount}
+                />
+              </div>
             </div>
 
             {/* Video Prompt Details */}
@@ -251,6 +261,7 @@ const VideoPromptItem: React.FC<VideoPromptItemProps> = ({ videoPrompt }) => {
                 </div>
               )}
             </div>
+
 
             {/* Media Grid */}
             <div className="flex flex-wrap gap-4">
@@ -309,6 +320,7 @@ const VideoPromptItem: React.FC<VideoPromptItemProps> = ({ videoPrompt }) => {
         videoPrompt={videoPrompt}
         onSubmit={handleEditVideoPrompt}
       />
+
     </>
   );
 };

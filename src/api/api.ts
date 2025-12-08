@@ -53,7 +53,62 @@ export interface Proxy {
   failure_count: number;
 }
 
-// Helper to construct full image URLs with optional cache busting (to reload video if it changed)
+export interface AutopostingProperties {
+  enabled: boolean;
+  posting_frequency?: string;
+  daily_posts?: Record<string, number>;
+  downtime_hours?: number;
+  downtime_start?: string;
+  downtime_end?: string;
+}
+
+export interface Account {
+  _id: string;
+  username: string;
+  platforms: string[];
+  is_ai: boolean;
+  autoposting_properties: AutopostingProperties;
+  scheduled_times: string[];
+}
+
+export interface User {
+  id: number;
+  username: string;
+  accounts: Account[];
+}
+
+export interface UsersResponse {
+  users: User[];
+  active_user: User | null;
+}
+
+export interface ScheduleResponse {
+  success: boolean;
+  message?: string;
+  scheduled_date?: string;
+  warnings?: string[];
+  error?: string;
+}
+
+export interface ModelPricing {
+  prompt: string;
+  completion: string;
+}
+
+export interface AIModel {
+  id: string;
+  name: string;
+  description?: string;
+  context_length?: number;
+  pricing?: ModelPricing;
+}
+
+export interface ModelsResponse {
+  recommended: AIModel[];
+  all?: AIModel[];
+}
+
+// Helper to construct full image URLs with optional cache busting
 export function constructImageUrl(filePath: string, cacheBuster?: number): string {
   const url = `${API_BASE_URL}${filePath}`;
   if (cacheBuster) {
@@ -62,18 +117,27 @@ export function constructImageUrl(filePath: string, cacheBuster?: number): strin
   return url;
 }
 
+// Helper to parse user ID (remove dots: 1.2.3.4 -> 1234)
+export function parseUserID(input: string): number {
+  const cleaned = input.replace(/\./g, '');
+  return parseInt(cleaned, 10);
+}
+
 class API {
-  // Ideas (Video Prompt Ideas)
-  static async createNewPrompt(videoIdea: string): Promise<void> {
-    await axios.post(`${API_BASE_URL}/new-video-prompt-idea`, { 
-      video_idea: videoIdea
+  // Ideas
+  static async createNewPrompt(videoIdea: string, provider?: string, model?: string): Promise<void> {
+    await axios.post(`${API_BASE_URL}/new-video-prompt-idea`, {
+      video_idea: videoIdea,
+      provider,
+      model
     });
   }
 
-  // Create multiple ideas at once (e.g., "Generate 10 video ideas")
-  static async createMultiplePrompts(promptText: string): Promise<void> {
-    await axios.post(`${API_BASE_URL}/new-video-prompt-ideas`, { 
-      video_idea: promptText
+  static async createMultiplePrompts(promptText: string, provider?: string, model?: string): Promise<void> {
+    await axios.post(`${API_BASE_URL}/new-video-prompt-ideas`, {
+      video_idea: promptText,
+      provider,
+      model
     });
   }
 
@@ -88,16 +152,13 @@ class API {
     });
   }
 
-  // Video Prompts - Create from Idea's JSON (already parsed)
+  // Video Prompts
   static async createVideoPromptFromJson(jsonObject: any): Promise<void> {
     await axios.post(`${API_BASE_URL}/new-prompt`, jsonObject, {
-      headers: {
-        'Content-Type': 'application/json'
-      }
+      headers: { 'Content-Type': 'application/json' }
     });
   }
 
-  // Legacy: Create from JSON string
   static async createVideoPrompt(videoPromptJson: string): Promise<void> {
     const parsed = JSON.parse(videoPromptJson);
     await this.createVideoPromptFromJson(parsed);
@@ -180,6 +241,66 @@ class API {
 
   static async deleteProxy(id: string): Promise<void> {
     await axios.delete(`${API_BASE_URL}/proxies/${id}`);
+  }
+
+  // Users
+  static async addUser(username: string, userID: number): Promise<User> {
+    const response = await axios.post(`${API_BASE_URL}/users/add`, {
+      username: username,
+      user_id: userID
+    });
+    return response.data;
+  }
+
+  static async getUsers(): Promise<UsersResponse> {
+    const response = await axios.get(`${API_BASE_URL}/users`);
+    return response.data;
+  }
+
+  static async setActiveUser(userID: number): Promise<User> {
+    const response = await axios.post(`${API_BASE_URL}/users/set-active`, {
+      user_id: userID
+    });
+    return response.data;
+  }
+
+  static async removeUser(userID: number): Promise<void> {
+    await axios.post(`${API_BASE_URL}/users/remove`, {
+      user_id: userID
+    });
+  }
+
+  static async refreshAccounts(): Promise<UsersResponse> {
+    const response = await axios.post(`${API_BASE_URL}/users/refresh-accounts`);
+    return response.data;
+  }
+
+  // Account
+  static async getActiveAccount(): Promise<Account | null> {
+    const response = await axios.get(`${API_BASE_URL}/active-account`);
+    return response.data.active_account;
+  }
+
+  static async setActiveAccount(accountID: string): Promise<Account> {
+    const response = await axios.post(`${API_BASE_URL}/set-active-account`, {
+      account_id: accountID
+    });
+    return response.data;
+  }
+
+  // Schedule
+  static async scheduleVideo(videoID: string, platforms: string[]): Promise<ScheduleResponse> {
+    const response = await axios.post(`${API_BASE_URL}/schedule-video`, {
+      video_id: videoID,
+      platforms: platforms
+    });
+    return response.data;
+  }
+
+  // Models
+  static async getModels(): Promise<ModelsResponse> {
+    const response = await axios.get(`${API_BASE_URL}/models`);
+    return response.data;
   }
 }
 

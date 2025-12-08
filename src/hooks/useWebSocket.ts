@@ -1,56 +1,78 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 
-export const useWebSocket = (url: string, onMessage: (data: any) => void) => {
-  const [isConnected, setIsConnected] = useState(false);
+interface ScheduleUpdate {
+  type: 'schedule_update';
+  video_id: string;
+  success: boolean;
+  status: string;
+  message: string;
+}
+
+export const useWebSocket = (
+  url: string,
+  onRefresh: () => void,
+  onScheduleUpdate?: (data: ScheduleUpdate) => void
+) => {
   const wsRef = useRef<WebSocket | null>(null);
-  const reconnectTimeoutRef = useRef<NodeJS.Timeout>();
+  const onRefreshRef = useRef(onRefresh);
+  const onScheduleUpdateRef = useRef(onScheduleUpdate);
 
-  const connect = () => {
-    try {
+  // Keep refs updated without causing reconnects
+  useEffect(() => {
+    onRefreshRef.current = onRefresh;
+    onScheduleUpdateRef.current = onScheduleUpdate;
+  }, [onRefresh, onScheduleUpdate]);
+
+  useEffect(() => {
+    let reconnectTimeout: NodeJS.Timeout;
+    let isUnmounting = false;
+
+    const connect = () => {
+      if (isUnmounting) return;
+
       const ws = new WebSocket(url);
-      
+
       ws.onopen = () => {
         console.log('WebSocket connected');
-        setIsConnected(true);
       };
 
       ws.onmessage = (event) => {
-        onMessage(event.data);
+        try {
+          const data = JSON.parse(event.data);
+
+          // Handle schedule updates
+          if (data.type === 'schedule_update' && onScheduleUpdateRef.current) {
+            onScheduleUpdateRef.current(data);
+          }
+
+          // Trigger refresh for all messages
+          onRefreshRef.current();
+        } catch {
+          onRefreshRef.current();
+        }
+      };
+
+      ws.onclose = () => {
+        if (!isUnmounting) {
+          console.log('WebSocket disconnected, reconnecting in 3s...');
+          reconnectTimeout = setTimeout(connect, 3000);
+        }
       };
 
       ws.onerror = (error) => {
         console.error('WebSocket error:', error);
-      };
-
-      ws.onclose = () => {
-        console.log('WebSocket disconnected');
-        setIsConnected(false);
-        
-        // Reconnect after 3 seconds
-        reconnectTimeoutRef.current = setTimeout(() => {
-          console.log('Reconnecting...');
-          connect();
-        }, 3000);
+        ws.close();
       };
 
       wsRef.current = ws;
-    } catch (error) {
-      console.error('Failed to connect WebSocket:', error);
-    }
-  };
+    };
 
-  useEffect(() => {
     connect();
 
     return () => {
-      if (reconnectTimeoutRef.current) {
-        clearTimeout(reconnectTimeoutRef.current);
-      }
-      if (wsRef.current) {
-        wsRef.current.close();
-      }
+      isUnmounting = true;
+      clearTimeout(reconnectTimeout);
+      wsRef.current?.close();
     };
-  }, [url]);
-
-  return { isConnected };
+  }, [url]); // Only reconnect if URL changes
 };

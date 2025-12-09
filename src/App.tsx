@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import API, { User, Account } from './api/api';
+import API, { User, Account, ImageGenerator } from './api/api';
 import IdeasList from './components/IdeasList';
 import VideoPromptsList from './components/VideoPromptsList';
 import { useWebSocket } from './hooks/useWebSocket';
 import UserMenu from './components/UserMenu';
 import { ProxyModal, AddUserModal } from './components/modals';
+import ImageModelSelector from './components/ImageModelSelector';
 
 function App() {
   const [refreshTrigger, setRefreshTrigger] = useState(0);
@@ -14,6 +15,10 @@ function App() {
   const [users, setUsers] = useState<User[]>([]);
   const [activeUser, setActiveUser] = useState<User | null>(null);
   const [activeAccount, setActiveAccount] = useState<Account | null>(null);
+
+  // Image generator state
+  const [imageGenerator, setImageGenerator] = useState<ImageGenerator>('openrouter');
+  const [imageModel, setImageModel] = useState('google/gemini-2.0-flash-exp:free');
 
   const handleScheduleUpdate = useCallback((data: any) => {
     const msg = data.success 
@@ -112,6 +117,14 @@ function App() {
           <h1 className="text-2xl font-bold text-white">🎬 Content Generator</h1>
           
           <div className="flex items-center gap-3">
+            {/* Image Generator Selector */}
+            <ImageModelSelector
+              provider={imageGenerator}
+              model={imageModel}
+              onProviderChange={setImageGenerator}
+              onModelChange={setImageModel}
+            />
+
             <button
               onClick={() => setShowProxyModal(true)}
               className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-white rounded text-sm"
@@ -141,12 +154,18 @@ function App() {
               <VideoPromptsList 
                 onRefresh={refreshTrigger} 
                 activeAccount={activeAccount}
+                imageGenerator={imageGenerator}
+                imageModel={imageModel}
               />
             </div>
             
             {/* Right Column - Ideas */}
             <div className="h-full overflow-y-auto pr-2">
-              <IdeasList onRefresh={refreshTrigger} />
+              <IdeasList 
+                onRefresh={refreshTrigger}
+                imageGenerator={imageGenerator}
+                imageModel={imageModel}
+              />
             </div>
           </div>
         </div>

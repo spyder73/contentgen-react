@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import API, { VideoPrompt, FrontTextWithMedia, EndText, VidDuration, Account } from '../api/api';
+import API, { VideoPrompt, FrontTextWithMedia, EndText, VidDuration, Account, ImageGenerator } from '../api/api';
 import VideoPlayer from './VideoPlayer';
 import ImagePromptItem from './ImagePromptItem';
 import { AddImagePromptModal, EditVideoPromptModal } from './modals';
@@ -8,9 +8,11 @@ import ScheduleButton from './ScheduleButton';
 interface VideoPromptItemProps {
   videoPrompt: VideoPrompt;
   activeAccount: Account | null;
+  imageGenerator: ImageGenerator;
+  imageModel: string;
 }
 
-const VideoPromptItem: React.FC<VideoPromptItemProps> = ({ videoPrompt, activeAccount }) => {
+const VideoPromptItem: React.FC<VideoPromptItemProps> = ({ videoPrompt, activeAccount, imageGenerator, imageModel }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [activeVideo, setActiveVideo] = useState<string | null>(null);
   const [showAddImage, setShowAddImage] = useState(false);
@@ -56,7 +58,7 @@ const VideoPromptItem: React.FC<VideoPromptItemProps> = ({ videoPrompt, activeAc
 
   const handleAddImagePrompt = async (prompt: string) => {
     try {
-      await API.createImagePrompt(videoPrompt.id, prompt);
+      await API.createImagePrompt(videoPrompt.id, prompt, imageGenerator, imageGenerator === 'openrouter' ? imageModel : undefined);
       // New image will trigger video regeneration
       invalidateVideoCache();
     } catch (error: any) {
@@ -82,7 +84,7 @@ const VideoPromptItem: React.FC<VideoPromptItemProps> = ({ videoPrompt, activeAc
 
   const handleEditImagePrompt = async (id: string, newPrompt: string) => {
     try {
-      await API.editImagePrompt(id, newPrompt);
+      await API.editImagePrompt(id, newPrompt, imageGenerator, imageGenerator === 'openrouter' ? imageModel : undefined);
       // Editing image prompt triggers image + video regeneration
       invalidateImageCache(id);
       invalidateVideoCache();
@@ -105,7 +107,7 @@ const VideoPromptItem: React.FC<VideoPromptItemProps> = ({ videoPrompt, activeAc
 
   const handleRegenerateImage = async (id: string) => {
     try {
-      await API.regenerateImage(id);
+      await API.regenerateImage(id, imageGenerator, imageGenerator === 'openrouter' ? imageModel : undefined);
       // Regenerating image triggers image + video regeneration
       invalidateImageCache(id);
       invalidateVideoCache();

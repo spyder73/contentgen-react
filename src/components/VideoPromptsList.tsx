@@ -1,13 +1,20 @@
 import React, { useEffect, useState } from 'react';
-import API, { VideoPrompt, Account } from '../api/api';
+import API, { VideoPrompt, Account, ImageGenerator } from '../api/api';
 import VideoPromptItem from './VideoPromptItem';
 
 interface VideoPromptsListProps {
   onRefresh: number;
   activeAccount: Account | null;
+  imageGenerator: ImageGenerator;
+  imageModel: string;
 }
 
-const VideoPromptsList: React.FC<VideoPromptsListProps> = ({ onRefresh, activeAccount }) => {
+const VideoPromptsList: React.FC<VideoPromptsListProps> = ({ 
+  onRefresh, 
+  activeAccount,
+  imageGenerator,
+  imageModel
+}) => {
   const [videoPrompts, setVideoPrompts] = useState<VideoPrompt[]>([]);
 
   const fetchVideoPrompts = async () => {
@@ -35,10 +42,12 @@ const VideoPromptsList: React.FC<VideoPromptsListProps> = ({ onRefresh, activeAc
       ) : (
         <div className="grid gap-4">
           {videoPrompts.map((vp) => (
-            <VideoPromptItem 
-              key={vp.id} 
-              videoPrompt={vp} 
+            <VideoPromptItem
+              key={vp.id}
+              videoPrompt={vp}
               activeAccount={activeAccount}
+              imageGenerator={imageGenerator}
+              imageModel={imageModel}
             />
           ))}
         </div>

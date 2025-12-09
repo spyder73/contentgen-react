@@ -90,9 +90,16 @@ export interface ScheduleResponse {
   error?: string;
 }
 
+export interface ModelArchitecture {
+  modality?: string;
+  input_modalities?: string[];
+  output_modalities?: string[];
+}
+
 export interface ModelPricing {
   prompt: string;
   completion: string;
+  image?: string;
 }
 
 export interface AIModel {
@@ -101,12 +108,15 @@ export interface AIModel {
   description?: string;
   context_length?: number;
   pricing?: ModelPricing;
+  architecture?: ModelArchitecture;
 }
 
 export interface ModelsResponse {
   recommended: AIModel[];
   all?: AIModel[];
 }
+
+export type ImageGenerator = 'pollinations' | 'openrouter';
 
 // Helper to construct full image URLs with optional cache busting
 export function constructImageUrl(filePath: string, cacheBuster?: number): string {
@@ -121,6 +131,11 @@ export function constructImageUrl(filePath: string, cacheBuster?: number): strin
 export function parseUserID(input: string): number {
   const cleaned = input.replace(/\./g, '');
   return parseInt(cleaned, 10);
+}
+
+// Helper to check if model supports image output
+export function supportsImageOutput(model: AIModel): boolean {
+  return model.architecture?.output_modalities?.includes('image') ?? false;
 }
 
 class API {
@@ -153,15 +168,27 @@ class API {
   }
 
   // Video Prompts
-  static async createVideoPromptFromJson(jsonObject: any): Promise<void> {
-    await axios.post(`${API_BASE_URL}/new-prompt`, jsonObject, {
+  static async createVideoPromptFromJson(
+    jsonObject: any,
+    generator?: ImageGenerator,
+    model?: string
+  ): Promise<void> {
+    await axios.post(`${API_BASE_URL}/new-prompt`, {
+      ...jsonObject,
+      generator,
+      model
+    }, {
       headers: { 'Content-Type': 'application/json' }
     });
   }
 
-  static async createVideoPrompt(videoPromptJson: string): Promise<void> {
+  static async createVideoPrompt(
+    videoPromptJson: string,
+    generator?: ImageGenerator,
+    model?: string
+  ): Promise<void> {
     const parsed = JSON.parse(videoPromptJson);
-    await this.createVideoPromptFromJson(parsed);
+    await this.createVideoPromptFromJson(parsed, generator, model);
   }
 
   static async getVideoPrompts(): Promise<VideoPrompt[]> {
@@ -192,16 +219,30 @@ class API {
   }
 
   // Image Prompts
-  static async createImagePrompt(videoId: string, newPromptString: string): Promise<void> {
+  static async createImagePrompt(
+    videoId: string, 
+    newPromptString: string,
+    generator?: ImageGenerator,
+    model?: string
+  ): Promise<void> {
     await axios.post(`${API_BASE_URL}/new-image-prompt`, { 
       video_id: videoId,
-      new_prompt_string: newPromptString
+      new_prompt_string: newPromptString,
+      generator,
+      model
     });
   }
 
-  static async editImagePrompt(imagePromptId: string, newPromptString: string): Promise<void> {
+  static async editImagePrompt(
+    imagePromptId: string, 
+    newPromptString: string,
+    generator?: ImageGenerator,
+    model?: string
+  ): Promise<void> {
     await axios.post(`${API_BASE_URL}/edit-image-prompt/${imagePromptId}`, { 
-      new_prompt_string: newPromptString 
+      new_prompt_string: newPromptString,
+      generator,
+      model
     });
   }
 
@@ -211,8 +252,15 @@ class API {
     });
   }
 
-  static async regenerateImage(imagePromptId: string): Promise<void> {
-    await axios.get(`${API_BASE_URL}/regenerate-image/${imagePromptId}`);
+  static async regenerateImage(
+    imagePromptId: string,
+    generator?: ImageGenerator,
+    model?: string
+  ): Promise<void> {
+    await axios.post(`${API_BASE_URL}/regenerate-image/${imagePromptId}`, {
+      generator,
+      model
+    });
   }
 
   static async deleteImagePrompt(imagePromptId: string): Promise<void> {

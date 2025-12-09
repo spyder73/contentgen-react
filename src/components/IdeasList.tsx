@@ -1,13 +1,19 @@
 import React, { useEffect, useState } from 'react';
-import API, { Idea } from '../api/api';
+import API, { Idea, ImageGenerator } from '../api/api';
 import ModelSelector, { Provider } from './ModelSelector';
 import IdeaItem from './IdeaItem';
 
 interface IdeasListProps {
   onRefresh: number;
+  imageGenerator: ImageGenerator;
+  imageModel: string;
 }
 
-const IdeasList: React.FC<IdeasListProps> = ({ onRefresh }) => {
+const IdeasList: React.FC<IdeasListProps> = ({ 
+  onRefresh,
+  imageGenerator,
+  imageModel
+}) => {
   const [ideas, setIdeas] = useState<Idea[]>([]);
   const [newIdea, setNewIdea] = useState('');
   const [bulkIdeas, setBulkIdeas] = useState('');
@@ -87,9 +93,13 @@ const IdeasList: React.FC<IdeasListProps> = ({ onRefresh }) => {
       return;
     }
     try {
-      await API.createVideoPrompt(idea.video_prompt_json);
+      await API.createVideoPrompt(
+        idea.video_prompt_json,
+        imageGenerator,
+        imageGenerator === 'openrouter' ? imageModel : undefined
+      );
       await API.deleteIdea(idea.video_idea);
-      fetchIdeas(); // Refresh ideas list after deletion
+      fetchIdeas();
     } catch (error: any) {
       alert(`Failed: ${error.message}`);
     }

@@ -1,50 +1,50 @@
 import React, { useEffect, useState } from 'react';
-import API, { VideoPrompt, Account, ImageGenerator } from '../api/api';
-import VideoPromptItem from './VideoPromptItem';
+import API, { ClipPrompt, Account, ImageGenerator } from '../api/api';
+import ClipPromptItem from './ClipPromptItem';
 
-interface VideoPromptsListProps {
+interface ClipPromptsListProps {
   onRefresh: number;
   activeAccount: Account | null;
   imageGenerator: ImageGenerator;
   imageModel: string;
 }
 
-const VideoPromptsList: React.FC<VideoPromptsListProps> = ({ 
+const ClipPromptsList: React.FC<ClipPromptsListProps> = ({ 
   onRefresh, 
   activeAccount,
   imageGenerator,
   imageModel
 }) => {
-  const [videoPrompts, setVideoPrompts] = useState<VideoPrompt[]>([]);
+  const [clipPrompts, setClipPrompts] = useState<ClipPrompt[]>([]);
 
-  const fetchVideoPrompts = async () => {
+  const fetchClipPrompts = async () => {
     try {
-      const data = await API.getVideoPrompts();
-      console.log('Fetched video prompts:', data);
-      setVideoPrompts(Array.isArray(data) ? data : []);
+      const data = await API.getClipPrompts();
+      console.log('Fetched clip prompts:', data);
+      setClipPrompts(Array.isArray(data) ? data : []);
     } catch (error: any) {
       console.error('Failed to fetch video prompts:', error);
     }
   };
 
   useEffect(() => {
-    fetchVideoPrompts();
+    fetchClipPrompts();
   }, [onRefresh]);
 
   return (
     <div className="space-y-4">
-      <h2 className="text-2xl font-bold text-white mb-4">🎥 Prompts ({videoPrompts.length})</h2>
+      <h2 className="text-2xl font-bold text-white mb-4">🎥 Prompts ({clipPrompts.length})</h2>
       
-      {videoPrompts.length === 0 ? (
+      {clipPrompts.length === 0 ? (
         <div className="text-center p-8 bg-slate-800 rounded-lg">
           <p className="text-slate-400">No prompts yet. Create one from an idea!</p>
         </div>
       ) : (
         <div className="grid gap-4">
-          {videoPrompts.map((vp) => (
-            <VideoPromptItem
-              key={vp.id}
-              videoPrompt={vp}
+          {clipPrompts.map((cp) => (
+            <ClipPromptItem
+              key={cp.id}
+              clipPrompt={cp}
               activeAccount={activeAccount}
               imageGenerator={imageGenerator}
               imageModel={imageModel}
@@ -56,4 +56,4 @@ const VideoPromptsList: React.FC<VideoPromptsListProps> = ({
   );
 };
 
-export default VideoPromptsList;
+export default ClipPromptsList;

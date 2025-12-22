@@ -1,40 +1,40 @@
 import React, { useState } from 'react';
-import API, { VideoPrompt, FrontTextWithMedia, EndText, VidDuration, Account, ImageGenerator } from '../api/api';
-import VideoPlayer from './VideoPlayer';
+import API, { ClipPrompt, FrontTextWithMedia, EndText, ClipDuration, Account, ImageGenerator } from '../api/api';
+import ClipPlayer from './ClipPlayer';
 import ImagePromptItem from './ImagePromptItem';
-import { AddImagePromptModal, EditVideoPromptModal } from './modals';
+import { AddImagePromptModal, EditClipPromptModal } from './modals';
 import ScheduleButton from './ScheduleButton';
 
-interface VideoPromptItemProps {
-  videoPrompt: VideoPrompt;
+interface ClipPromptItemProps {
+  clipPrompt: ClipPrompt;
   activeAccount: Account | null;
   imageGenerator: ImageGenerator;
   imageModel: string;
 }
 
-const VideoPromptItem: React.FC<VideoPromptItemProps> = ({ videoPrompt, activeAccount, imageGenerator, imageModel }) => {
+const ClipPromptItem: React.FC<ClipPromptItemProps> = ({ clipPrompt, activeAccount, imageGenerator, imageModel }) => {
   const [isExpanded, setIsExpanded] = useState(false);
-  const [activeVideo, setActiveVideo] = useState<string | null>(null);
+  const [activeClip, setActiveClip] = useState<string | null>(null);
   const [showAddImage, setShowAddImage] = useState(false);
-  const [showEditVideo, setShowEditVideo] = useState(false);
+  const [showEditClip, setShowEditClip] = useState(false);
   
   // Cache buster timestamp - incremented when content changes
-  const [videoCacheBuster, setVideoCacheBuster] = useState<number>(Date.now());
+  const [clipCacheBuster, setClipCacheBuster] = useState<number>(Date.now());
   const [imageCacheBusters, setImageCacheBusters] = useState<Record<string, number>>({});
 
-  const hasVideo = videoPrompt.file_url && videoPrompt.file_url !== '';
+  const hasClip = clipPrompt.file_url && clipPrompt.file_url !== '';
 
   // Get title from front text
   const getTitle = () => {
-    if (videoPrompt.front_text?.frontText && videoPrompt.front_text.frontText.length > 0) {
-      return videoPrompt.front_text.frontText[0];
+    if (clipPrompt.front_text?.frontText && clipPrompt.front_text.frontText.length > 0) {
+      return clipPrompt.front_text.frontText[0];
     }
     return 'No front text';
   };
 
   // Helper to invalidate video cache
-  const invalidateVideoCache = () => {
-    setVideoCacheBuster(Date.now());
+  const invalidateClipCache = () => {
+    setClipCacheBuster(Date.now());
   };
 
   // Helper to invalidate a specific image cache
@@ -49,7 +49,7 @@ const VideoPromptItem: React.FC<VideoPromptItemProps> = ({ videoPrompt, activeAc
     if (!window.confirm('Are you sure you want to delete this video prompt?')) return;
     
     try {
-      await API.deleteVideoPrompt(videoPrompt.id);
+      await API.deleteClipPrompt(clipPrompt.id);
     } catch (error: any) {
       console.error('Failed to delete video prompt:', error);
       alert(`Failed to delete: ${error.message}`);
@@ -58,9 +58,9 @@ const VideoPromptItem: React.FC<VideoPromptItemProps> = ({ videoPrompt, activeAc
 
   const handleAddImagePrompt = async (prompt: string) => {
     try {
-      await API.createImagePrompt(videoPrompt.id, prompt, imageGenerator, imageGenerator === 'openrouter' ? imageModel : undefined);
+      await API.createImagePrompt(clipPrompt.id, prompt, imageGenerator, imageGenerator === 'openrouter' ? imageModel : undefined);
       // New image will trigger video regeneration
-      invalidateVideoCache();
+      invalidateClipCache();
     } catch (error: any) {
       console.error('Failed to create image:', error);
       alert(`Failed to create image: ${error.message}`);
@@ -70,12 +70,12 @@ const VideoPromptItem: React.FC<VideoPromptItemProps> = ({ videoPrompt, activeAc
   const handleEditVideoPrompt = async (
     frontText: FrontTextWithMedia, 
     endText: EndText, 
-    vidDuration: VidDuration
+    clipDuration: ClipDuration
   ) => {
     try {
-      await API.editVideoPrompt(videoPrompt.id, frontText, endText, vidDuration);
+      await API.editClipPrompt(clipPrompt.id, frontText, endText, clipDuration);
       // Editing video prompt triggers regeneration
-      invalidateVideoCache();
+      invalidateClipCache();
     } catch (error: any) {
       console.error('Failed to edit video prompt:', error);
       alert(`Failed to edit: ${error.message}`);
@@ -87,7 +87,7 @@ const VideoPromptItem: React.FC<VideoPromptItemProps> = ({ videoPrompt, activeAc
       await API.editImagePrompt(id, newPrompt, imageGenerator, imageGenerator === 'openrouter' ? imageModel : undefined);
       // Editing image prompt triggers image + video regeneration
       invalidateImageCache(id);
-      invalidateVideoCache();
+      invalidateClipCache();
     } catch (error: any) {
       console.error('Failed to edit image prompt:', error);
       alert(`Failed to edit: ${error.message}`);
@@ -98,7 +98,7 @@ const VideoPromptItem: React.FC<VideoPromptItemProps> = ({ videoPrompt, activeAc
     try {
       await API.editImageText(id, newText);
       // Editing text triggers video regeneration (text overlay changes)
-      invalidateVideoCache();
+      invalidateClipCache();
     } catch (error: any) {
       console.error('Failed to edit image text:', error);
       alert(`Failed to edit: ${error.message}`);
@@ -110,7 +110,7 @@ const VideoPromptItem: React.FC<VideoPromptItemProps> = ({ videoPrompt, activeAc
       await API.regenerateImage(id, imageGenerator, imageGenerator === 'openrouter' ? imageModel : undefined);
       // Regenerating image triggers image + video regeneration
       invalidateImageCache(id);
-      invalidateVideoCache();
+      invalidateClipCache();
     } catch (error: any) {
       console.error('Failed to regenerate image:', error);
       alert(`Failed to regenerate: ${error.message}`);
@@ -121,7 +121,7 @@ const VideoPromptItem: React.FC<VideoPromptItemProps> = ({ videoPrompt, activeAc
     try {
       await API.deleteImagePrompt(id);
       // Deleting image triggers video regeneration
-      invalidateVideoCache();
+      invalidateClipCache();
     } catch (error: any) {
       console.error('Failed to delete image:', error);
       alert(`Failed to delete: ${error.message}`);
@@ -139,13 +139,13 @@ const VideoPromptItem: React.FC<VideoPromptItemProps> = ({ videoPrompt, activeAc
         <div className="flex items-center gap-3">
           {/* Small Video Thumbnail */}
           <div 
-            className={`w-12 h-12 bg-slate-700 rounded-lg flex items-center justify-center flex-shrink-0 ${hasVideo ? 'cursor-pointer hover:bg-slate-600' : ''} transition-colors`}
+            className={`w-12 h-12 bg-slate-700 rounded-lg flex items-center justify-center flex-shrink-0 ${hasClip ? 'cursor-pointer hover:bg-slate-600' : ''} transition-colors`}
             onClick={(e) => {
               e.stopPropagation();
-              if (hasVideo) setActiveVideo(videoPrompt.file_url!);
+              if (hasClip) setActiveClip(clipPrompt.file_url!);
             }}
           >
-            {!hasVideo ? (
+            {!hasClip ? (
               <span className="text-xl">⏳</span>
             ) : (
               <span className="text-xl hover:scale-110 transition-transform">▶️</span>
@@ -158,14 +158,14 @@ const VideoPromptItem: React.FC<VideoPromptItemProps> = ({ videoPrompt, activeAc
           </span>
 
           {/* Image count badge */}
-          {videoPrompt.image_prompts && videoPrompt.image_prompts.length > 0 && (
+          {clipPrompt.image_prompts && clipPrompt.image_prompts.length > 0 && (
             <span className="text-slate-400 text-sm">
-              🖼️ {videoPrompt.image_prompts.length}
+              🖼️ {clipPrompt.image_prompts.length}
             </span>
           )}
 
           {/* ID */}
-          <span className="text-slate-500 text-xs">{videoPrompt.id.substring(0, 8)}...</span>
+          <span className="text-slate-500 text-xs">{clipPrompt.id.substring(0, 8)}...</span>
 
           {/* Expand/Collapse button */}
           <button
@@ -191,9 +191,9 @@ const VideoPromptItem: React.FC<VideoPromptItemProps> = ({ videoPrompt, activeAc
               </button>
 
               <button
-                onClick={() => setShowEditVideo(true)}
+                onClick={() => setShowEditClip(true)}
                 className="p-2 hover:bg-slate-600 rounded-lg transition-colors"
-                title="Edit Video Prompt"
+                title="Edit Clip Prompt"
               >
                 <span className="text-slate-300">✏️ Edit</span>
               </button>
@@ -209,7 +209,7 @@ const VideoPromptItem: React.FC<VideoPromptItemProps> = ({ videoPrompt, activeAc
               {/* Schedule Button - inline with other actions */}
               <div className="ml-auto">
                 <ScheduleButton 
-                  videoPrompt={videoPrompt}
+                  clipPrompt={clipPrompt}
                   activeAccount={activeAccount}
                 />
               </div>
@@ -218,11 +218,11 @@ const VideoPromptItem: React.FC<VideoPromptItemProps> = ({ videoPrompt, activeAc
             {/* Video Prompt Details */}
             <div className="mb-4 p-3 bg-slate-700 rounded-lg space-y-2">
               {/* Front Text */}
-              {videoPrompt.front_text?.frontText && videoPrompt.front_text.frontText.length > 0 && (
+              {clipPrompt.front_text?.frontText && clipPrompt.front_text.frontText.length > 0 && (
                 <div>
                   <span className="text-slate-400 text-sm">Front Text:</span>
                   <ul className="text-slate-300 text-sm list-disc list-inside">
-                    {videoPrompt.front_text.frontText.map((text, i) => (
+                    {clipPrompt.front_text.frontText.map((text, i) => (
                       <li key={i}>{text}</li>
                     ))}
                   </ul>
@@ -230,35 +230,35 @@ const VideoPromptItem: React.FC<VideoPromptItemProps> = ({ videoPrompt, activeAc
               )}
 
               {/* POV */}
-              {videoPrompt.front_text?.POV && (
+              {clipPrompt.front_text?.POV && (
                 <div>
                   <span className="text-slate-400 text-sm">POV: </span>
-                  <span className="text-slate-300 text-sm">{videoPrompt.front_text.POV}</span>
+                  <span className="text-slate-300 text-sm">{clipPrompt.front_text.POV}</span>
                 </div>
               )}
 
               {/* Media */}
-              {videoPrompt.front_text?.frontVid && (
+              {clipPrompt.front_text?.frontVid && (
                 <div>
                   <span className="text-slate-400 text-sm">Media: </span>
-                  <span className="text-slate-300 text-sm">{videoPrompt.front_text.frontVid}</span>
+                  <span className="text-slate-300 text-sm">{clipPrompt.front_text.frontVid}</span>
                 </div>
               )}
 
               {/* End Text */}
-              {videoPrompt.partTwo?.partTwo && (
+              {clipPrompt.partTwo?.partTwo && (
                 <div>
                   <span className="text-slate-400 text-sm">End Text: </span>
-                  <span className="text-slate-300 text-sm">{videoPrompt.partTwo.partTwo}</span>
+                  <span className="text-slate-300 text-sm">{clipPrompt.partTwo.partTwo}</span>
                 </div>
               )}
 
               {/* Duration */}
-              {videoPrompt.totalDuration && (
+              {clipPrompt.totalDuration && (
                 <div>
                   <span className="text-slate-400 text-sm">Duration: </span>
                   <span className="text-slate-300 text-sm">
-                    Total: {videoPrompt.totalDuration.totalDuration}, Front: {videoPrompt.totalDuration.frontVidDuration}
+                    Total: {clipPrompt.totalDuration.totalDuration}, Front: {clipPrompt.totalDuration.frontVidDuration}
                   </span>
                 </div>
               )}
@@ -273,10 +273,10 @@ const VideoPromptItem: React.FC<VideoPromptItemProps> = ({ videoPrompt, activeAc
                   Generated Video
                 </div>
                 <div 
-                  className={`w-[200px] h-[200px] bg-slate-700 rounded-xl flex items-center justify-center overflow-hidden ${hasVideo ? 'cursor-pointer hover:bg-slate-600' : ''} transition-colors`}
-                  onClick={() => hasVideo && setActiveVideo(videoPrompt.file_url!)}
+                  className={`w-[200px] h-[200px] bg-slate-700 rounded-xl flex items-center justify-center overflow-hidden ${hasClip ? 'cursor-pointer hover:bg-slate-600' : ''} transition-colors`}
+                  onClick={() => hasClip && setActiveClip(clipPrompt.file_url!)}
                 >
-                  {!hasVideo ? (
+                  {!hasClip ? (
                     <span className="text-6xl">⏳</span>
                   ) : (
                     <span className="text-6xl hover:scale-110 transition-transform">▶️</span>
@@ -285,7 +285,7 @@ const VideoPromptItem: React.FC<VideoPromptItemProps> = ({ videoPrompt, activeAc
               </div>
 
               {/* Image Prompts */}
-              {videoPrompt.image_prompts && videoPrompt.image_prompts.map((img) => (
+              {clipPrompt.image_prompts && clipPrompt.image_prompts.map((img) => (
                 <ImagePromptItem
                   key={img.id}
                   imagePrompt={img}
@@ -302,11 +302,11 @@ const VideoPromptItem: React.FC<VideoPromptItemProps> = ({ videoPrompt, activeAc
       </div>
 
       {/* Modals */}
-      {activeVideo && (
-        <VideoPlayer 
-          fileUrl={activeVideo} 
-          onClose={() => setActiveVideo(null)}
-          cacheBuster={videoCacheBuster}
+      {activeClip && (
+        <ClipPlayer 
+          fileUrl={activeClip} 
+          onClose={() => setActiveClip(null)}
+          cacheBuster={clipCacheBuster}
         />
       )}
 
@@ -316,10 +316,10 @@ const VideoPromptItem: React.FC<VideoPromptItemProps> = ({ videoPrompt, activeAc
         onSubmit={handleAddImagePrompt}
       />
 
-      <EditVideoPromptModal
-        isOpen={showEditVideo}
-        onClose={() => setShowEditVideo(false)}
-        videoPrompt={videoPrompt}
+      <EditClipPromptModal
+        isOpen={showEditClip}
+        onClose={() => setShowEditClip(false)}
+        clipPrompt={clipPrompt}
         onSubmit={handleEditVideoPrompt}
       />
 
@@ -327,4 +327,4 @@ const VideoPromptItem: React.FC<VideoPromptItemProps> = ({ videoPrompt, activeAc
   );
 };
 
-export default VideoPromptItem;
+export default ClipPromptItem;

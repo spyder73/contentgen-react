@@ -1,18 +1,22 @@
 import React, { useEffect, useState } from 'react';
-import API, { Idea, ImageGenerator } from '../api/api';
+import API, { Idea, ImageGenerator, VideoGenerator } from '../api/api';
 import ModelSelector, { Provider } from './ModelSelector';
 import IdeaItem from './IdeaItem';
 
 interface IdeasListProps {
   onRefresh: number;
   imageGenerator: ImageGenerator;
+  videoGenerator: VideoGenerator;
   imageModel: string;
+  videoModel: string;
 }
 
 const IdeasList: React.FC<IdeasListProps> = ({ 
   onRefresh,
   imageGenerator,
-  imageModel
+  videoGenerator,
+  imageModel,
+  videoModel
 }) => {
   const [ideas, setIdeas] = useState<Idea[]>([]);
   const [newIdea, setNewIdea] = useState('');
@@ -22,7 +26,7 @@ const IdeasList: React.FC<IdeasListProps> = ({
 
   // Model selection state
   const [provider, setProvider] = useState<Provider>('google');
-  const [model, setModel] = useState('x-ai/grok-3-fast');
+  const [model, setModel] = useState('x-ai/grok-4-fast');
 
   const fetchIdeas = async () => {
     try {
@@ -43,7 +47,7 @@ const IdeasList: React.FC<IdeasListProps> = ({
 
     setIsLoading(true);
     try {
-      await API.createNewPrompt(
+      await API.createNewIdea(
         newIdea,
         provider,
         provider === 'openrouter' ? model : undefined
@@ -63,7 +67,7 @@ const IdeasList: React.FC<IdeasListProps> = ({
 
     setIsLoading(true);
     try {
-      await API.createMultiplePrompts(
+      await API.createMultipleIdeas(
         bulkIdeas,
         provider,
         provider === 'openrouter' ? model : undefined
@@ -88,17 +92,19 @@ const IdeasList: React.FC<IdeasListProps> = ({
   };
 
   const handleCreatePrompt = async (idea: Idea) => {
-    if (!idea.video_prompt_json) {
+    if (!idea.clip_prompt_json) {
       alert('Idea still generating...');
       return;
     }
     try {
-      await API.createVideoPrompt(
-        idea.video_prompt_json,
+      await API.createClipPrompt(
+        // TODO: We need to specify the videoModel here
+        idea.clip_prompt_json,
         imageGenerator,
-        imageGenerator === 'openrouter' ? imageModel : undefined
+        videoGenerator,
+        imageModel === 'openrouter' ? imageModel : undefined,
       );
-      await API.deleteIdea(idea.video_idea);
+      await API.deleteIdea(idea.clip_idea);
       fetchIdeas();
     } catch (error: any) {
       alert(`Failed: ${error.message}`);

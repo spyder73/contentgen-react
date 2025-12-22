@@ -11,8 +11,7 @@ interface ImageModelSelectorProps {
 }
 
 const RECOMMENDED_IMAGE_MODELS = [
-  'google/gemini-2.0-flash-exp:free',
-  'google/gemini-2.5-pro-preview-06-05',
+  'openai/gpt-5-image-mini'
 ];
 
 const formatPrice = (model: AIModel): string => {
@@ -41,7 +40,12 @@ const ImageModelSelector: React.FC<ImageModelSelectorProps> = ({
       setLoading(true);
       try {
         const response = await API.getModels();
-        const imageModels = (response.all || []).filter(supportsImageOutput);
+        const allModels = [...(response.all|| []), ...(response.recommended || [])];
+        // Remove duplicates by ID
+        const uniqueModels = Array.from(
+          new Map(allModels.map(m => [m.id, m])).values()
+        );
+        const imageModels = uniqueModels.filter(supportsImageOutput);
         setAllModels(imageModels);
       } catch (error) {
         console.error('Failed to fetch models:', error);

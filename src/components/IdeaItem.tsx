@@ -11,7 +11,7 @@ const IdeaItem: React.FC<IdeaItemProps> = ({ idea, onCreatePrompt, onDelete }) =
   const [isExpanded, setIsExpanded] = useState(false);
   
   // Check if the idea is still being generated (no JSON yet or empty)
-  const isGenerating = !idea.video_prompt_json || idea.video_prompt_json.trim() === '';
+  const isGenerating = !idea.clip_prompt_json || idea.clip_prompt_json.trim() === '';
   
   // Parse the JSON to get details
   let parsedJson: any = null;
@@ -19,7 +19,7 @@ const IdeaItem: React.FC<IdeaItemProps> = ({ idea, onCreatePrompt, onDelete }) =
   
   if (!isGenerating) {
     try {
-      parsedJson = JSON.parse(idea.video_prompt_json);
+      parsedJson = JSON.parse(idea.clip_prompt_json);
     } catch (e) {
       parseError = true;
     }
@@ -34,9 +34,9 @@ const IdeaItem: React.FC<IdeaItemProps> = ({ idea, onCreatePrompt, onDelete }) =
       }
     }
     // Fallback to the video_idea, truncated
-    return idea.video_idea.length > 100 
-      ? idea.video_idea.substring(0, 100) + '...' 
-      : idea.video_idea;
+    return idea.clip_idea.length > 100 
+      ? idea.clip_idea.substring(0, 100) + '...' 
+      : idea.clip_idea;
   };
 
   return (
@@ -77,7 +77,7 @@ const IdeaItem: React.FC<IdeaItemProps> = ({ idea, onCreatePrompt, onDelete }) =
           </button>
           
           <button
-            onClick={() => onDelete(idea.video_idea)}
+            onClick={() => onDelete(idea.clip_idea)}
             className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white rounded text-sm"
             title="Delete Idea"
           >
@@ -92,7 +92,7 @@ const IdeaItem: React.FC<IdeaItemProps> = ({ idea, onCreatePrompt, onDelete }) =
           {/* Original Idea */}
           <div>
             <span className="text-slate-400 text-sm">Original Idea:</span>
-            <p className="text-slate-300 text-sm">{idea.video_idea}</p>
+            <p className="text-slate-300 text-sm">{idea.clip_idea}</p>
           </div>
 
           {/* Front Text */}

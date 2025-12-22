@@ -1,26 +1,26 @@
 import React, { useState, useEffect } from 'react';
 import Modal from './Modal';
-import API, { VideoPrompt, FrontTextWithMedia, EndText, VidDuration } from '../../api/api';
+import API, { ClipPrompt, FrontTextWithMedia, EndText, ClipDuration } from '../../api/api';
 
-interface EditVideoPromptModalProps {
+interface EditClipPromptModalProps {
   isOpen: boolean;
   onClose: () => void;
-  videoPrompt: VideoPrompt;
-  onSubmit: (frontText: FrontTextWithMedia, endText: EndText, vidDuration: VidDuration) => void;
+  clipPrompt: ClipPrompt;
+  onSubmit: (frontText: FrontTextWithMedia, endText: EndText, clipDuration: ClipDuration) => void;
 }
 
-const EditVideoPromptModal: React.FC<EditVideoPromptModalProps> = ({ 
+const EditClipPromptModal: React.FC<EditClipPromptModalProps> = ({ 
   isOpen, 
   onClose, 
-  videoPrompt,
+  clipPrompt,
   onSubmit 
 }) => {
-  const [frontText, setFrontText] = useState(videoPrompt.front_text?.frontText.join('\n') || '');
-  const [mediaUrl, setMediaUrl] = useState(videoPrompt.front_text?.frontVid || '');
-  const [pov, setPov] = useState(videoPrompt.front_text?.POV || '');
-  const [endText, setEndText] = useState(videoPrompt.partTwo?.partTwo || '');
-  const [totalDuration, setTotalDuration] = useState(videoPrompt.totalDuration?.totalDuration || '');
-  const [frontVidDuration, setFrontVidDuration] = useState(videoPrompt.totalDuration?.frontVidDuration || '');
+  const [frontText, setFrontText] = useState(clipPrompt.front_text?.frontText.join('\n') || '');
+  const [mediaUrl, setMediaUrl] = useState(clipPrompt.front_text?.frontVid || '');
+  const [pov, setPov] = useState(clipPrompt.front_text?.POV || '');
+  const [endText, setEndText] = useState(clipPrompt.partTwo?.partTwo || '');
+  const [totalDuration, setTotalDuration] = useState(clipPrompt.totalDuration?.totalDuration || '');
+  const [frontVidDuration, setFrontVidDuration] = useState(clipPrompt.totalDuration?.frontVidDuration || '');
   const [availableMedia, setAvailableMedia] = useState<string[]>([]);
 
   useEffect(() => {
@@ -40,12 +40,12 @@ const EditVideoPromptModal: React.FC<EditVideoPromptModalProps> = ({
       partTwo: endText
     };
 
-    const vidDurationObj: VidDuration = {
+    const clipDurationObj: ClipDuration = {
       totalDuration: totalDuration,
       frontVidDuration: frontVidDuration
     };
 
-    onSubmit(frontTextObj, endTextObj, vidDurationObj);
+    onSubmit(frontTextObj, endTextObj, clipDurationObj);
     onClose();
   };
 
@@ -133,4 +133,4 @@ const EditVideoPromptModal: React.FC<EditVideoPromptModalProps> = ({
   );
 };
 
-export default EditVideoPromptModal;
+export default EditClipPromptModal;

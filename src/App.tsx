@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import API, { User, Account, ImageGenerator } from './api/api';
+import API, { User, Account, ImageGenerator, VideoGenerator } from './api/api';
 import IdeasList from './components/IdeasList';
-import VideoPromptsList from './components/VideoPromptsList';
+import ClipPromptsList from './components/ClipPromptsList';
 import { useWebSocket } from './hooks/useWebSocket';
 import UserMenu from './components/UserMenu';
 import { ProxyModal, AddUserModal } from './components/modals';
@@ -19,6 +19,10 @@ function App() {
   // Image generator state
   const [imageGenerator, setImageGenerator] = useState<ImageGenerator>('openrouter');
   const [imageModel, setImageModel] = useState('google/gemini-2.0-flash-exp:free');
+
+  // Video generator state
+  const [videoGenerator, setVideoGenerator] = useState<VideoGenerator>('runware');
+  const [videoModel, setVideoModel] = useState('lightricks:2@1');
 
   const handleScheduleUpdate = useCallback((data: any) => {
     const msg = data.success 
@@ -151,7 +155,7 @@ function App() {
           <div className="h-full grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Left Column - Video Prompts */}
             <div className="h-full overflow-y-auto pr-2">
-              <VideoPromptsList 
+              <ClipPromptsList 
                 onRefresh={refreshTrigger} 
                 activeAccount={activeAccount}
                 imageGenerator={imageGenerator}
@@ -164,7 +168,9 @@ function App() {
               <IdeasList 
                 onRefresh={refreshTrigger}
                 imageGenerator={imageGenerator}
+                videoGenerator={videoGenerator}
                 imageModel={imageModel}
+                videoModel={videoModel}
               />
             </div>
           </div>

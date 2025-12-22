@@ -1,14 +1,14 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { constructImageUrl } from '../api/api';
+import { constructMediaUrl } from '../api/api';
 
-interface VideoPlayerProps {
+interface ClipPlayerProps {
   fileUrl: string;
   onClose: () => void;
   cacheBuster?: number;
 }
 
-const VideoPlayer: React.FC<VideoPlayerProps> = ({ fileUrl, onClose, cacheBuster }) => {
-  const videoRef = useRef<HTMLVideoElement>(null);
+const ClipPlayer: React.FC<ClipPlayerProps> = ({ fileUrl, onClose, cacheBuster }) => {
+  const clipRef = useRef<HTMLVideoElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
@@ -23,37 +23,37 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ fileUrl, onClose, cacheBuster
   }, [fileUrl, cacheBuster]);
 
   const togglePlayPause = () => {
-    if (!videoRef.current) return;
+    if (!clipRef.current) return;
     
     if (isPlaying) {
-      videoRef.current.pause();
+      clipRef.current.pause();
     } else {
-      videoRef.current.play();
+      clipRef.current.play();
     }
     setIsPlaying(!isPlaying);
   };
 
   const handleTimeUpdate = () => {
-    if (!videoRef.current) return;
-    const progress = (videoRef.current.currentTime / videoRef.current.duration) * 100;
+    if (!clipRef.current) return;
+    const progress = (clipRef.current.currentTime / clipRef.current.duration) * 100;
     setProgress(progress);
   };
 
   const handleProgressClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!videoRef.current) return;
+    if (!clipRef.current) return;
     const rect = e.currentTarget.getBoundingClientRect();
     const clickPosition = (e.clientX - rect.left) / rect.width;
-    videoRef.current.currentTime = clickPosition * videoRef.current.duration;
+    clipRef.current.currentTime = clickPosition * clipRef.current.duration;
   };
 
-  const videoSrc = constructImageUrl(fileUrl, cacheBuster);
+  const clipSrc = constructMediaUrl(fileUrl, cacheBuster);
 
   if (hasError) {
     return (
       <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50" onClick={onClose}>
         <div className="bg-slate-800 p-8 rounded-lg text-center">
           <span className="text-6xl">⏳</span>
-          <p className="text-white mt-4">Video is still being generated...</p>
+          <p className="text-white mt-4">Clip is still being generated...</p>
         </div>
       </div>
     );
@@ -76,9 +76,9 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ fileUrl, onClose, cacheBuster
         )}
         
         <video
-          ref={videoRef}
-          key={videoSrc} // Force re-mount when URL changes
-          src={videoSrc}
+          ref={clipRef}
+          key={clipSrc} // Force re-mount when URL changes
+          src={clipSrc}
           className="h-full w-full object-contain rounded-xl"
           onTimeUpdate={handleTimeUpdate}
           onEnded={() => setIsPlaying(false)}
@@ -117,4 +117,4 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ fileUrl, onClose, cacheBuster
   );
 };
 
-export default VideoPlayer;
+export default ClipPlayer;

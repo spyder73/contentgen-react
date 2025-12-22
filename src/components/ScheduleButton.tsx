@@ -1,14 +1,14 @@
 import React, { useState } from 'react';
-import API, { Account, VideoPrompt } from '../api/api';
+import API, { Account, ClipPrompt } from '../api/api';
 
 interface ScheduleButtonProps {
-  videoPrompt: VideoPrompt;
+  clipPrompt: ClipPrompt;
   activeAccount: Account | null;
   onScheduled?: () => void;
 }
 
 const ScheduleButton: React.FC<ScheduleButtonProps> = ({ 
-  videoPrompt, 
+  clipPrompt, 
   activeAccount,
   onScheduled 
 }) => {
@@ -16,7 +16,7 @@ const ScheduleButton: React.FC<ScheduleButtonProps> = ({
   const [isScheduling, setIsScheduling] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
 
-  const hasVideo = videoPrompt.file_url && videoPrompt.file_url !== '';
+  const hasVideo = clipPrompt.file_url && clipPrompt.file_url !== '';
   const canSchedule = hasVideo && activeAccount && selectedPlatforms.length > 0;
 
   const getPlatformIcon = (platform: string) => {
@@ -41,7 +41,7 @@ const ScheduleButton: React.FC<ScheduleButtonProps> = ({
 
     setIsScheduling(true);
     try {
-      const response = await API.scheduleVideo(videoPrompt.id, selectedPlatforms);
+      const response = await API.scheduleClip(clipPrompt.id, selectedPlatforms);
       
       if (response.success) {
         alert(`✅ Video scheduled!\n${response.scheduled_date ? `Date: ${response.scheduled_date}` : response.message || 'Success'}`);

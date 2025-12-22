@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import API, { AIModel } from '../api/api';
 
-export type Provider = 'google' | 'openrouter';
+export type Provider = 'openrouter' | 'google';
 
 interface ModelSelectorProps {
   provider: Provider;
@@ -34,10 +34,12 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({
       setLoading(true);
       try {
         const response = await API.getModels();
-        setRecommendedModels(response.recommended || []);
-        setAllModels(response.all || []);
-        if (!model && response.recommended?.length > 0) {
-          onModelChange(response.recommended[0].id);
+        const textModels = (response.all || []).filter(m => !m.architecture?.output_modalities?.includes('image'));
+        const recommendedTextModels = (response.recommended || []).filter(m => !m.architecture?.output_modalities?.includes('image'));
+        setRecommendedModels(recommendedTextModels);
+        setAllModels(textModels);
+        if (!model && recommendedTextModels?.length > 0) {
+          onModelChange(recommendedTextModels[0].id);
         }
       } catch (error) {
         console.error('Failed to fetch models:', error);

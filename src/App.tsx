@@ -18,7 +18,7 @@ function App() {
 
   // Image generator state
   const [imageGenerator, setImageGenerator] = useState<ImageGenerator>('openrouter');
-  const [imageModel, setImageModel] = useState('google/gemini-2.0-flash-exp:free');
+  const [imageModel, setImageModel] = useState('openai/gpt-5-image-mini');
 
   // Video generator state
   const [videoGenerator, setVideoGenerator] = useState<VideoGenerator>('runware');

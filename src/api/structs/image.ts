@@ -1,2 +1,2 @@
-export type ImageGenerator = 'pollinations' | 'openrouter';
+export type ImageGenerator = 'pollinations' | 'openrouter' | 'runware';
 export type VideoGenerator = 'runware';

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ImagePrompt, constructImageUrl } from '../api/api';
+import { ImagePrompt, constructMediaUrl } from '../api/api';
 import { 
   ImagePreviewModal, 
   EditImagePromptModal, 
@@ -31,7 +31,7 @@ const ImagePromptItem: React.FC<ImagePromptItemProps> = ({
   const isFailed = imagePrompt.file_url === '/assets/_failed.png';
 
   // Use cache buster for the image URL
-  const imageUrl = constructImageUrl(imagePrompt.file_url, cacheBuster);
+  const imageUrl = constructMediaUrl(imagePrompt.file_url, cacheBuster);
 
   return (
     <>

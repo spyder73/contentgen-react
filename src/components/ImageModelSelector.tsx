@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import API, { AIModel, supportsImageOutput } from '../api/api';
 
-export type ImageProvider = 'pollinations' | 'openrouter';
+export type ImageProvider = 'pollinations' | 'openrouter' | 'runware';
 
 interface ImageModelSelectorProps {
   provider: ImageProvider;
@@ -47,6 +47,14 @@ const ImageModelSelector: React.FC<ImageModelSelectorProps> = ({
         );
         const imageModels = uniqueModels.filter(supportsImageOutput);
         setAllModels(imageModels);
+
+        // Set default model if none is selected
+        if (!model && imageModels.length > 0) {
+          // Prefer the first recommended model with image output
+          const recommendedImageModels = (response.recommended || []).filter(supportsImageOutput);
+          const defaultModel = recommendedImageModels[0] || imageModels[0];
+          onModelChange(defaultModel.id);
+        }
       } catch (error) {
         console.error('Failed to fetch models:', error);
       } finally {
@@ -85,6 +93,7 @@ const ImageModelSelector: React.FC<ImageModelSelectorProps> = ({
       >
         <option value="pollinations">Pollinations</option>
         <option value="openrouter">OpenRouter</option>
+        <option value="runware">Runware</option>
       </select>
 
       {provider === 'openrouter' && (

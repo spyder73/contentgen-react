@@ -102,7 +102,7 @@ const IdeasList: React.FC<IdeasListProps> = ({
         idea.clip_prompt_json,
         imageGenerator,
         videoGenerator,
-        imageModel === 'openrouter' ? imageModel : undefined,
+        imageGenerator === 'openrouter' ? imageModel : undefined,
       );
       await API.deleteIdea(idea.clip_idea);
       fetchIdeas();

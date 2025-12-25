@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { constructMediaUrl } from '../api/api';
+import { constructMediaUrl } from '../api/helpers';
 
 interface ClipPlayerProps {
   fileUrl: string;

@@ -1,2 +1,1 @@
-export type ImageGenerator = 'pollinations' | 'openrouter' | 'runware';
-export type VideoGenerator = 'runware';
+export type { ImageProvider, VideoProvider } from './providers';

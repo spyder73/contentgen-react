@@ -1,4 +1,5 @@
 import React from 'react';
+import Modal from './Modal';
 
 interface ImagePreviewModalProps {
   isOpen: boolean;
@@ -6,20 +7,23 @@ interface ImagePreviewModalProps {
   imageUrl: string;
 }
 
-const ImagePreviewModal: React.FC<ImagePreviewModalProps> = ({ isOpen, onClose, imageUrl }) => {
-  if (!isOpen) return null;
+const ImagePreviewModal: React.FC<ImagePreviewModalProps> = ({
+  isOpen,
+  onClose,
+  imageUrl,
+}) => {
+  if (!imageUrl) return null;
 
   return (
-    <div 
-      className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50"
-      onClick={onClose}
-    >
-      <img 
-        src={imageUrl} 
-        alt="Preview" 
-        className="max-h-[90vh] max-w-[90vw] object-contain rounded-xl"
-      />
-    </div>
+    <Modal isOpen={isOpen} onClose={onClose} title="Image Preview">
+      <div className="flex items-center justify-center">
+        <img
+          src={imageUrl}
+          alt="Preview"
+          className="max-w-full max-h-[70vh] object-contain rounded-lg"
+        />
+      </div>
+    </Modal>
   );
 };
 

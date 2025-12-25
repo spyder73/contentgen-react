@@ -1,18 +1,18 @@
 import axios from 'axios';
 import { API_BASE_URL } from './helpers';
-import { ImageGenerator } from './structs';
+import { ImageProvider } from './structs';
 
 class ImageAPI {
   static async createImagePrompt(
     clipId: string, 
     newPromptString: string,
-    generator?: ImageGenerator,
+    provider?: ImageProvider,
     model?: string
   ): Promise<void> {
     await axios.post(`${API_BASE_URL}/new-image-prompt`, { 
       clip_id: clipId,
       new_prompt_string: newPromptString,
-      generator,
+      generator: provider,
       model
     });
   }
@@ -20,12 +20,12 @@ class ImageAPI {
   static async editImagePrompt(
     imagePromptId: string, 
     newPromptString: string,
-    generator?: ImageGenerator,
+    provider?: ImageProvider,
     model?: string
   ): Promise<void> {
     await axios.post(`${API_BASE_URL}/edit-image-prompt/${imagePromptId}`, { 
       new_prompt_string: newPromptString,
-      generator,
+      generator: provider,
       model
     });
   }
@@ -38,11 +38,11 @@ class ImageAPI {
 
   static async regenerateImage(
     imagePromptId: string,
-    generator?: ImageGenerator,
+    provider?: ImageProvider,
     model?: string
   ): Promise<void> {
     await axios.post(`${API_BASE_URL}/regenerate-image/${imagePromptId}`, {
-      generator,
+      generator: provider,
       model
     });
   }

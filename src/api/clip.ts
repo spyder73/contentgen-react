@@ -6,8 +6,8 @@ import {
   FrontTextWithMedia, 
   EndText, 
   ClipDuration,
-  ImageGenerator,
-  VideoGenerator
+  ImageProvider,
+  VideoProvider
 } from './structs';
 
 class ClipAPI {
@@ -42,14 +42,15 @@ class ClipAPI {
   // Clip Prompts
   static async createClipPromptFromJson(
     jsonObject: any,
-    generator?: ImageGenerator,
-    videoGenerator?: VideoGenerator,
+    imageProvider?: ImageProvider,
+    videoProvider?: VideoProvider,
     model?: string
   ): Promise<void> {
     await axios.post(`${API_BASE_URL}/new-prompt`, {
       ...jsonObject,
-      generator,
-      videoGenerator,
+      generator: imageProvider,
+      videoGenerator: videoProvider,
+      //here we have to add imageModel and videoModel!
       model
     }, {
       headers: { 'Content-Type': 'application/json' }
@@ -58,12 +59,12 @@ class ClipAPI {
 
   static async createClipPrompt(
     clipPromptJson: string,
-    generator?: ImageGenerator,
-    videoGenerator?: VideoGenerator,
+    imageProvider?: ImageProvider,
+    videoProvider?: VideoProvider,
     model?: string
   ): Promise<void> {
     const parsed = JSON.parse(clipPromptJson);
-    await this.createClipPromptFromJson(parsed, generator, videoGenerator, model);
+    await this.createClipPromptFromJson(parsed, imageProvider, videoProvider, model);
   }
 
   static async getClipPrompts(): Promise<ClipPrompt[]> {

@@ -1,17 +1,15 @@
 import axios from 'axios';
-import { API_BASE_URL } from './helpers';
+import { BASE_URL } from './helpers';
 
-class MusicAPI {
-  static async createMusicPrompt(prompt: string): Promise<void> {
-    await axios.post(`${API_BASE_URL}/new-music-prompt`, {
-      prompt
-    });
-  }
+const createMusicPrompt = (prompt: string) =>
+  axios.post(`${BASE_URL}/new-music-prompt`, prompt).then((res) => res.data);
 
-  static async getMusicPrompts(): Promise<any[]> {
-    const response = await axios.get(`${API_BASE_URL}/get-music-prompts`);
-    return response.data.music_prompts || [];
-  }
-}
+const getMusicPrompts = () =>
+  axios.get(`${BASE_URL}/get-music-prompts`).then((res) => res.data);
+
+const MusicAPI = {
+  createMusicPrompt,
+  getMusicPrompts,
+};
 
 export default MusicAPI;

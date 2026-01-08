@@ -7,7 +7,7 @@ interface UserMenuProps {
   activeUser: User | null;
   activeAccount: Account | null;
   onAddUser: () => void;
-  onSelectUser: (userID: number) => void;
+  onSelectUser: (user: number) => void;
   onRemoveUser: (userID: number) => void;
   onSelectAccount: (accountID: string) => void;
 }

@@ -1,24 +1,19 @@
 import axios from 'axios';
-import { API_BASE_URL } from './helpers';
-import { Proxy } from './structs';
+import { BASE_URL } from './helpers';
 
-class ProxyAPI {
-  static async getProxies(): Promise<Proxy[]> {
-    const response = await axios.get(`${API_BASE_URL}/proxies`);
-    return response.data.proxies || [];
-  }
+const getProxies = () =>
+  axios.get(`${BASE_URL}/proxies`).then((res) => res.data);
 
-  static async addProxy(proxyString: string, type: 'http' | 'https'): Promise<Proxy> {
-    const response = await axios.post(`${API_BASE_URL}/proxies`, { 
-      proxy: proxyString,
-      type: type
-    });
-    return response.data;
-  }
+const addProxy = (proxy: string, type: string) =>
+  axios.post(`${BASE_URL}/proxies`, { proxy, type }).then((res) => res.data);
 
-  static async deleteProxy(id: string): Promise<void> {
-    await axios.delete(`${API_BASE_URL}/proxies/${id}`);
-  }
-}
+const deleteProxy = (proxyId: string) =>
+  axios.delete(`${BASE_URL}/proxies/${proxyId}`).then((res) => res.data);
+
+const ProxyAPI = {
+  getProxies,
+  addProxy,
+  deleteProxy,
+};
 
 export default ProxyAPI;

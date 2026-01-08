@@ -1,9 +1,9 @@
 import ClipAPI from './clip';
-import ImageAPI from './image';
 import MusicAPI from './music';
 import ProxyAPI from './proxy';
 import ExternalAPI from './external';
 import UpscalerAPI from './upscaler';
+import MediaAPI from './media'
 
 // Unified API object for backward compatibility
 const API = {
@@ -20,12 +20,18 @@ const API = {
   deleteClipPrompt: ClipAPI.deleteClipPrompt,
   getAvailableMedia: ClipAPI.getAvailableMedia,
 
-  // Image
-  createImagePrompt: ImageAPI.createImagePrompt,
-  editImagePrompt: ImageAPI.editImagePrompt,
-  editImageText: ImageAPI.editImageText,
-  regenerateImage: ImageAPI.regenerateImage,
-  deleteImagePrompt: ImageAPI.deleteImagePrompt,
+  // Media
+  getMediaItem: MediaAPI.getMediaItem,
+  createMediaItem: MediaAPI.createMediaItem,
+  createImage: MediaAPI.createImage,
+  createAIVideo: MediaAPI.createAIVideo,
+  createAudio: MediaAPI.createAudio,
+  editMediaItem: MediaAPI.editMediaItem,
+  regenerateMedia: MediaAPI.regenerateMedia,
+  editMediaMetadata: MediaAPI.editMediaMetadata,
+  replaceMediaMetadata: MediaAPI.replaceMediaMetadata,
+  deleteMediaItem: MediaAPI.deleteMediaItem,
+
 
   // Music
   createMusicPrompt: MusicAPI.createMusicPrompt,
@@ -55,7 +61,7 @@ const API = {
 export default API;
 
 // Re-export individual APIs for direct access
-export { ClipAPI, ImageAPI, MusicAPI, ProxyAPI, ExternalAPI, UpscalerAPI };
+export { ClipAPI, MediaAPI, MusicAPI, ProxyAPI, ExternalAPI, UpscalerAPI };
 
 // Re-export structs and helpers
 export * from './structs';

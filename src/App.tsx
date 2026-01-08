@@ -3,10 +3,16 @@ import API from './api/api';
 import { 
   ImageProvider, 
   VideoProvider,
+  AudioProvider,
+  ChatProvider,
   DEFAULT_IMAGE_PROVIDER,
   DEFAULT_IMAGE_MODEL,
   DEFAULT_VIDEO_PROVIDER,
   DEFAULT_VIDEO_MODEL,
+  DEFAULT_AUDIO_PROVIDER,
+  DEFAULT_AUDIO_MODEL,
+  DEFAULT_CHAT_PROVIDER,
+  DEFAULT_CHAT_MODEL,
 } from './api/structs/providers';
 import { User, Account } from './api/structs/user';
 import { Header, Toast } from './components/layout';
@@ -26,6 +32,14 @@ function App() {
   // Video provider state
   const [videoProvider, setVideoProvider] = useState<VideoProvider>(DEFAULT_VIDEO_PROVIDER);
   const [videoModel, setVideoModel] = useState(DEFAULT_VIDEO_MODEL);
+
+  // Audio provider state
+  const [audioProvider, setAudioProvider] = useState<AudioProvider>(DEFAULT_AUDIO_PROVIDER);
+  const [audioModel, setAudioModel] = useState(DEFAULT_AUDIO_MODEL);
+
+  // Chat provider state (for ideas generation)
+  const [chatProvider, setChatProvider] = useState<ChatProvider>(DEFAULT_CHAT_PROVIDER);
+  const [chatModel, setChatModel] = useState(DEFAULT_CHAT_MODEL);
 
   // User state
   const [users, setUsers] = useState<User[]>([]);
@@ -132,6 +146,14 @@ function App() {
         videoModel={videoModel}
         onVideoProviderChange={setVideoProvider}
         onVideoModelChange={setVideoModel}
+        audioProvider={audioProvider}
+        audioModel={audioModel}
+        onAudioProviderChange={setAudioProvider}
+        onAudioModelChange={setAudioModel}
+        chatProvider={chatProvider}
+        chatModel={chatModel}
+        onChatProviderChange={setChatProvider}
+        onChatModelChange={setChatModel}
         users={users}
         activeUser={activeUser}
         activeAccount={activeAccount}
@@ -147,26 +169,33 @@ function App() {
         <div className="page-container h-full py-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-full">
             {/* Ideas Panel */}
-            <div className="card flex flex-col overflow-hidden">
-              <div className="card-body flex-1 overflow-hidden">
+            <div className="card flex flex-col overflow-hidden h-full">
+              <div className="card-body flex-1 flex flex-col overflow-hidden">
                 <IdeasList
                   onRefresh={refreshTrigger}
+                  chatProvider={chatProvider}
+                  chatModel={chatModel}
                   imageProvider={imageProvider}
-                  videoProvider={videoProvider}
                   imageModel={imageModel}
+                  videoProvider={videoProvider}
                   videoModel={videoModel}
+                  audioProvider={audioProvider}
+                  audioModel={audioModel}
                 />
               </div>
             </div>
 
             {/* Clips Panel */}
-            <div className="card flex flex-col overflow-hidden">
-              <div className="card-body flex-1 overflow-hidden">
+            <div className="card flex flex-col overflow-hidden h-full">
+              <div className="card-body flex-1 flex flex-col overflow-hidden">
                 <ClipPromptsList
-                  onRefresh={refreshTrigger}
-                  onTriggerRefresh={triggerRefresh}
+                  refreshTrigger={refreshTrigger}
                   imageProvider={imageProvider}
                   imageModel={imageModel}
+                  videoProvider={videoProvider}
+                  videoModel={videoModel}
+                  audioProvider={audioProvider}
+                  audioModel={audioModel}
                   activeAccount={activeAccount}
                 />
               </div>

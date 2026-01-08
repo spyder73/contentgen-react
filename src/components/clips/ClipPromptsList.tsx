@@ -2,83 +2,93 @@ import React, { useEffect, useState } from 'react';
 import API from '../../api/api';
 import { ClipPrompt } from '../../api/structs/clip';
 import { Account } from '../../api/structs/user';
-import { ImageProvider } from '../../api/structs/providers';
+import { ImageProvider, VideoProvider, AudioProvider } from '../../api/structs/providers';
 import ClipPromptItem from './ClipPromptItem';
 
 interface ClipPromptsListProps {
-  onRefresh: number;
-  onTriggerRefresh: () => void;
+  refreshTrigger: number;
   imageProvider: ImageProvider;
   imageModel: string;
+  videoProvider: VideoProvider;
+  videoModel: string;
+  audioProvider: AudioProvider;
+  audioModel: string;
   activeAccount: Account | null;
 }
 
 const ClipPromptsList: React.FC<ClipPromptsListProps> = ({
-  onRefresh,
-  onTriggerRefresh,
+  refreshTrigger,
   imageProvider,
   imageModel,
+  videoProvider,
+  videoModel,
+  audioProvider,
+  audioModel,
   activeAccount,
 }) => {
-  const [clipPrompts, setClipPrompts] = useState<ClipPrompt[]>([]);
-  const [expandedClipId, setExpandedClipId] = useState<string | null>(null);
+  const [clips, setClips] = useState<ClipPrompt[]>([]);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const fetchClipPrompts = async () => {
+  const fetchClips = async () => {
+    setIsLoading(true);
     try {
       const data = await API.getClipPrompts();
-      setClipPrompts(Array.isArray(data) ? data : []);
+      setClips(data || []);
     } catch (error) {
-      console.error('Failed to fetch clip prompts:', error);
+      console.error('Failed to fetch clips:', error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchClipPrompts();
-  }, [onRefresh]);
+    fetchClips();
+  }, [refreshTrigger]);
 
-  const handleDelete = async (clipId: string) => {
-    try {
-      await API.deleteClipPrompt(clipId);
-      fetchClipPrompts();
-    } catch (error: any) {
-      alert(`Failed: ${error.message}`);
-    }
-  };
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="text-slate-400">Loading clips...</div>
+      </div>
+    );
+  }
 
-  const handleToggleExpand = (clipId: string) => {
-    setExpandedClipId(expandedClipId === clipId ? null : clipId);
-  };
+  if (clips.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="text-center py-8 text-slate-500">
+          No clips yet. Generate some ideas to get started!
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col h-full gap-4">
-      {/* Header */}
       <div className="flex items-center justify-between shrink-0">
-        <h2 className="section-title">🎬 Clips ({clipPrompts.length})</h2>
+        <h2 className="section-title">🎬 Clips ({clips.length})</h2>
       </div>
 
-      {/* List */}
       <div className="flex-1 overflow-y-auto">
-        {clipPrompts.length === 0 ? (
-          <div className="list-empty">
-            <p>No clips yet. Create one from an idea!</p>
-          </div>
-        ) : (
-          <div className="list-container">
-            {clipPrompts.map((clip) => (
-              <ClipPromptItem
-                key={clip.id}
-                clip={clip}
-                isExpanded={expandedClipId === clip.id}
-                onToggleExpand={() => handleToggleExpand(clip.id)}
-                onDelete={() => handleDelete(clip.id)}
-                onRefresh={onTriggerRefresh}
-                imageProvider={imageProvider}
-                imageModel={imageModel}
-                activeAccount={activeAccount}
-              />
-            ))}
-          </div>
-        )}
+        <div className="space-y-4 pr-2">
+          {clips.map((clip) => (
+            <ClipPromptItem
+              key={clip.id}
+              clip={clip}
+              isExpanded={expandedId === clip.id}
+              onToggleExpand={() => setExpandedId(expandedId === clip.id ? null : clip.id)}
+              onRefresh={fetchClips}
+              imageProvider={imageProvider}
+              imageModel={imageModel}
+              videoProvider={videoProvider}
+              videoModel={videoModel}
+              audioProvider={audioProvider}
+              audioModel={audioModel}
+              activeAccount={activeAccount}
+            />
+          ))}
+        </div>
       </div>
     </div>
   );

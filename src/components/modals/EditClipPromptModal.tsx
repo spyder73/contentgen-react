@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import API from '../../api/api';
-import { ClipPrompt, FrontTextWithMedia, EndText, ClipDuration } from '../../api/structs/clip';
-import { Button, TextArea, Input } from '../ui';
+import { ClipPrompt } from '../../api/structs';
+import { ClipStyleSelector } from '../selectors';
+import { getStyleConfig, MetadataFieldConfig } from '../../clipStyles';
+import { Button, Input, TextArea } from '../ui';
 import Modal from './Modal';
 
 interface EditClipPromptModalProps {
@@ -17,56 +19,35 @@ const EditClipPromptModal: React.FC<EditClipPromptModalProps> = ({
   clip,
   onSave,
 }) => {
-  // Front Text fields
-  const [frontText, setFrontText] = useState('');
-  const [frontVid, setFrontVid] = useState('');
-  const [pov, setPov] = useState('');
-
-  // End Text field
-  const [partTwo, setPartTwo] = useState('');
-
-  // Duration fields
-  const [totalDuration, setTotalDuration] = useState('');
-  const [frontVidDuration, setFrontVidDuration] = useState('');
-
+  const [name, setName] = useState('');
+  const [style, setStyle] = useState('standard');
+  const [metadata, setMetadata] = useState<Record<string, any>>({});
   const [isLoading, setIsLoading] = useState(false);
+
+  const styleConfig = getStyleConfig(style);
+  const clipStyle = clip.style?.style;
 
   useEffect(() => {
     if (clip) {
-      // Front Text
-      setFrontText(clip.front_text?.frontText?.join('\n') || '');
-      setFrontVid(clip.front_text?.frontVid || '');
-      setPov(clip.front_text?.POV || '');
-
-      // End Text
-      setPartTwo(clip.partTwo?.partTwo || '');
-
-      // Duration
-      setTotalDuration(clip.totalDuration?.totalDuration || '');
-      setFrontVidDuration(clip.totalDuration?.frontVidDuration || '');
+      setName(clip.name || '');
+      setStyle(clipStyle || 'standard');
+      setMetadata(clip.metadata || {});
     }
   }, [clip]);
+
+  const handleMetadataChange = (key: string, value: any) => {
+    setMetadata((prev) => ({ ...prev, [key]: value }));
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     try {
-      const frontTextData: FrontTextWithMedia = {
-        frontText: frontText.split('\n').filter(line => line.trim()),
-        frontVid: frontVid,
-        POV: pov,
-      };
-
-      const endTextData: EndText = {
-        partTwo: partTwo,
-      };
-
-      const clipDurationData: ClipDuration = {
-        totalDuration: totalDuration,
-        frontVidDuration: frontVidDuration,
-      };
-
-      await API.editClipPrompt(clip.id, frontTextData, endTextData, clipDurationData);
+      await API.editClipPrompt(clip.id, {
+        name,
+        clipStyle: style,
+        metadata,
+      });
       onSave();
       onClose();
     } catch (error: any) {
@@ -76,90 +57,105 @@ const EditClipPromptModal: React.FC<EditClipPromptModalProps> = ({
     }
   };
 
-  return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Edit Clip" size="lg">
-      <form onSubmit={handleSubmit} className="space-y-6">
-        
-        {/* Front Text Section */}
-        <div className="space-y-3">
-          <h4 className="text-white font-medium border-b border-slate-700 pb-2">
-            📝 Front Text
-          </h4>
-          
-          <div>
-            <label className="block text-sm text-muted mb-1">
-              Text Lines (one per line)
+  const renderMetadataField = (field: MetadataFieldConfig) => {
+    const value = metadata[field.key] ?? '';
+
+    switch (field.type) {
+      case 'textarea':
+        return (
+          <div key={field.key}>
+            <label className="block text-sm text-slate-400 mb-1">
+              {field.label}
+              {field.description && (
+                <span className="text-xs text-slate-500 ml-2">({field.description})</span>
+              )}
             </label>
             <TextArea
-              value={frontText}
-              onChange={(e) => setFrontText(e.target.value)}
-              placeholder="Enter front text lines..."
-              rows={4}
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-sm text-muted mb-1">Front Video</label>
-              <Input
-                value={frontVid}
-                onChange={(e) => setFrontVid(e.target.value)}
-                placeholder="Video filename..."
-              />
-            </div>
-            <div>
-              <label className="block text-sm text-muted mb-1">POV</label>
-              <Input
-                value={pov}
-                onChange={(e) => setPov(e.target.value)}
-                placeholder="POV text..."
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* End Text Section */}
-        <div className="space-y-3">
-          <h4 className="text-white font-medium border-b border-slate-700 pb-2">
-            🎬 End Text (Part Two)
-          </h4>
-          
-          <div>
-            <label className="block text-sm text-muted mb-1">Part Two Text</label>
-            <TextArea
-              value={partTwo}
-              onChange={(e) => setPartTwo(e.target.value)}
-              placeholder="Enter end text..."
+              value={Array.isArray(value) ? value.join('\n') : value}
+              onChange={(e) => {
+                // Split by newlines for array fields
+                const newValue = field.description?.includes('per line')
+                  ? e.target.value.split('\n')
+                  : e.target.value;
+                handleMetadataChange(field.key, newValue);
+              }}
+              placeholder={field.placeholder}
               rows={3}
             />
           </div>
+        );
+
+      case 'select':
+        return (
+          <div key={field.key}>
+            <label className="block text-sm text-slate-400 mb-1">{field.label}</label>
+            <select
+              value={value}
+              onChange={(e) => handleMetadataChange(field.key, e.target.value)}
+              className="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2 text-white"
+            >
+              <option value="">Select...</option>
+              {field.options?.map((opt) => (
+                <option key={opt} value={opt}>{opt}</option>
+              ))}
+            </select>
+          </div>
+        );
+
+      case 'select-media':
+        // TODO: fetch available media and show selector
+        return (
+          <div key={field.key}>
+            <label className="block text-sm text-slate-400 mb-1">{field.label}</label>
+            <Input
+              value={value}
+              onChange={(e) => handleMetadataChange(field.key, e.target.value)}
+              placeholder={field.placeholder || 'Media path...'}
+            />
+          </div>
+        );
+
+      case 'text':
+      default:
+        return (
+          <div key={field.key}>
+            <label className="block text-sm text-slate-400 mb-1">{field.label}</label>
+            <Input
+              value={value}
+              onChange={(e) => handleMetadataChange(field.key, e.target.value)}
+              placeholder={field.placeholder}
+            />
+          </div>
+        );
+    }
+  };
+
+  return (
+    <Modal isOpen={isOpen} onClose={onClose} title="Edit Clip" size="lg">
+      <form onSubmit={handleSubmit} className="space-y-4">
+        
+        {/* Name */}
+        <div>
+          <label className="block text-sm text-slate-400 mb-1">Name</label>
+          <Input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Clip name..."
+          />
         </div>
 
-        {/* Duration Section */}
-        <div className="space-y-3">
-          <h4 className="text-white font-medium border-b border-slate-700 pb-2">
-            ⏱️ Duration
-          </h4>
-          
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-sm text-muted mb-1">Total Duration</label>
-              <Input
-                value={totalDuration}
-                onChange={(e) => setTotalDuration(e.target.value)}
-                placeholder="e.g., 30s"
-              />
-            </div>
-            <div>
-              <label className="block text-sm text-muted mb-1">Front Video Duration</label>
-              <Input
-                value={frontVidDuration}
-                onChange={(e) => setFrontVidDuration(e.target.value)}
-                placeholder="e.g., 5s"
-              />
-            </div>
+        {/* Style */}
+        <ClipStyleSelector value={style} onChange={setStyle} />
+
+        {/* Dynamic Metadata Fields */}
+        {styleConfig.metadataFields.length > 0 && (
+          <div className="space-y-3 pt-3 border-t border-slate-700">
+            <p className="text-sm text-white font-medium">
+              {styleConfig.name} Settings
+            </p>
+            {styleConfig.metadataFields.map(renderMetadataField)}
           </div>
-        </div>
+        )}
 
         {/* Actions */}
         <div className="flex justify-end gap-3 pt-4 border-t border-slate-700">
@@ -167,7 +163,7 @@ const EditClipPromptModal: React.FC<EditClipPromptModalProps> = ({
             Cancel
           </Button>
           <Button variant="primary" type="submit" loading={isLoading}>
-            Save Changes
+            Save
           </Button>
         </div>
       </form>

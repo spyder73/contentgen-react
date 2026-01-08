@@ -1,9 +1,9 @@
 import { AIModel } from './structs';
 
-export const API_BASE_URL = 'http://localhost:81';
+export const BASE_URL = 'http://localhost:81';
 
 export function constructMediaUrl(filePath: string, cacheBuster?: number): string {
-  const url = `${API_BASE_URL}${filePath}`;
+  const url = `${BASE_URL}${filePath}`;
   if (cacheBuster) {
     return `${url}?t=${cacheBuster}`;
   }

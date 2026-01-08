@@ -89,7 +89,7 @@ const ImageProviderSelector: React.FC<ImageProviderSelectorProps> = ({
       />
 
       {(provider === 'openrouter' || provider === 'runware') && (
-        <Dropdown
+        <Dropdown   
           options={dropdownOptions}
           value={model}
           onChange={onModelChange}

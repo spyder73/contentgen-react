@@ -1,24 +1,34 @@
 import React, { useEffect, useState } from 'react';
 import API from '../../api/api';
 import { Idea } from '../../api/structs/clip';
-import { ImageProvider, VideoProvider, ChatProvider } from '../../api/structs/providers';
+import { ImageProvider, VideoProvider, AudioProvider, ChatProvider } from '../../api/structs/providers';
 import IdeaForm from './IdeaForm';
 import IdeaItem from './IdeaItem';
 
 interface IdeasListProps {
   onRefresh: number;
+  // Chat (for generating ideas)
+  chatProvider: ChatProvider;
+  chatModel: string;
+  // Media generators (passed when creating clip from idea)
   imageProvider: ImageProvider;
-  videoProvider: VideoProvider;
   imageModel: string;
+  videoProvider: VideoProvider;
   videoModel: string;
+  audioProvider: AudioProvider;
+  audioModel: string;
 }
 
-const IdeasList: React.FC<IdeasListProps> = ({ 
+const IdeasList: React.FC<IdeasListProps> = ({
   onRefresh,
+  chatProvider,
+  chatModel,
   imageProvider,
-  videoProvider,
   imageModel,
+  videoProvider,
   videoModel,
+  audioProvider,
+  audioModel,
 }) => {
   const [ideas, setIdeas] = useState<Idea[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -36,14 +46,11 @@ const IdeasList: React.FC<IdeasListProps> = ({
     fetchIdeas();
   }, [onRefresh]);
 
-  const handleCreateSingleIdea = async (idea: string, provider: ChatProvider, model: string) => {
+  // Use chatProvider/chatModel for idea generation
+  const handleCreateSingleIdea = async (idea: string) => {
     setIsLoading(true);
     try {
-      await API.createNewIdea(
-        idea,
-        provider,
-        provider === 'openrouter' ? model : undefined
-      );
+      await API.createNewIdea(idea, chatProvider, chatModel || undefined);
       setTimeout(fetchIdeas, 1000);
     } catch (error: any) {
       alert(`Failed: ${error.message}`);
@@ -52,15 +59,11 @@ const IdeasList: React.FC<IdeasListProps> = ({
     }
   };
 
-  const handleCreateBulkIdeas = async (ideas: string, provider: ChatProvider, model: string) => {
+  const handleCreateBulkIdeas = async (ideasPrompt: string) => {
     setIsLoading(true);
     try {
-      await API.createMultipleIdeas(
-        ideas,
-        provider,
-        provider === 'openrouter' ? model : undefined
-      );
-      setTimeout(fetchIdeas, 1000);
+      await API.createMultipleIdeas(ideasPrompt, chatProvider, chatModel || undefined);
+      setTimeout(fetchIdeas, 2000);
     } catch (error: any) {
       alert(`Failed: ${error.message}`);
     } finally {
@@ -68,26 +71,30 @@ const IdeasList: React.FC<IdeasListProps> = ({
     }
   };
 
-  const handleDelete = async (clipIdea: string) => {
+  const handleDelete = async (clip_idea: string) => {
     try {
-      await API.deleteIdea(clipIdea);
+      await API.deleteIdea(clip_idea);
       fetchIdeas();
     } catch (error: any) {
       alert(`Failed: ${error.message}`);
     }
   };
 
+  // Use media providers when creating clip from idea
   const handleCreatePrompt = async (idea: Idea) => {
     if (!idea.clip_prompt_json) {
       alert('Idea still generating...');
       return;
     }
     try {
-      await API.createClipPrompt(
+      await API.createClipPromptFromJson(
         idea.clip_prompt_json,
         imageProvider,
+        imageModel,
         videoProvider,
-        imageProvider === 'openrouter' ? imageModel : undefined
+        videoModel,
+        audioProvider,
+        audioModel
       );
       await API.deleteIdea(idea.clip_idea);
       fetchIdeas();
@@ -98,12 +105,10 @@ const IdeasList: React.FC<IdeasListProps> = ({
 
   return (
     <div className="flex flex-col h-full gap-4">
-      {/* Header */}
       <div className="flex items-center justify-between shrink-0">
         <h2 className="section-title">💡 Ideas ({ideas.length})</h2>
       </div>
 
-      {/* Form */}
       <div className="shrink-0">
         <IdeaForm
           onSubmitSingle={handleCreateSingleIdea}
@@ -112,7 +117,6 @@ const IdeasList: React.FC<IdeasListProps> = ({
         />
       </div>
 
-      {/* List */}
       <div className="flex-1 overflow-y-auto">
         {ideas.length === 0 ? (
           <div className="list-empty">
@@ -120,12 +124,12 @@ const IdeasList: React.FC<IdeasListProps> = ({
           </div>
         ) : (
           <div className="list-container">
-            {ideas.map((idea, idx) => (
+            {ideas.map((idea) => (
               <IdeaItem
-                key={idea.id || idx}
+                key={idea.id}
                 idea={idea}
                 onCreatePrompt={handleCreatePrompt}
-                onDelete={handleDelete}
+                onDelete={() => handleDelete(idea.clip_idea)}
               />
             ))}
           </div>

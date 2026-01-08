@@ -1,5 +1,5 @@
 import { useEffect, useCallback, useRef } from 'react';
-import { API_BASE_URL } from '../api/helpers';
+import { BASE_URL } from '../api/helpers';
 
 type WebSocketEventHandler = (eventType: string, data: any) => void;
 
@@ -18,7 +18,7 @@ export function useWebSocket({
   const reconnectTimeoutRef = useRef<NodeJS.Timeout>();
 
   const connect = useCallback(() => {
-    const wsUrl = API_BASE_URL.replace('http', 'ws') + endpoint;
+    const wsUrl = BASE_URL.replace('http', 'ws') + endpoint;
     const ws = new WebSocket(wsUrl);
     wsRef.current = ws;
 

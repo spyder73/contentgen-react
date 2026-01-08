@@ -1,67 +1,61 @@
 import axios from 'axios';
-import { API_BASE_URL } from './helpers';
-import { ModelsResponse, User, UsersResponse, Account, ScheduleResponse } from './structs';
+import { BASE_URL } from './helpers';
 
-class ExternalAPI {
-  // Models
-  static async getModels(): Promise<ModelsResponse> {
-    const response = await axios.get(`${API_BASE_URL}/models`);
-    return response.data;
-  }
+// ==================== Models ====================
 
-  // Users
-  static async addUser(username: string, userID: number): Promise<User> {
-    const response = await axios.post(`${API_BASE_URL}/users/add`, {
-      username: username,
-      user_id: userID
-    });
-    return response.data;
-  }
+const getModels = () =>
+  axios.get(`${BASE_URL}/models`).then((res) => res.data);
 
-  static async getUsers(): Promise<UsersResponse> {
-    const response = await axios.get(`${API_BASE_URL}/users`);
-    return response.data;
-  }
+// ==================== Users ====================
 
-  static async setActiveUser(userID: number): Promise<User> {
-    const response = await axios.post(`${API_BASE_URL}/users/set-active`, {
-      user_id: userID
-    });
-    return response.data;
-  }
+const getUsers = () =>
+  axios.get(`${BASE_URL}/users`).then((res) => res.data);
 
-  static async removeUser(userID: number): Promise<void> {
-    await axios.post(`${API_BASE_URL}/users/remove`, {
-      user_id: userID
-    });
-  }
+const addUser = (user_name: string, userId: number) =>
+  axios.post(`${BASE_URL}/users`, {username: user_name, user_id: userId }).then((res) => res.data);
 
-  static async refreshAccounts(): Promise<UsersResponse> {
-    const response = await axios.post(`${API_BASE_URL}/users/refresh-accounts`);
-    return response.data;
-  }
+const setActiveUser = (userId: number) =>
+  axios.post(`${BASE_URL}/users/active`, { user_id: userId }).then((res) => res.data);
 
-  // Account
-  static async getActiveAccount(): Promise<Account | null> {
-    const response = await axios.get(`${API_BASE_URL}/active-account`);
-    return response.data.active_account;
-  }
+const removeUser = (userId: number) =>
+  axios.delete(`${BASE_URL}/users/${userId}`).then((res) => res.data);
 
-  static async setActiveAccount(accountID: string): Promise<Account> {
-    const response = await axios.post(`${API_BASE_URL}/set-active-account`, {
-      account_id: accountID
-    });
-    return response.data;
-  }
+const refreshAccounts = () =>
+  axios.post(`${BASE_URL}/users/refresh-accounts`).then((res) => res.data);
 
-  // Schedule
-  static async scheduleClip(clipID: string, platforms: string[]): Promise<ScheduleResponse> {
-    const response = await axios.post(`${API_BASE_URL}/schedule-video`, {
-      clip_id: clipID,
-      platforms: platforms
-    });
-    return response.data;
-  }
+// ==================== Accounts ====================
+
+const getActiveAccount = () =>
+  axios.get(`${BASE_URL}/accounts/active`).then((res) => res.data.active_account);
+
+const setActiveAccount = (accountId: string) =>
+  axios.post(`${BASE_URL}/accounts/active`, { account_id: accountId }).then((res) => res.data);
+
+// ==================== Scheduling ====================
+
+interface ScheduleClipRequest {
+  clip_id: string;
+  platforms: string[];
 }
+
+const scheduleClip = (clipId: string, platforms: string[]) =>
+  axios.post(`${BASE_URL}/schedule`, {
+    clip_id: clipId,
+    platforms,
+  } as ScheduleClipRequest).then((res) => res.data);
+
+// ==================== Export ====================
+
+const ExternalAPI = {
+  getModels,
+  getUsers,
+  addUser,
+  setActiveUser,
+  removeUser,
+  refreshAccounts,
+  getActiveAccount,
+  setActiveAccount,
+  scheduleClip,
+};
 
 export default ExternalAPI;

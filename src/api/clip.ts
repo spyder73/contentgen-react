@@ -1,104 +1,130 @@
 import axios from 'axios';
-import { API_BASE_URL } from './helpers';
-import { 
-  Idea, 
-  ClipPrompt, 
-  FrontTextWithMedia, 
-  EndText, 
-  ClipDuration,
-  ImageProvider,
-  VideoProvider
-} from './structs';
+import { BASE_URL } from './helpers';
+import { ClipMetadata } from './structs';
 
-class ClipAPI {
-  // Ideas
-  static async createNewIdea(clipIdea: string, provider?: string, model?: string): Promise<void> {
-    await axios.post(`${API_BASE_URL}/new-clip-prompt-idea`, {
-      clip_idea: clipIdea,
-      provider,
-      model
-    });
-  }
+// ==================== Request Types ====================
 
-  static async createMultipleIdeas(clipsIdea: string, provider?: string, model?: string): Promise<void> {
-    await axios.post(`${API_BASE_URL}/new-clip-prompt-ideas`, {
-      clip_idea: clipsIdea,
-      provider,
-      model
-    });
-  }
+interface NewClipPromptRequest {
+  name?: string;
 
-  static async getIdeas(): Promise<Idea[]> {
-    const response = await axios.get(`${API_BASE_URL}/get-all-clip-prompt-ideas`);
-    return response.data.prompt_ideas || [];
-  }
+  imagePrompts?: Array<[string, ...string[]]>;
+  aiVideoPrompts?: Array<[string, ...string[]]>;
+  audioPrompts?: Array<[string, ...string[]]>;
 
-  static async deleteIdea(clipIdea: string): Promise<void> {
-    await axios.delete(`${API_BASE_URL}/delete-clip-prompt-idea`, { 
-      data: { clip_idea: clipIdea }
-    });
-  }
+  metadata?: ClipMetadata;
+  clipStyle?: string;
 
-  // Clip Prompts
-  static async createClipPromptFromJson(
-    jsonObject: any,
-    imageProvider?: ImageProvider,
-    videoProvider?: VideoProvider,
-    model?: string
-  ): Promise<void> {
-    await axios.post(`${API_BASE_URL}/new-prompt`, {
-      ...jsonObject,
-      generator: imageProvider,
-      videoGenerator: videoProvider,
-      //here we have to add imageModel and videoModel!
-      model
-    }, {
-      headers: { 'Content-Type': 'application/json' }
-    });
-  }
+  imageGenerator?: string;
+  imageModel?: string;
 
-  static async createClipPrompt(
-    clipPromptJson: string,
-    imageProvider?: ImageProvider,
-    videoProvider?: VideoProvider,
-    model?: string
-  ): Promise<void> {
-    const parsed = JSON.parse(clipPromptJson);
-    await this.createClipPromptFromJson(parsed, imageProvider, videoProvider, model);
-  }
+  videoGenerator?: string;
+  videoModel?: string;
 
-  static async getClipPrompts(): Promise<ClipPrompt[]> {
-    const response = await axios.get(`${API_BASE_URL}/get-all-prompts`);
-    return response.data.clip_prompts || [];
-  }
-
-  static async getClipPrompt(clipPromptId: string): Promise<ClipPrompt> {
-    const response = await axios.get(`${API_BASE_URL}/get-prompt/${clipPromptId}`);
-    return response.data.clip_prompt;
-  }
-
-  static async editClipPrompt(
-    clipPromptId: string, 
-    frontText: FrontTextWithMedia, 
-    endText: EndText, 
-    clipDuration: ClipDuration
-  ): Promise<void> {
-    await axios.post(`${API_BASE_URL}/edit-clip-prompt/${clipPromptId}`, {
-      frontText: frontText,
-      endText: endText,
-      clipDuration: clipDuration
-    });
-  }
-
-  static async deleteClipPrompt(clipPromptId: string): Promise<void> {
-    await axios.delete(`${API_BASE_URL}/delete-clip-prompt/${clipPromptId}`);
-  }
-
-  // Available Media
-  static async getAvailableMedia(): Promise<string[]> {
-    const response = await axios.get(`${API_BASE_URL}/get-available-media`);
-    return response.data.media_files || [];
-  }
+  audioGenerator?: string;
+  audioModel?: string;
 }
+
+interface EditClipPromptRequest {
+  name?: string;
+  metadata?: ClipMetadata;
+  clipStyle?: string;
+}
+
+interface NewClipIdeaRequest {
+  clip_idea: string;
+  provider?: string;
+  model?: string;
+}
+
+
+// ==================== Clip API ====================
+
+const getClipPrompt = (clipId: string) =>
+  axios.get(`${BASE_URL}/clips/${clipId}`).then((res) => res.data.clip_prompt);
+
+const getClipPrompts = () =>
+  axios.get(`${BASE_URL}/clips`).then((res) => res.data.clip_prompts || []);
+
+const createClipPrompt = (request: NewClipPromptRequest) =>
+  axios.post(`${BASE_URL}/clips`, request).then((res) => res.data.clip_prompt_id);
+
+// Helper to create from JSON + generators
+const createClipPromptFromJson = (
+  json: string,
+  imageGenerator: string,
+  imageModel: string,
+  videoGenerator: string,
+  videoModel: string,
+  audioGenerator: string,
+  audioModel: string
+) => {
+  const parsed = JSON.parse(json);
+  return createClipPrompt({
+    ...parsed,
+    imageGenerator,
+    imageModel,
+    videoGenerator,
+    videoModel,
+    audioGenerator,
+    audioModel,
+  });
+};
+
+const editClipPrompt = (clipId: string, request: EditClipPromptRequest) =>
+  axios.put(`${BASE_URL}/clips/${clipId}`, request).then((res) => res.data);
+
+const editClipMetadata = (clipId: string, key: string, value: any) =>
+  axios.put(`${BASE_URL}/clips/${clipId}/metadata`, { key, value }).then((res) => res.data);
+
+const deleteClipPrompt = (clipId: string) =>
+  axios.delete(`${BASE_URL}/clips/${clipId}`).then((res) => res.data);
+
+// ==================== Clip Ideas API ====================
+
+const getIdeas = () =>
+  axios.get(`${BASE_URL}/clip-ideas`).then((res) => (console.log(res.data.prompt_ideas), res.data.prompt_ideas || []));
+
+// Single idea → generates one clip prompt
+const createNewIdea = (clipIdea: string, provider?: string, model?: string) =>
+  axios.post(`${BASE_URL}/clip-ideas`, {
+    clip_idea: clipIdea,
+    provider,
+    model,
+  } as NewClipIdeaRequest).then((res) => res.data);
+
+// Batch: prompt that generates multiple ideas
+const createMultipleIdeas = (clipIdeasPrompt: string, provider?: string, model?: string) =>
+  axios.post(`${BASE_URL}/clip-ideas/batch`, {
+    clip_idea: clipIdeasPrompt,
+    provider,
+    model,
+  }).then((res) => res.data);
+
+const deleteIdea = (ideaId: string) =>
+  axios.delete(`${BASE_URL}/clip-ideas`, {
+    data: { clip_idea: ideaId }
+  }).then((res) => res.data);
+
+// ==================== Available Media ====================
+
+const getAvailableMedia = () =>
+  axios.get(`${BASE_URL}/clips/available-media`).then((res) => res.data.media_files || []);
+
+// ==================== Export ====================
+
+const ClipAPI = {
+  getClipPrompt,
+  getClipPrompts,
+  createClipPrompt,
+  createClipPromptFromJson,
+  editClipPrompt,
+  editClipMetadata,
+  deleteClipPrompt,
+  getAvailableMedia,
+  getIdeas,
+  createNewIdea,
+  createMultipleIdeas,
+  deleteIdea,
+};
 
 export default ClipAPI;

@@ -1,27 +1,21 @@
 import axios from 'axios';
-import { API_BASE_URL } from './helpers';
-
-interface UpscalingStatus {
-  enabled: boolean;
-  current_task?: string;
-  progress?: number;
-}
+import { BASE_URL } from './helpers';
 
 interface UpscalingConfig {
-  enabled: boolean;
-  scale_factor?: number;
+  enabled?: boolean;
   model?: string;
+  scale?: number;
 }
 
-class UpscalerAPI {
-  static async getUpscalingStatus(): Promise<UpscalingStatus> {
-    const response = await axios.get(`${API_BASE_URL}/upscaling-status`);
-    return response.data;
-  }
+const getUpscalingStatus = () =>
+  axios.get(`${BASE_URL}/upscaling/status`).then((res) => res.data);
 
-  static async updateUpscalingConfig(config: UpscalingConfig): Promise<void> {
-    await axios.post(`${API_BASE_URL}/update-upscaling-config`, config);
-  }
-}
+const updateUpscalingConfig = (config: UpscalingConfig) =>
+  axios.put(`${BASE_URL}/upscaling/config`, config).then((res) => res.data);
+
+const UpscalerAPI = {
+  getUpscalingStatus,
+  updateUpscalingConfig,
+};
 
 export default UpscalerAPI;

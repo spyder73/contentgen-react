@@ -1,54 +1,69 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import API, { User, Account, ImageGenerator } from './api/api';
-import IdeasList from './components/IdeasList';
-import VideoPromptsList from './components/VideoPromptsList';
-import { useWebSocket } from './hooks/useWebSocket';
-import UserMenu from './components/UserMenu';
-import { ProxyModal, AddUserModal } from './components/modals';
-import ImageModelSelector from './components/ImageModelSelector';
+import API from './api/api';
+import { 
+  ImageProvider, 
+  VideoProvider,
+  AudioProvider,
+  ChatProvider,
+  DEFAULT_IMAGE_PROVIDER,
+  DEFAULT_IMAGE_MODEL,
+  DEFAULT_VIDEO_PROVIDER,
+  DEFAULT_VIDEO_MODEL,
+  DEFAULT_AUDIO_PROVIDER,
+  DEFAULT_AUDIO_MODEL,
+  DEFAULT_CHAT_PROVIDER,
+  DEFAULT_CHAT_MODEL,
+} from './api/structs/providers';
+import { User, Account } from './api/structs/user';
+import { Header, Toast } from './components/layout';
+import { AddUserModal, ProxyModal } from './components/modals';
+import { IdeasList } from './components/ideas';
+import { ClipPromptsList } from './components/clips';
+import { useWebSocketEvents } from './hooks';
 
 function App() {
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [toast, setToast] = useState<string | null>(null);
-  const [showProxyModal, setShowProxyModal] = useState(false);
-  const [showAddUserModal, setShowAddUserModal] = useState(false);
+
+  // Image provider state
+  const [imageProvider, setImageProvider] = useState<ImageProvider>(DEFAULT_IMAGE_PROVIDER);
+  const [imageModel, setImageModel] = useState(DEFAULT_IMAGE_MODEL);
+
+  // Video provider state
+  const [videoProvider, setVideoProvider] = useState<VideoProvider>(DEFAULT_VIDEO_PROVIDER);
+  const [videoModel, setVideoModel] = useState(DEFAULT_VIDEO_MODEL);
+
+  // Audio provider state
+  const [audioProvider, setAudioProvider] = useState<AudioProvider>(DEFAULT_AUDIO_PROVIDER);
+  const [audioModel, setAudioModel] = useState(DEFAULT_AUDIO_MODEL);
+
+  // Chat provider state (for ideas generation)
+  const [chatProvider, setChatProvider] = useState<ChatProvider>(DEFAULT_CHAT_PROVIDER);
+  const [chatModel, setChatModel] = useState(DEFAULT_CHAT_MODEL);
+
+  // User state
   const [users, setUsers] = useState<User[]>([]);
   const [activeUser, setActiveUser] = useState<User | null>(null);
   const [activeAccount, setActiveAccount] = useState<Account | null>(null);
 
-  // Image generator state
-  const [imageGenerator, setImageGenerator] = useState<ImageGenerator>('openrouter');
-  const [imageModel, setImageModel] = useState('google/gemini-2.0-flash-exp:free');
+  // Modal state
+  const [showProxyModal, setShowProxyModal] = useState(false);
+  const [showAddUserModal, setShowAddUserModal] = useState(false);
 
-  const handleScheduleUpdate = useCallback((data: any) => {
-    const msg = data.success 
-      ? `✅ ${data.message}` 
-      : `❌ ${data.message}`;
-    setToast(msg);
-    setTimeout(() => setToast(null), 5000);
-  }, []);
+  // WebSocket for real-time updates
+  const triggerRefresh = useCallback(() => setRefreshTrigger((r) => r + 1), []);
+  useWebSocketEvents({ 
+    onRefresh: triggerRefresh, 
+    onToast: setToast 
+  });
 
-  useWebSocket(
-    'ws://localhost:81/webhook',
-    () => setRefreshTrigger(prev => prev + 1),
-    handleScheduleUpdate
-  );
-
+  // Fetch users on mount
   useEffect(() => {
     const fetchUsers = async () => {
       try {
         const response = await API.getUsers();
         setUsers(response.users || []);
         setActiveUser(response.active_user);
-
-        if (response.users && response.users.length > 0) {
-          const refreshed = await API.refreshAccounts();
-          setUsers(refreshed.users || []);
-          setActiveUser(refreshed.active_user);
-        }
-
-        const account = await API.getActiveAccount();
-        setActiveAccount(account);
       } catch (error) {
         console.error('Failed to fetch users:', error);
       }
@@ -56,125 +71,143 @@ function App() {
     fetchUsers();
   }, []);
 
-  const handleAddUser = async (username: string, userID: number) => {
+  // Fetch active account when active user changes
+  useEffect(() => {
+    const fetchActiveAccount = async () => {
+      if (!activeUser) {
+        setActiveAccount(null);
+        return;
+      }
+      try {
+        const account = await API.getActiveAccount();
+        setActiveAccount(account);
+      } catch (error) {
+        console.error('Failed to fetch active account:', error);
+      }
+    };
+    fetchActiveAccount();
+  }, [activeUser]);
+
+  const handleSelectUser = async (userId: number) => {
     try {
-      await API.addUser(username, userID);
-      const response = await API.getUsers();
-      setUsers(response.users || []);
-      setActiveUser(response.active_user);
-      const account = await API.getActiveAccount();
-      setActiveAccount(account);
-    } catch (error: any) {
-      alert(`Failed to add user: ${error.message}`);
+      await API.setActiveUser(userId);
+      const user = users.find((u) => u.id === userId);
+      setActiveUser(user || null);
+      setToast(`Switched to ${user?.username}`);
+    } catch (error) {
+      console.error('Failed to select user:', error);
     }
   };
 
-  const handleSelectUser = async (userID: number) => {
+  const handleRemoveUser = async (userId: number) => {
     try {
-      const user = await API.setActiveUser(userID);
-      setActiveUser(user);
-      const account = await API.getActiveAccount();
-      setActiveAccount(account);
-    } catch (error: any) {
-      alert(`Failed to select user: ${error.message}`);
+      await API.removeUser(userId);
+      setUsers(users.filter((u) => u.id !== userId));
+      if (activeUser?.id === userId) {
+        setActiveUser(null);
+      }
+      setToast('User removed');
+    } catch (error) {
+      console.error('Failed to remove user:', error);
     }
   };
 
-  const handleRemoveUser = async (userID: number) => {
+  const handleSelectAccount = async (accountId: string) => {
     try {
-      await API.removeUser(userID);
-      const response = await API.getUsers();
-      setUsers(response.users || []);
-      setActiveUser(response.active_user);
-      const account = await API.getActiveAccount();
+      const account = await API.setActiveAccount(accountId);
       setActiveAccount(account);
-    } catch (error: any) {
-      alert(`Failed to remove user: ${error.message}`);
+      setToast(`Switched to @${account.username}`);
+    } catch (error) {
+      console.error('Failed to select account:', error);
     }
   };
 
-  const handleSelectAccount = async (accountID: string) => {
+  const handleAddUser = async (username: string, userId: number) => {
     try {
-      const account = await API.setActiveAccount(accountID);
-      setActiveAccount(account);
-    } catch (error: any) {
-      alert(`Failed to select account: ${error.message}`);
+      const user = await API.addUser(username, userId);
+      setUsers([...users, user]);
+      setShowAddUserModal(false);
+      setToast(`Added ${username}`);
+    } catch (error) {
+      console.error('Failed to add user:', error);
     }
   };
 
   return (
     <div className="h-screen flex flex-col bg-slate-900">
-      {/* Toast notification */}
-      {toast && (
-        <div className="fixed top-4 right-4 z-50 px-4 py-3 bg-slate-800 border border-slate-600 rounded-lg shadow-lg text-white">
-          {toast}
-        </div>
-      )}
+      <Toast message={toast} onClose={() => setToast(null)} />
 
-      {/* Header */}
-      <header className="bg-slate-800 border-b border-slate-700 shadow-lg flex-shrink-0">
-        <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
-          <h1 className="text-2xl font-bold text-white">🎬 Content Generator</h1>
-          
-          <div className="flex items-center gap-3">
-            {/* Image Generator Selector */}
-            <ImageModelSelector
-              provider={imageGenerator}
-              model={imageModel}
-              onProviderChange={setImageGenerator}
-              onModelChange={setImageModel}
-            />
+      <Header
+        imageProvider={imageProvider}
+        imageModel={imageModel}
+        onImageProviderChange={setImageProvider}
+        onImageModelChange={setImageModel}
+        videoProvider={videoProvider}
+        videoModel={videoModel}
+        onVideoProviderChange={setVideoProvider}
+        onVideoModelChange={setVideoModel}
+        audioProvider={audioProvider}
+        audioModel={audioModel}
+        onAudioProviderChange={setAudioProvider}
+        onAudioModelChange={setAudioModel}
+        chatProvider={chatProvider}
+        chatModel={chatModel}
+        onChatProviderChange={setChatProvider}
+        onChatModelChange={setChatModel}
+        users={users}
+        activeUser={activeUser}
+        activeAccount={activeAccount}
+        onAddUser={() => setShowAddUserModal(true)}
+        onSelectUser={handleSelectUser}
+        onRemoveUser={handleRemoveUser}
+        onSelectAccount={handleSelectAccount}
+        onOpenProxyModal={() => setShowProxyModal(true)}
+      />
 
-            <button
-              onClick={() => setShowProxyModal(true)}
-              className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-white rounded text-sm"
-            >
-              🌐 Proxies
-            </button>
-
-            <UserMenu
-              users={users}
-              activeUser={activeUser}
-              activeAccount={activeAccount}
-              onAddUser={() => setShowAddUserModal(true)}
-              onSelectUser={handleSelectUser}
-              onRemoveUser={handleRemoveUser}
-              onSelectAccount={handleSelectAccount}
-            />
-          </div>
-        </div>
-      </header>
-
-      {/* Main Content - Scrollable columns */}
+      {/* Main Content */}
       <main className="flex-1 overflow-hidden">
-        <div className="h-full max-w-7xl mx-auto px-4 py-6">
-          <div className="h-full grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Left Column - Video Prompts */}
-            <div className="h-full overflow-y-auto pr-2">
-              <VideoPromptsList 
-                onRefresh={refreshTrigger} 
-                activeAccount={activeAccount}
-                imageGenerator={imageGenerator}
-                imageModel={imageModel}
-              />
+        <div className="page-container h-full py-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-full">
+            {/* Ideas Panel */}
+            <div className="card flex flex-col overflow-hidden h-full">
+              <div className="card-body flex-1 flex flex-col overflow-hidden">
+                <IdeasList
+                  onRefresh={refreshTrigger}
+                  chatProvider={chatProvider}
+                  chatModel={chatModel}
+                  imageProvider={imageProvider}
+                  imageModel={imageModel}
+                  videoProvider={videoProvider}
+                  videoModel={videoModel}
+                  audioProvider={audioProvider}
+                  audioModel={audioModel}
+                />
+              </div>
             </div>
-            
-            {/* Right Column - Ideas */}
-            <div className="h-full overflow-y-auto pr-2">
-              <IdeasList 
-                onRefresh={refreshTrigger}
-                imageGenerator={imageGenerator}
-                imageModel={imageModel}
-              />
+
+            {/* Clips Panel */}
+            <div className="card flex flex-col overflow-hidden h-full">
+              <div className="card-body flex-1 flex flex-col overflow-hidden">
+                <ClipPromptsList
+                  refreshTrigger={refreshTrigger}
+                  imageProvider={imageProvider}
+                  imageModel={imageModel}
+                  videoProvider={videoProvider}
+                  videoModel={videoModel}
+                  audioProvider={audioProvider}
+                  audioModel={audioModel}
+                  activeAccount={activeAccount}
+                />
+              </div>
             </div>
           </div>
         </div>
       </main>
 
       {/* Modals */}
-      <ProxyModal 
-        isOpen={showProxyModal} 
-        onClose={() => setShowProxyModal(false)} 
+      <ProxyModal
+        isOpen={showProxyModal}
+        onClose={() => setShowProxyModal(false)}
       />
       <AddUserModal
         isOpen={showAddUserModal}

@@ -5,19 +5,21 @@ interface ModalProps {
   onClose: () => void;
   title: string;
   children: React.ReactNode;
-  onSubmit?: () => void;
-  submitText?: string;
-  submitDisabled?: boolean;
+  size?: 'sm' | 'md' | 'lg';
 }
 
-const Modal: React.FC<ModalProps> = ({ 
-  isOpen, 
-  onClose, 
-  title, 
-  children, 
-  onSubmit, 
-  submitText = 'Submit',
-  submitDisabled = false
+const sizeClasses = {
+  sm: 'max-w-sm',
+  md: 'max-w-md',
+  lg: 'max-w-2xl',
+};
+
+const Modal: React.FC<ModalProps> = ({
+  isOpen,
+  onClose,
+  title,
+  children,
+  size = 'md',
 }) => {
   if (!isOpen) return null;
 
@@ -26,32 +28,24 @@ const Modal: React.FC<ModalProps> = ({
       className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50"
       onClick={onClose}
     >
-      <div 
-        className="bg-slate-800 rounded-xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto"
+      <div
+        className={`bg-slate-800 rounded-xl p-6 w-full ${sizeClasses[size]} max-h-[90vh] overflow-y-auto animate-slide-up`}
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 className="text-xl font-bold text-white mb-4">{title}</h2>
-        
-        <div className="space-y-4">
-          {children}
-        </div>
-
-        <div className="flex justify-end gap-3 mt-6">
+        {/* Header */}
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-xl font-bold text-white">{title}</h2>
           <button
             onClick={onClose}
-            className="px-4 py-2 bg-slate-600 hover:bg-slate-500 text-white rounded-lg"
+            className="text-slate-400 hover:text-white transition-colors"
           >
-            Cancel
+            ✕
           </button>
-          {onSubmit && (
-            <button
-              onClick={onSubmit}
-              disabled={submitDisabled}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-600 disabled:cursor-not-allowed text-white rounded-lg"
-            >
-              {submitText}
-            </button>
-          )}
+        </div>
+
+        {/* Body */}
+        <div className="space-y-4">
+          {children}
         </div>
       </div>
     </div>

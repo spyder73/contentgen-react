@@ -1,8 +1,8 @@
 export { default as Modal } from './Modal';
-export { default as ImagePreviewModal } from './ImagePreviewModal';
-export { default as EditImagePromptModal } from './EditImagePromptModal';
-export { default as EditImageTextModal } from './EditImageTextModal';
-export { default as AddImagePromptModal } from './AddImagePromptModal';
-export { default as EditVideoPromptModal } from './EditVideoPromptModal';
-export { default as ProxyModal } from './ProxyModal';
 export { default as AddUserModal } from './AddUserModal';
+export { default as ConfirmModal } from './ConfirmModal';
+export { default as AddMediaModal } from './AddMediaModal'
+export { default as EditClipPromptModal } from './EditClipPromptModal';
+export { default as EditMediaModal } from './EditMediaModal'
+export { default as MediaPreviewModal } from './MediaPreviewModal';
+export { default as ProxyModal } from './ProxyModal';

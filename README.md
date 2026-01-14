@@ -1,46 +1,116 @@
-# Getting Started with Create React App
+# ContentGen React Frontend
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+A modern React frontend for AI-powered content generation, built with TypeScript, Tailwind CSS, and a modular component architecture.
 
-## Available Scripts
+## 🚀 Quick Start
 
-In the project directory, you can run:
+```bash
+# Install dependencies
+npm install
 
-### `npm start`
+# Start development server
+npm run dev
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+# Build for production
+npm run build
+```
 
-The page will reload if you make edits.\
-You will also see any lint errors in the console.
+## 📁 Project Structure
 
-### `npm test`
+```
+src/
+├── api/                    # API layer
+│   ├── structs/           # TypeScript interfaces & types
+│   └── *.ts               # API service classes
+├── components/            # React components
+│   ├── clips/             # Clip-related components
+│   ├── ideas/             # Idea-related components
+│   ├── layout/            # Layout components (Header, Toast)
+│   ├── modals/            # Modal dialogs
+│   ├── selectors/         # Provider/Model selectors
+│   ├── ui/                # Reusable UI primitives
+│   └── user/              # User management components
+├── index.css              # Tailwind + custom CSS classes
+├── App.tsx                # Main application component
+└── main.tsx               # Application entry point
+```
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+## 📚 Documentation
 
-### `npm run build`
+| Document | Description |
+|----------|-------------|
+| [API Layer](./docs/API.md) | API services, types, and data structures |
+| [Components](./docs/COMPONENTS.md) | Component documentation and usage |
+| [UI System](./docs/UI.md) | UI primitives and CSS classes |
+| [Extending](./docs/EXTENDING.md) | How to add new features |
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+## 🏗️ Architecture Overview
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+### Core Concepts
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+1. **Providers** - External API services (OpenRouter, Pollinations, Runware)
+2. **Models** - AI models available through providers
+3. **Ideas** - User-generated content ideas
+4. **Clips** - Video clips with images, text, and metadata
 
-### `npm run eject`
+### Data Flow
 
-**Note: this is a one-way operation. Once you `eject`, you can’t go back!**
+```
+User Input → Ideas → Clip Prompts → Images/Videos → Final Clip
+                ↓
+         AI Generation
+      (Chat/Image/Video)
+```
 
-If you aren’t satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+### State Management
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you’re on your own.
+- React `useState` for local component state
+- Props drilling for shared state
+- WebSocket for real-time updates
 
-You don’t have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn’t feel obligated to use this feature. However we understand that this tool wouldn’t be useful if you couldn’t customize it when you are ready for it.
+## 🔧 Configuration
 
-## Learn More
+### Environment Variables
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+Create a `.env` file:
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+```env
+VITE_API_BASE_URL=http://localhost:8000
+```
+
+### Tailwind Configuration
+
+Tailwind is configured in `tailwind.config.js` with:
+- Dark theme (slate color palette)
+- Custom component classes in `index.css`
+
+## 🎨 Design System
+
+- **Colors**: Slate-based dark theme with accent colors
+- **Typography**: System fonts with consistent sizing
+- **Spacing**: Tailwind's default spacing scale
+- **Components**: Consistent rounded corners, shadows, and hover states
+
+See [UI Documentation](./docs/UI.md) for details.
+
+## 📦 Dependencies
+
+| Package | Purpose |
+|---------|---------|
+| React 18 | UI framework |
+| TypeScript | Type safety |
+| Tailwind CSS | Styling |
+| Axios | HTTP requests |
+| Vite | Build tool |
+
+## 🤝 Contributing
+
+1. Follow the component structure in `/components`
+2. Use TypeScript interfaces for all props
+3. Use UI primitives from `/components/ui`
+4. Add CSS classes to `index.css` when needed
+5. Document new components
+
+## 📄 License
+
+MIT

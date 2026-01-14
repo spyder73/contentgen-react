@@ -1,0 +1,97 @@
+import React, { useEffect, useState } from 'react';
+import API from '../../api/api';
+import { ClipPrompt } from '../../api/structs/clip';
+import { Account } from '../../api/structs/user';
+import { ImageProvider, VideoProvider, AudioProvider } from '../../api/structs/providers';
+import ClipPromptItem from './ClipPromptItem';
+
+interface ClipPromptsListProps {
+  refreshTrigger: number;
+  imageProvider: ImageProvider;
+  imageModel: string;
+  videoProvider: VideoProvider;
+  videoModel: string;
+  audioProvider: AudioProvider;
+  audioModel: string;
+  activeAccount: Account | null;
+}
+
+const ClipPromptsList: React.FC<ClipPromptsListProps> = ({
+  refreshTrigger,
+  imageProvider,
+  imageModel,
+  videoProvider,
+  videoModel,
+  audioProvider,
+  audioModel,
+  activeAccount,
+}) => {
+  const [clips, setClips] = useState<ClipPrompt[]>([]);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const fetchClips = async () => {
+    setIsLoading(true);
+    try {
+      const data = await API.getClipPrompts();
+      setClips(data || []);
+    } catch (error) {
+      console.error('Failed to fetch clips:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchClips();
+  }, [refreshTrigger]);
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="text-slate-400">Loading clips...</div>
+      </div>
+    );
+  }
+
+  if (clips.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="text-center py-8 text-slate-500">
+          No clips yet. Generate some ideas to get started!
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col h-full gap-4">
+      <div className="flex items-center justify-between shrink-0">
+        <h2 className="section-title">🎬 Clips ({clips.length})</h2>
+      </div>
+
+      <div className="flex-1 overflow-y-auto">
+        <div className="space-y-4 pr-2">
+          {clips.map((clip) => (
+            <ClipPromptItem
+              key={clip.id}
+              clip={clip}
+              isExpanded={expandedId === clip.id}
+              onToggleExpand={() => setExpandedId(expandedId === clip.id ? null : clip.id)}
+              onRefresh={fetchClips}
+              imageProvider={imageProvider}
+              imageModel={imageModel}
+              videoProvider={videoProvider}
+              videoModel={videoModel}
+              audioProvider={audioProvider}
+              audioModel={audioModel}
+              activeAccount={activeAccount}
+            />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default ClipPromptsList;

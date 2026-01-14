@@ -1,4 +1,4 @@
-# ContentGen React Frontend
+# ContentGen React Frontend - The FrontEnd of my (Private) Content Generator Project
 
 A modern React frontend for AI-powered content generation, built with TypeScript, Tailwind CSS, and a modular component architecture.
 

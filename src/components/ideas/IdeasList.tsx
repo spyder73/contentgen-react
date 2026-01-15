@@ -6,7 +6,7 @@ import IdeaForm from './IdeaForm';
 import IdeaItem from './IdeaItem';
 
 interface IdeasListProps {
-  onRefresh: number;
+  refreshTrigger: number;
   // Chat (for generating ideas)
   chatProvider: ChatProvider;
   chatModel: string;
@@ -20,7 +20,7 @@ interface IdeasListProps {
 }
 
 const IdeasList: React.FC<IdeasListProps> = ({
-  onRefresh,
+  refreshTrigger,
   chatProvider,
   chatModel,
   imageProvider,
@@ -44,7 +44,7 @@ const IdeasList: React.FC<IdeasListProps> = ({
 
   useEffect(() => {
     fetchIdeas();
-  }, [onRefresh]);
+  }, [refreshTrigger]);
 
   // Use chatProvider/chatModel for idea generation
   const handleCreateSingleIdea = async (idea: string) => {

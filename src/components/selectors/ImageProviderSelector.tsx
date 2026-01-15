@@ -41,7 +41,6 @@ const ImageProviderSelector: React.FC<ImageProviderSelectorProps> = ({
     const fetchModels = async () => {
       if (provider === 'pollinations') return;
       
-      setLoading(true);
       try {
         const response = await API.getModels();
         const allModels = [

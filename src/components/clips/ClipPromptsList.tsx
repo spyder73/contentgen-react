@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import API from '../../api/api';
 import { ClipPrompt } from '../../api/structs/clip';
 import { Account } from '../../api/structs/user';
@@ -26,19 +26,20 @@ const ClipPromptsList: React.FC<ClipPromptsListProps> = ({
   audioModel,
   activeAccount,
 }) => {
+  // useState always re-renders the component when a change is noticed
   const [clips, setClips] = useState<ClipPrompt[]>([]);
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
 
   const fetchClips = async () => {
-    setIsLoading(true);
+
     try {
       const data = await API.getClipPrompts();
       setClips(data || []);
     } catch (error) {
       console.error('Failed to fetch clips:', error);
     } finally {
-      setIsLoading(false);
+      setIsInitialLoading(false);
     }
   };
 
@@ -46,7 +47,7 @@ const ClipPromptsList: React.FC<ClipPromptsListProps> = ({
     fetchClips();
   }, [refreshTrigger]);
 
-  if (isLoading) {
+  if (isInitialLoading) {
     return (
       <div className="flex items-center justify-center h-full">
         <div className="text-slate-400">Loading clips...</div>

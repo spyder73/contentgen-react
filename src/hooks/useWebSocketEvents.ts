@@ -14,43 +14,44 @@ export type WebSocketEventType =
   | string;
 
 interface UseWebSocketEventsOptions {
-  onRefresh: () => void;
+  onRefreshIdeas: () => void;
+  onRefreshClips: () => void;
   onToast?: (message: string) => void;
 }
 
-export function useWebSocketEvents({ onRefresh, onToast }: UseWebSocketEventsOptions) {
+export function useWebSocketEvents({ onRefreshIdeas, onRefreshClips, onToast }: UseWebSocketEventsOptions) {
   const handleEvent = useCallback((eventType: WebSocketEventType, data: any) => {
     switch (eventType) {
-      // Idea events
+      // Idea events - only refresh ideas list
       case 'AddPromptIdea':
       case 'EditPromptIdea':
       case 'DeletePromptIdea':
         console.log('Idea updated');
-        onRefresh();
+        onRefreshIdeas();
         break;
 
-      // Clip events
+      // Clip events - only refresh clips list
       case 'UpdateClipPrompt':
         console.log('Clip updated');
-        onRefresh();
+        onRefreshClips();
         break;
 
       case 'UpdateClipPromptFileURL':
         console.log('Clip rendered');
-        onRefresh();
+        onRefreshClips();
         onToast?.('Clip rendered!');
         break;
 
-      // Image events
+      // Image events - only refresh clips
       case 'UpdateImagePromptFileURL':
         console.log('Image generated');
-        onRefresh();
+        onRefreshClips();
         break;
 
-      // Video events
+      // Video events - only refresh clips
       case 'UpdateAIVideoPromptFileURL':
         console.log('AI Video generated');
-        onRefresh();
+        onRefreshClips();
         break;
 
       // Schedule events
@@ -64,10 +65,11 @@ export function useWebSocketEvents({ onRefresh, onToast }: UseWebSocketEventsOpt
 
       default:
         console.log('Unknown event:', eventType);
-        // Refresh for unknown events that might affect data
-        onRefresh();
+        // For unknown events, refresh both to be safe
+        onRefreshIdeas();
+        onRefreshClips();
     }
-  }, [onRefresh, onToast]);
+  }, [onRefreshIdeas, onRefreshClips, onToast]);
 
   useWebSocket({ onEvent: handleEvent });
 }

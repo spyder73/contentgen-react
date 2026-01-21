@@ -14,7 +14,7 @@ const ProxyModal: React.FC<ProxyModalProps> = ({ isOpen, onClose }) => {
   const fetchProxies = async () => {
     try {
       const data = await API.getProxies();
-      setProxies(data);
+      setProxies(data.proxies);
     } catch (error) {
       console.error('Failed to fetch proxies:', error);
     }

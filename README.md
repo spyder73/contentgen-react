@@ -1,4 +1,4 @@
-# ContentGen
+# ContentGen React Frontend - The FrontEnd of my (Private) Content Generator Project
 
 ContentGen React Frontend - The FrontEnd of my (Private) Content Generator Project
 

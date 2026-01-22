@@ -16,5 +16,5 @@ export function parseUserID(input: string): number {
 }
 
 export function supportsImageOutput(model: AIModel): boolean {
-  return model.architecture?.output_modalities?.includes('image') ?? false;
+  return model.type=="image";
 }

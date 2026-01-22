@@ -3,13 +3,15 @@ import MusicAPI from './music';
 import ProxyAPI from './proxy';
 import ExternalAPI from './external';
 import UpscalerAPI from './upscaler';
-import MediaAPI from './media'
+import MediaAPI from './media';
+import PipelineAPI from './pipeline';
+import ModelsAPI from './models';
 
 // Unified API object for backward compatibility
 const API = {
   // Clip
-  createNewIdea: ClipAPI.createNewIdea,
-  createMultipleIdeas: ClipAPI.createMultipleIdeas,
+  createIdea: ClipAPI.createIdea,
+  createIdeas: ClipAPI.createIdeas,
   getIdeas: ClipAPI.getIdeas,
   deleteIdea: ClipAPI.deleteIdea,
   createClipPromptFromJson: ClipAPI.createClipPromptFromJson,
@@ -32,6 +34,35 @@ const API = {
   replaceMediaMetadata: MediaAPI.replaceMediaMetadata,
   deleteMediaItem: MediaAPI.deleteMediaItem,
 
+  // Pipeline Runs
+  startPipeline: PipelineAPI.startPipeline,
+  getPipeline: PipelineAPI.getPipeline,
+  listPipelines: PipelineAPI.listPipelines,
+  continuePipeline: PipelineAPI.continuePipeline,
+  regenerateCheckpoint: PipelineAPI.regenerateCheckpoint,
+  addPipelineAttachment: PipelineAPI.addAttachment,
+  cancelPipeline: PipelineAPI.cancelPipeline,
+
+  // Pipeline Templates
+  createPipelineTemplate: PipelineAPI.createPipelineTemplate,
+  getPipelineTemplate: PipelineAPI.getPipelineTemplate,
+  listPipelineTemplates: PipelineAPI.listPipelineTemplates,
+  updatePipelineTemplate: PipelineAPI.updatePipelineTemplate,
+  deletePipelineTemplate: PipelineAPI.deletePipelineTemplate,
+
+  // Prompt Templates
+  createPromptTemplate: PipelineAPI.createPromptTemplate,
+  getPromptTemplate: PipelineAPI.getPromptTemplate,
+  listPromptTemplates: PipelineAPI.listPromptTemplates,
+  updatePromptTemplate: PipelineAPI.updatePromptTemplate,
+  deletePromptTemplate: PipelineAPI.deletePromptTemplate,
+
+  // Models
+  getModels: ModelsAPI.getModels,
+  getChatModels: ModelsAPI.getChatModels,
+  getImageModels: ModelsAPI.getImageModels,
+  getVideoModels: ModelsAPI.getVideoModels,
+  getModelsForProvider: ModelsAPI.getModelsForProvider,
 
   // Music
   createMusicPrompt: MusicAPI.createMusicPrompt,
@@ -43,7 +74,6 @@ const API = {
   deleteProxy: ProxyAPI.deleteProxy,
 
   // External
-  getModels: ExternalAPI.getModels,
   addUser: ExternalAPI.addUser,
   getUsers: ExternalAPI.getUsers,
   setActiveUser: ExternalAPI.setActiveUser,
@@ -61,7 +91,7 @@ const API = {
 export default API;
 
 // Re-export individual APIs for direct access
-export { ClipAPI, MediaAPI, MusicAPI, ProxyAPI, ExternalAPI, UpscalerAPI };
+export { ClipAPI, MediaAPI, MusicAPI, ProxyAPI, ExternalAPI, UpscalerAPI, PipelineAPI };
 
 // Re-export structs and helpers
 export * from './structs';

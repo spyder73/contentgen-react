@@ -20,26 +20,28 @@ import { AddUserModal, ProxyModal } from './components/modals';
 import { IdeasList } from './components/ideas';
 import { ClipPromptsList } from './components/clips';
 import { useWebSocketEvents } from './hooks';
+import { useLocalStorage } from './hooks/useLocalStorage';
 
 function App() {
-  const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [ideasRefreshTrigger, setIdeasRefreshTrigger] = useState(0);
+  const [clipsRefreshTrigger, setClipsRefreshTrigger] = useState(0);
   const [toast, setToast] = useState<string | null>(null);
 
   // Image provider state
-  const [imageProvider, setImageProvider] = useState<ImageProvider>(DEFAULT_IMAGE_PROVIDER);
-  const [imageModel, setImageModel] = useState(DEFAULT_IMAGE_MODEL);
+  const [imageProvider, setImageProvider] = useLocalStorage<ImageProvider>('imageProvider', DEFAULT_IMAGE_PROVIDER);
+  const [imageModel, setImageModel] = useLocalStorage('imageModel', DEFAULT_IMAGE_MODEL);
 
   // Video provider state
-  const [videoProvider, setVideoProvider] = useState<VideoProvider>(DEFAULT_VIDEO_PROVIDER);
-  const [videoModel, setVideoModel] = useState(DEFAULT_VIDEO_MODEL);
+  const [videoProvider, setVideoProvider] = useLocalStorage<VideoProvider>('videoProvider', DEFAULT_VIDEO_PROVIDER);
+  const [videoModel, setVideoModel] = useLocalStorage('videoModel', DEFAULT_VIDEO_MODEL);
 
   // Audio provider state
-  const [audioProvider, setAudioProvider] = useState<AudioProvider>(DEFAULT_AUDIO_PROVIDER);
-  const [audioModel, setAudioModel] = useState(DEFAULT_AUDIO_MODEL);
+  const [audioProvider, setAudioProvider] = useLocalStorage<AudioProvider>('audioProvider', DEFAULT_AUDIO_PROVIDER);
+  const [audioModel, setAudioModel] = useLocalStorage('audioModel', DEFAULT_AUDIO_MODEL);
 
   // Chat provider state (for ideas generation)
-  const [chatProvider, setChatProvider] = useState<ChatProvider>(DEFAULT_CHAT_PROVIDER);
-  const [chatModel, setChatModel] = useState(DEFAULT_CHAT_MODEL);
+  const [chatProvider, setChatProvider] = useLocalStorage<ChatProvider>('chatProvider', DEFAULT_CHAT_PROVIDER);
+  const [chatModel, setChatModel] = useLocalStorage('chatModel', DEFAULT_CHAT_MODEL);
 
   // User state
   const [users, setUsers] = useState<User[]>([]);
@@ -51,9 +53,12 @@ function App() {
   const [showAddUserModal, setShowAddUserModal] = useState(false);
 
   // WebSocket for real-time updates
-  const triggerRefresh = useCallback(() => setRefreshTrigger((r) => r + 1), []);
+  const refreshIdeas = useCallback(() => setIdeasRefreshTrigger((r) => r + 1), []);
+  const refreshClips = useCallback(() => setClipsRefreshTrigger((r) => r + 1), []);
+  
   useWebSocketEvents({ 
-    onRefresh: triggerRefresh, 
+    onRefreshIdeas: refreshIdeas,
+    onRefreshClips: refreshClips,
     onToast: setToast 
   });
 
@@ -172,7 +177,7 @@ function App() {
             <div className="card flex flex-col overflow-hidden h-full">
               <div className="card-body flex-1 flex flex-col overflow-hidden">
                 <IdeasList
-                  onRefresh={refreshTrigger}
+                  refreshTrigger={ideasRefreshTrigger}
                   chatProvider={chatProvider}
                   chatModel={chatModel}
                   imageProvider={imageProvider}
@@ -189,7 +194,7 @@ function App() {
             <div className="card flex flex-col overflow-hidden h-full">
               <div className="card-body flex-1 flex flex-col overflow-hidden">
                 <ClipPromptsList
-                  refreshTrigger={refreshTrigger}
+                  refreshTrigger={clipsRefreshTrigger}
                   imageProvider={imageProvider}
                   imageModel={imageModel}
                   videoProvider={videoProvider}

@@ -1,32 +1,41 @@
 import React, { useState, useEffect } from 'react';
 import ModelsAPI from '../../api/models';
 import { 
-  VideoProvider, 
-  DEFAULT_VIDEO_MODEL,
-  VIDEO_PROVIDERS,
+  ChatProvider, 
+  DEFAULT_CHAT_MODEL,
+  CHAT_PROVIDERS,
+  ProviderDefinition,
   providerRequiresModel,
 } from '../../api/structs/providers';
 import { AIModel, formatPrice } from '../../api/structs/model';
 import { Select, Dropdown } from '../ui';
 
-interface VideoProviderSelectorProps {
-  provider: VideoProvider;
+interface CheckpointProviderSelectorProps {
+  provider: ChatProvider | '';
   model: string;
-  onProviderChange: (provider: VideoProvider) => void;
+  onProviderChange: (provider: ChatProvider | '') => void;
   onModelChange: (model: string) => void;
+  allowInherit?: boolean;
 }
 
-const VideoProviderSelector: React.FC<VideoProviderSelectorProps> = ({
+const INHERIT_OPTION: ProviderDefinition = { value: '', label: 'Inherit from run' };
+
+const CheckpointProviderSelector: React.FC<CheckpointProviderSelectorProps> = ({
   provider,
   model,
   onProviderChange,
   onModelChange,
+  allowInherit = true,
 }) => {
   const [models, setModels] = useState<AIModel[]>([]);
   const [loading, setLoading] = useState(false);
 
+  const providerOptions = allowInherit 
+    ? [INHERIT_OPTION, ...CHAT_PROVIDERS] 
+    : CHAT_PROVIDERS;
+
   useEffect(() => {
-    if (!providerRequiresModel(provider)) {
+    if (!provider || !providerRequiresModel(provider as ChatProvider)) {
       setModels([]);
       return;
     }
@@ -34,11 +43,11 @@ const VideoProviderSelector: React.FC<VideoProviderSelectorProps> = ({
     const fetchModels = async () => {
       setLoading(true);
       try {
-        const videoModels = await ModelsAPI.getVideoModels(provider);
-        setModels(videoModels);
+        const chatModels = await ModelsAPI.getChatModels();
+        setModels(chatModels);
 
-        if (!model && videoModels.length > 0) {
-          onModelChange(videoModels[0]?.id || DEFAULT_VIDEO_MODEL);
+        if (!model && chatModels.length > 0) {
+          onModelChange(chatModels[0]?.id || DEFAULT_CHAT_MODEL);
         }
       } catch (error) {
         console.error('Failed to fetch models:', error);
@@ -59,16 +68,20 @@ const VideoProviderSelector: React.FC<VideoProviderSelectorProps> = ({
 
   return (
     <div className="flex gap-2 items-center">
-      <span className="text-muted text-sm">🎬</span>
-
       <Select
-        options={VIDEO_PROVIDERS}
+        options={providerOptions}
         value={provider}
-        onChange={(e) => onProviderChange(e.target.value as VideoProvider)}
+        onChange={(e) => {
+          const newProvider = e.target.value as ChatProvider | '';
+          onProviderChange(newProvider);
+          if (newProvider !== provider) {
+            onModelChange('');
+          }
+        }}
         selectSize="sm"
       />
 
-      {providerRequiresModel(provider) && (
+      {provider && providerRequiresModel(provider as ChatProvider) && (
         <Dropdown
           options={dropdownOptions}
           value={model}
@@ -78,8 +91,12 @@ const VideoProviderSelector: React.FC<VideoProviderSelectorProps> = ({
           loading={loading}
         />
       )}
+
+      {provider === '' && (
+        <span className="text-xs text-gray-500 italic">Uses run default</span>
+      )}
     </div>
   );
 };
 
-export default VideoProviderSelector;
+export default CheckpointProviderSelector;

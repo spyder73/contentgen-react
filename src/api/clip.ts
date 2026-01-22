@@ -82,27 +82,26 @@ const deleteClipPrompt = (clipId: string) =>
 // ==================== Clip Ideas API ====================
 
 const getIdeas = () =>
-  axios.get(`${BASE_URL}/clip-ideas`).then((res) => (console.log(res.data.prompt_ideas), res.data.prompt_ideas || []));
+  axios.get(`${BASE_URL}/clip-ideas`).then((res) => res.data.prompt_ideas || []);
 
-// Single idea → generates one clip prompt
-const createNewIdea = (clipIdea: string, provider?: string, model?: string) =>
+// Create idea(s) from pipeline output - single JSON or array
+const createIdea = (clipIdea: string, clipPromptJson: string) =>
   axios.post(`${BASE_URL}/clip-ideas`, {
     clip_idea: clipIdea,
-    provider,
-    model,
+    clip_prompt_json: clipPromptJson,
   } as NewClipIdeaRequest).then((res) => res.data);
 
-// Batch: prompt that generates multiple ideas
-const createMultipleIdeas = (clipIdeasPrompt: string, provider?: string, model?: string) =>
-  axios.post(`${BASE_URL}/clip-ideas/batch`, {
-    clip_idea: clipIdeasPrompt,
-    provider,
-    model,
-  }).then((res) => res.data);
+// Create multiple ideas from distributor output
+const createIdeas = (clipIdea: string, clipPromptList: string[]) =>
+  axios.post(`${BASE_URL}/clip-ideas`, {
+    clip_idea: clipIdea,
+    clip_prompt_list: clipPromptList,
+  } as NewClipIdeaRequest).then((res) => res.data);
 
-const deleteIdea = (ideaId: string) =>
+// Delete an Idea
+const deleteIdea = (clipIdea: string) =>
   axios.delete(`${BASE_URL}/clip-ideas`, {
-    data: { clip_idea: ideaId }
+    data: { clip_idea: clipIdea }  
   }).then((res) => res.data);
 
 // ==================== Available Media ====================
@@ -110,11 +109,14 @@ const deleteIdea = (ideaId: string) =>
 const getAvailableMedia = () =>
   axios.get(`${BASE_URL}/clips/available-media`).then((res) => res.data.media_files || []);
 
+
 // ==================== Export ====================
 
 const ClipAPI = {
   getClipPrompt,
   getClipPrompts,
+  createIdea,
+  createIdeas,
   createClipPrompt,
   createClipPromptFromJson,
   editClipPrompt,
@@ -122,8 +124,6 @@ const ClipAPI = {
   deleteClipPrompt,
   getAvailableMedia,
   getIdeas,
-  createNewIdea,
-  createMultipleIdeas,
   deleteIdea,
 };
 

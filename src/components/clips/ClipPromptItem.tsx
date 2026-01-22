@@ -1,13 +1,12 @@
 import React, { useState } from 'react';
 import { ClipPrompt } from '../../api/structs/clip';
-import { MediaType } from '../../api/structs/media';
 import { Account } from '../../api/structs/user';
-import { ImageProvider, VideoProvider, AudioProvider, Generator } from '../../api/structs/providers';
-import { Card, Button, Badge, Thumbnail, MediaSection } from '../ui';
+import { ImageProvider, VideoProvider, AudioProvider } from '../../api/structs/providers';
+import { Card, Button, Badge, Thumbnail, ExpandableSection } from '../ui';
 import { constructMediaUrl } from '../../api/helpers';
-import ClipPlayer from './ClipPlayer';
-import ScheduleButton from './ScheduleButton';
-import { EditClipPromptModal, AddMediaModal, MediaPreviewModal, ConfirmModal } from '../modals';
+import OutputGallery from './OutputGallery';
+import { MediaEditorSection, ScheduleSection } from './sections';
+import { EditClipPromptModal, ConfirmModal } from '../modals';
 import API from '../../api/api';
 
 interface ClipPromptItemProps {
@@ -38,34 +37,16 @@ const ClipPromptItem: React.FC<ClipPromptItemProps> = ({
   activeAccount,
 }) => {
   const [showEditModal, setShowEditModal] = useState(false);
-  const [showAddMediaModal, setShowAddMediaModal] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [addMediaType, setAddMediaType] = useState<MediaType>('image');
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [previewType, setPreviewType] = useState<'image' | 'video'>('image');
 
   const images = clip.media?.images || [];
   const aiVideos = clip.media?.ai_videos || [];
   const audios = clip.media?.audios || [];
   const totalMedia = images.length + aiVideos.length + audios.length;
-  const hasRenderedVideo = !!clip.file_url;
+
+  const fileUrls = clip.file_urls || [];
+  const hasOutput = fileUrls.length > 0;
   const clipStyle = clip.style?.style || 'standard';
-
-  const getGenerator = (type: MediaType): Generator => {
-    switch (type) {
-      case 'image': return imageProvider;
-      case 'ai_video': return videoProvider;
-      case 'audio': return audioProvider;
-    }
-  };
-
-  const getModel = (type: MediaType): string => {
-    switch (type) {
-      case 'image': return imageModel;
-      case 'ai_video': return videoModel;
-      case 'audio': return audioModel;
-    }
-  };
 
   const handleDelete = async () => {
     try {
@@ -76,14 +57,14 @@ const ClipPromptItem: React.FC<ClipPromptItemProps> = ({
     }
   };
 
-  const handlePreview = (url: string, type: MediaType) => {
-    setPreviewUrl(url);
-    setPreviewType(type === 'ai_video' ? 'video' : 'image');
-  };
-
-  const openAddMedia = (type: MediaType) => {
-    setAddMediaType(type);
-    setShowAddMediaModal(true);
+  const getStatusBadge = () => {
+    if (hasOutput && fileUrls.length > 1) {
+      return <Badge variant="green">✓ {fileUrls.length} outputs</Badge>;
+    }
+    if (hasOutput) {
+      return <Badge variant="green">✓ Rendered</Badge>;
+    }
+    return <Badge variant="blue">Draft</Badge>;
   };
 
   return (
@@ -96,11 +77,9 @@ const ClipPromptItem: React.FC<ClipPromptItemProps> = ({
               <h3 className="text-white font-medium truncate max-w-xs">
                 {clip.name || 'Untitled Clip'}
               </h3>
-              <Badge variant={hasRenderedVideo ? 'green' : 'blue'}>
-                {hasRenderedVideo ? '✓ Rendered' : 'Draft'}
-              </Badge>
+              {getStatusBadge()}
               <span className="text-slate-400 text-sm">{totalMedia} media</span>
-              <Badge variant="gray">{clipStyle || 'standard'}</Badge>
+              <Badge variant="gray">{clipStyle}</Badge>
             </div>
 
             <div className="flex items-center gap-1">
@@ -135,54 +114,75 @@ const ClipPromptItem: React.FC<ClipPromptItemProps> = ({
             </div>
           )}
 
-          {/* Expanded */}
+          {/* Expanded: Three Sections */}
           {isExpanded && (
-            <div className="space-y-4 mt-4">
-              <MediaSection
-                title="Images"
-                icon="🖼️"
-                items={images}
-                clipStyle={clipStyle}
-                onRefresh={onRefresh}
-                generator={getGenerator('image')}
-                model={getModel('image')}
-                onPreview={(url) => handlePreview(url, 'image')}
-                onAdd={() => openAddMedia('image')}
-              />
+            <div className="space-y-3 mt-4">
+              {/* Section 1: Media Editor */}
+              <ExpandableSection
+                title="Media & Prompts"
+                icon="🎨"
+                badge={<Badge variant="gray">{totalMedia}</Badge>}
+                defaultExpanded={true}
+              >
+                <MediaEditorSection
+                  clipId={clip.id}
+                  images={images}
+                  aiVideos={aiVideos}
+                  audios={audios}
+                  clipStyle={clipStyle}
+                  onRefresh={onRefresh}
+                  imageGenerator={imageProvider}
+                  imageModel={imageModel}
+                  videoGenerator={videoProvider}
+                  videoModel={videoModel}
+                  audioGenerator={audioProvider}
+                  audioModel={audioModel}
+                />
+              </ExpandableSection>
 
-              <MediaSection
-                title="AI Videos"
-                icon="🎬"
-                items={aiVideos}
-                clipStyle={clipStyle}
-                onRefresh={onRefresh}
-                generator={getGenerator('ai_video')}
-                model={getModel('ai_video')}
-                onPreview={(url) => handlePreview(url, 'ai_video')}
-                onAdd={() => openAddMedia('ai_video')}
-              />
+              {/* Section 2: Output Gallery */}
+              <ExpandableSection
+                title="Output Gallery"
+                icon="📦"
+                badge={
+                  hasOutput ? (
+                    <Badge variant="green">{fileUrls.length} files</Badge>
+                  ) : (
+                    <Badge variant="yellow">Not rendered</Badge>
+                  )
+                }
+                defaultExpanded={hasOutput}
+                disabled={!hasOutput}
+              >
+                <OutputGallery
+                  fileUrls={fileUrls}
+                  clipStyle={clipStyle}
+                  originalImages={images}
+                />
+              </ExpandableSection>
 
-              <MediaSection
-                title="Audio"
-                icon="🎵"
-                items={audios}
-                clipStyle={clipStyle}
-                onRefresh={onRefresh}
-                generator={getGenerator('audio')}
-                model={getModel('audio')}
-                onAdd={() => openAddMedia('audio')}
-              />
-
-              {hasRenderedVideo && (
-                <div>
-                  <p className="text-slate-400 text-sm font-medium mb-2">📹 Rendered Video</p>
-                  <ClipPlayer clipUrl={constructMediaUrl(clip.file_url)} />
-                </div>
-              )}
-
-              {hasRenderedVideo && activeAccount && (
-                <ScheduleButton clipId={clip.id} activeAccount={activeAccount} />
-              )}
+              {/* Section 3: Schedule */}
+              <ExpandableSection
+                title="Schedule & Publish"
+                icon="📅"
+                badge={
+                  activeAccount ? (
+                    <Badge variant="blue">{activeAccount.username}</Badge>
+                  ) : (
+                    <Badge variant="gray">No account</Badge>
+                  )
+                }
+                defaultExpanded={false}
+                disabled={!hasOutput || !activeAccount}
+              >
+                {activeAccount && (
+                  <ScheduleSection
+                    clipId={clip.id}
+                    activeAccount={activeAccount}
+                    fileUrls={fileUrls}
+                  />
+                )}
+              </ExpandableSection>
             </div>
           )}
         </Card.Body>
@@ -193,27 +193,6 @@ const ClipPromptItem: React.FC<ClipPromptItemProps> = ({
         onClose={() => setShowEditModal(false)}
         clip={clip}
         onSave={onRefresh}
-      />
-
-      <AddMediaModal
-        isOpen={showAddMediaModal}
-        onClose={() => setShowAddMediaModal(false)}
-        clipId={clip.id}
-        onSuccess={onRefresh}
-        defaultType={addMediaType}
-        imageGenerator={imageProvider}
-        imageModel={imageModel}
-        videoGenerator={videoProvider}
-        videoModel={videoModel}
-        audioGenerator={audioProvider}
-        audioModel={audioModel}
-      />
-
-      <MediaPreviewModal
-        isOpen={!!previewUrl}
-        onClose={() => setPreviewUrl(null)}
-        mediaUrl={previewUrl || ''}
-        mediaType={previewType}
       />
 
       <ConfirmModal

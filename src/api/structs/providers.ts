@@ -12,10 +12,70 @@ export type VideoProvider = 'runware';
 export type AudioProvider = 'suno' | 'udio';
 
 /** Chat/Text inference API providers */
-export type ChatProvider = 'openrouter' | 'google';
+export type ChatProvider = 'openrouter';
 
-/** All generator types (union of all providers) */
+/** All provider types */
+export type Provider = ImageProvider | VideoProvider | AudioProvider | ChatProvider;
+
+/** All generator types (for media generation) */
 export type Generator = ImageProvider | VideoProvider | AudioProvider;
+
+// ===========================================
+// PROVIDER DEFINITIONS
+// ===========================================
+
+export interface ProviderDefinition {
+  value: string;
+  label: string;
+  icon?: string;
+}
+
+export const IMAGE_PROVIDERS: ProviderDefinition[] = [
+  { value: 'pollinations', label: 'Pollinations', icon: '🌸' },
+  { value: 'openrouter', label: 'OpenRouter', icon: '🔀' },
+  { value: 'runware', label: 'Runware', icon: '⚡' },
+];
+
+export const VIDEO_PROVIDERS: ProviderDefinition[] = [
+  { value: 'runware', label: 'Runware', icon: '⚡' },
+];
+
+export const AUDIO_PROVIDERS: ProviderDefinition[] = [
+  { value: 'suno', label: 'Suno', icon: '🎵' },
+  { value: 'udio', label: 'Udio', icon: '🎶' },
+];
+
+export const CHAT_PROVIDERS: ProviderDefinition[] = [
+  { value: 'openrouter', label: 'OpenRouter', icon: '🔀' },
+];
+
+// ===========================================
+// PROVIDER -> RESPONSE KEY MAPPING
+// ===========================================
+
+/** Maps provider to the key in ModelsResponse */
+export type ProviderResponseKey = 'openrouter' | 'runware';
+
+export const PROVIDER_RESPONSE_KEYS: Record<string, ProviderResponseKey | null> = {
+  pollinations: null,  // No models fetched
+  openrouter: 'openrouter',
+  runware: 'runware',
+  suno: null,          // No models fetched (yet)
+  udio: null,          // No models fetched (yet)
+};
+
+/** Providers that require model selection */
+export const PROVIDERS_WITH_MODELS: Provider[] = ['openrouter', 'runware'];
+
+/** Check if a provider requires model selection */
+export function providerRequiresModel(provider: Provider): boolean {
+  return PROVIDERS_WITH_MODELS.includes(provider);
+}
+
+/** Get the response key for a provider */
+export function getProviderResponseKey(provider: Provider): ProviderResponseKey | null {
+  return PROVIDER_RESPONSE_KEYS[provider] ?? null;
+}
 
 // ===========================================
 // MODEL TYPES (Actual AI Models)

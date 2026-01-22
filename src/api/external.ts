@@ -1,11 +1,6 @@
 import axios from 'axios';
 import { BASE_URL } from './helpers';
 
-// ==================== Models ====================
-
-const getModels = () =>
-  axios.get(`${BASE_URL}/models`).then((res) => res.data);
-
 // ==================== Users ====================
 
 const getUsers = () =>
@@ -47,7 +42,6 @@ const scheduleClip = (clipId: string, platforms: string[]) =>
 // ==================== Export ====================
 
 const ExternalAPI = {
-  getModels,
   getUsers,
   addUser,
   setActiveUser,

@@ -6,3 +6,4 @@ export { default as EditClipPromptModal } from './EditClipPromptModal';
 export { default as EditMediaModal } from './EditMediaModal'
 export { default as MediaPreviewModal } from './MediaPreviewModal';
 export { default as ProxyModal } from './ProxyModal';
+export { default as ConfirmationModal } from './ConfirmationModal';

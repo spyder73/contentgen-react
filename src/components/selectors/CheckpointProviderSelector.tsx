@@ -1,7 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import API from '../../api/api';
-import { ChatProvider, DEFAULT_CHAT_MODEL } from '../../api/structs/providers';
-import { AIModel } from '../../api/structs/model';
+import ModelsAPI from '../../api/models';
+import { 
+  ChatProvider, 
+  DEFAULT_CHAT_MODEL,
+  CHAT_PROVIDERS,
+  ProviderDefinition,
+  providerRequiresModel,
+} from '../../api/structs/providers';
+import { AIModel, formatPrice } from '../../api/structs/model';
 import { Select, Dropdown } from '../ui';
 
 interface CheckpointProviderSelectorProps {
@@ -9,32 +15,10 @@ interface CheckpointProviderSelectorProps {
   model: string;
   onProviderChange: (provider: ChatProvider | '') => void;
   onModelChange: (model: string) => void;
-  allowInherit?: boolean; // Show "inherit from run" option
+  allowInherit?: boolean;
 }
 
-const PROVIDER_OPTIONS_WITH_INHERIT = [
-  { value: '', label: 'Inherit from run' },
-  { value: 'openrouter', label: 'OpenRouter' },
-  { value: 'google', label: 'Google' },
-];
-
-const PROVIDER_OPTIONS = [
-  { value: 'openrouter', label: 'OpenRouter' },
-  { value: 'google', label: 'Google' },
-];
-
-function supportsTextOutput(model: AIModel): boolean {
-  const modalities = model.architecture?.output_modalities;
-  if (!modalities) return true;
-  return modalities.includes('text') && !modalities.includes('image');
-}
-
-function formatPrice(model: AIModel): string {
-  if (!model.pricing?.completion) return 'Free';
-  const price = parseFloat(model.pricing.completion);
-  if (price === 0) return 'Free';
-  return `$${price.toFixed(4)}`;
-}
+const INHERIT_OPTION: ProviderDefinition = { value: '', label: 'Inherit from run' };
 
 const CheckpointProviderSelector: React.FC<CheckpointProviderSelectorProps> = ({
   provider,
@@ -46,30 +30,24 @@ const CheckpointProviderSelector: React.FC<CheckpointProviderSelectorProps> = ({
   const [models, setModels] = useState<AIModel[]>([]);
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    const fetchModels = async () => {
-      if (provider !== 'openrouter') {
-        setModels([]);
-        return;
-      }
+  const providerOptions = allowInherit 
+    ? [INHERIT_OPTION, ...CHAT_PROVIDERS] 
+    : CHAT_PROVIDERS;
 
+  useEffect(() => {
+    if (!provider || !providerRequiresModel(provider as ChatProvider)) {
+      setModels([]);
+      return;
+    }
+
+    const fetchModels = async () => {
       setLoading(true);
       try {
-        const response = await API.getModels();
-        const allModels = [
-          ...(response.recommended || []),
-          ...(response.all || []),
-        ];
+        const chatModels = await ModelsAPI.getChatModels();
+        setModels(chatModels);
 
-        const uniqueModels = Array.from(
-          new Map(allModels.map((m) => [m.id, m])).values()
-        );
-        const textModels = uniqueModels.filter(supportsTextOutput);
-        setModels(textModels);
-
-        // Set default model if provider changed and no model selected
-        if (!model && textModels.length > 0) {
-          onModelChange(textModels[0]?.id || DEFAULT_CHAT_MODEL);
+        if (!model && chatModels.length > 0) {
+          onModelChange(chatModels[0]?.id || DEFAULT_CHAT_MODEL);
         }
       } catch (error) {
         console.error('Failed to fetch models:', error);
@@ -88,8 +66,6 @@ const CheckpointProviderSelector: React.FC<CheckpointProviderSelectorProps> = ({
     rightLabel: formatPrice(m),
   }));
 
-  const providerOptions = allowInherit ? PROVIDER_OPTIONS_WITH_INHERIT : PROVIDER_OPTIONS;
-
   return (
     <div className="flex gap-2 items-center">
       <Select
@@ -98,7 +74,6 @@ const CheckpointProviderSelector: React.FC<CheckpointProviderSelectorProps> = ({
         onChange={(e) => {
           const newProvider = e.target.value as ChatProvider | '';
           onProviderChange(newProvider);
-          // Reset model when provider changes
           if (newProvider !== provider) {
             onModelChange('');
           }
@@ -106,7 +81,7 @@ const CheckpointProviderSelector: React.FC<CheckpointProviderSelectorProps> = ({
         selectSize="sm"
       />
 
-      {provider === 'openrouter' && (
+      {provider && providerRequiresModel(provider as ChatProvider) && (
         <Dropdown
           options={dropdownOptions}
           value={model}
@@ -114,19 +89,6 @@ const CheckpointProviderSelector: React.FC<CheckpointProviderSelectorProps> = ({
           placeholder="Select model"
           searchable
           loading={loading}
-        />
-      )}
-
-      {provider === 'google' && (
-        <Select
-          options={[
-            { value: '', label: 'Default' },
-            { value: 'gemini-pro', label: 'Gemini Pro' },
-            { value: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash' },
-          ]}
-          value={model}
-          onChange={(e) => onModelChange(e.target.value)}
-          selectSize="sm"
         />
       )}
 

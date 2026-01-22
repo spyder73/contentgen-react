@@ -5,6 +5,7 @@ import ExternalAPI from './external';
 import UpscalerAPI from './upscaler';
 import MediaAPI from './media';
 import PipelineAPI from './pipeline';
+import ModelsAPI from './models';
 
 // Unified API object for backward compatibility
 const API = {
@@ -56,6 +57,13 @@ const API = {
   updatePromptTemplate: PipelineAPI.updatePromptTemplate,
   deletePromptTemplate: PipelineAPI.deletePromptTemplate,
 
+  // Models
+  getModels: ModelsAPI.getModels,
+  getChatModels: ModelsAPI.getChatModels,
+  getImageModels: ModelsAPI.getImageModels,
+  getVideoModels: ModelsAPI.getVideoModels,
+  getModelsForProvider: ModelsAPI.getModelsForProvider,
+
   // Music
   createMusicPrompt: MusicAPI.createMusicPrompt,
   getMusicPrompts: MusicAPI.getMusicPrompts,
@@ -66,7 +74,6 @@ const API = {
   deleteProxy: ProxyAPI.deleteProxy,
 
   // External
-  getModels: ExternalAPI.getModels,
   addUser: ExternalAPI.addUser,
   getUsers: ExternalAPI.getUsers,
   setActiveUser: ExternalAPI.setActiveUser,

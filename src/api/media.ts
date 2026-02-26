@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { BASE_URL } from './helpers';
-import { MediaType, Generator } from './structs';
+import { MediaType, MediaOutputSpec, Generator } from './structs';
 
 // ==================== Request Types ====================
 
@@ -9,6 +9,7 @@ interface NewMediaItemRequest {
   type: MediaType;
   prompt: string;
   metadata?: Record<string, any>;
+  output_spec?: MediaOutputSpec;
   generator?: Generator;
   model?: string;
 }
@@ -32,18 +33,20 @@ const createImage = (
   prompt: string,
   metadata?: Record<string, any>,
   generator?: Generator,
-  model?: string
+  model?: string,
+  outputSpec?: MediaOutputSpec
 ) =>
-  createMediaItem({ clip_id: clipId, type: 'image', prompt, metadata, generator, model });
+  createMediaItem({ clip_id: clipId, type: 'image', prompt, metadata, generator, model, output_spec: outputSpec });
 
 const createAIVideo = (
   clipId: string,
   prompt: string,
   metadata?: Record<string, any>,
   generator?: Generator,
-  model?: string
+  model?: string,
+  outputSpec?: MediaOutputSpec
 ) =>
-  createMediaItem({ clip_id: clipId, type: 'ai_video', prompt, metadata, generator, model });
+  createMediaItem({ clip_id: clipId, type: 'ai_video', prompt, metadata, generator, model, output_spec: outputSpec });
 
 const createAudio = (
   clipId: string,

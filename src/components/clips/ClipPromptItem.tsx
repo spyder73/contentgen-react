@@ -45,7 +45,7 @@ const ClipPromptItem: React.FC<ClipPromptItemProps> = ({
   const totalMedia = images.length + aiVideos.length + audios.length;
 
   const fileUrls = clip.file_urls || [];
-  const hasOutput = fileUrls.length > 0;
+  const hasOutput = fileUrls.length > 0 && !fileUrls.some(url => url.includes('waiting'));
   const clipStyle = clip.style?.style || 'standard';
 
   const handleDelete = async () => {

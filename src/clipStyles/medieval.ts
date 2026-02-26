@@ -1,9 +1,9 @@
 import { ClipStyleConfig } from './types';
 
-export const standardStyle: ClipStyleConfig = {
-  id: 'standard',
-  name: 'Standard',
-  description: 'Classic short reel with front text, slides, and music',
+export const medievalStyle: ClipStyleConfig = {
+  id: 'medieval',
+  name: 'Medieval',
+  description: 'Medieval themed reel with stylized text and slides',
   metadataFields: [
     { key: 'frontText', label: 'Front Text', type: 'textarea', description: 'One line per row' },
     { key: 'frontVidDuration', label: 'Intro Duration (s)', type: 'text', placeholder: '3' },

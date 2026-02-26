@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { PipelineTemplate } from '../../api/structs';
 import PipelineAPI from '../../api/pipeline';
 import ClipAPI from '../../api/clip';
@@ -18,6 +18,7 @@ const IdeaGeneratorPanel: React.FC<Props> = ({
   onIdeasCreated,
 }) => {
   const [templates, setTemplates] = useState<PipelineTemplate[]>([]);
+  const processingRef = useRef<Set<string>>(new Set());
   const {
     runs,
     startRun,
@@ -35,9 +36,11 @@ const IdeaGeneratorPanel: React.FC<Props> = ({
   // Handle completed runs
   useEffect(() => {
     const completedRuns = runs.filter((r) => r.status === 'completed');
-
     for (const run of completedRuns) {
-      handleCompleted(run.id);
+      if (!processingRef.current.has(run.id)) {
+        processingRef.current.add(run.id);
+        handleCompleted(run.id);
+      }
     }
   }, [runs]);
 
@@ -62,18 +65,21 @@ const IdeaGeneratorPanel: React.FC<Props> = ({
       if (!run) return;
 
       // Create idea(s) from output
-      if (output.startsWith('[')) {
+      /*if (output.startsWith('[')) {
         const list = JSON.parse(output) as string[];
         await ClipAPI.createIdeas(run.initial_input, list);
       } else {
         await ClipAPI.createIdea(run.initial_input, output);
-      }
+      }*/
+     await ClipAPI.createIdea(run.initial_input, output);
 
       onIdeasCreated();
       removeRun(runId);
     } catch (err) {
       console.error('Failed to create ideas:', err);
       removeRun(runId);
+    } finally {
+      processingRef.current.delete(runId);
     }
   };
 

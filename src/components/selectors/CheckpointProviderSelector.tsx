@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import ModelsAPI from '../../api/models';
-import { 
-  ChatProvider, 
+import {
+  ChatProvider,
   DEFAULT_CHAT_MODEL,
   CHAT_PROVIDERS,
   ProviderDefinition,
@@ -30,10 +30,11 @@ const CheckpointProviderSelector: React.FC<CheckpointProviderSelectorProps> = ({
   const [models, setModels] = useState<AIModel[]>([]);
   const [loading, setLoading] = useState(false);
 
-  const providerOptions = allowInherit 
-    ? [INHERIT_OPTION, ...CHAT_PROVIDERS] 
+  const providerOptions = allowInherit
+    ? [INHERIT_OPTION, ...CHAT_PROVIDERS]
     : CHAT_PROVIDERS;
 
+  // Fetch models when provider changes
   useEffect(() => {
     if (!provider || !providerRequiresModel(provider as ChatProvider)) {
       setModels([]);
@@ -45,10 +46,6 @@ const CheckpointProviderSelector: React.FC<CheckpointProviderSelectorProps> = ({
       try {
         const chatModels = await ModelsAPI.getChatModels();
         setModels(chatModels);
-
-        if (!model && chatModels.length > 0) {
-          onModelChange(chatModels[0]?.id || DEFAULT_CHAT_MODEL);
-        }
       } catch (error) {
         console.error('Failed to fetch models:', error);
       } finally {
@@ -58,6 +55,17 @@ const CheckpointProviderSelector: React.FC<CheckpointProviderSelectorProps> = ({
 
     fetchModels();
   }, [provider]);
+
+  // Auto-select default model when needed
+  useEffect(() => {
+    if (!provider || !providerRequiresModel(provider as ChatProvider)) {
+      return;
+    }
+
+    if (!model && models.length > 0) {
+      onModelChange(models[0]?.id || DEFAULT_CHAT_MODEL);
+    }
+  }, [provider, model, models, onModelChange]);
 
   const dropdownOptions = models.map((m) => ({
     value: m.id,

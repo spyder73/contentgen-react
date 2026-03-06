@@ -20,7 +20,6 @@ const IdeasList: React.FC<IdeasListProps> = ({
   mediaProfile,
 }) => {
   const [ideas, setIdeas] = useState<Idea[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
 
   const fetchIdeas = async () => {
     try {

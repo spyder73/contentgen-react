@@ -44,10 +44,6 @@ const VideoProviderSelector: React.FC<VideoProviderSelectorProps> = ({
       try {
         const videoModels = await ModelsAPI.getVideoModels(provider);
         setModels(videoModels);
-
-        if (!model && videoModels.length > 0) {
-          onModelChange(videoModels[0]?.id || DEFAULT_VIDEO_MODEL);
-        }
       } catch (error) {
         console.error('Failed to fetch models:', error);
       } finally {
@@ -58,10 +54,20 @@ const VideoProviderSelector: React.FC<VideoProviderSelectorProps> = ({
     fetchModels();
   }, [provider]);
 
+  useEffect(() => {
+    if (!providerRequiresModel(provider)) {
+      return;
+    }
+
+    if (!model && models.length > 0) {
+      onModelChange(models[0]?.id || DEFAULT_VIDEO_MODEL);
+    }
+  }, [provider, model, models, onModelChange]);
+
   // Reset settings when model changes (clears stale fields from previous model)
   useEffect(() => {
     onSettingsChange({});
-  }, [model]);
+  }, [model, onSettingsChange]);
 
   // Pre-fetch constraints so modal opens instantly
   useEffect(() => {

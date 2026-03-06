@@ -44,10 +44,6 @@ const ImageProviderSelector: React.FC<ImageProviderSelectorProps> = ({
       try {
         const imageModels = await ModelsAPI.getImageModels(provider);
         setModels(imageModels);
-
-        if (!model && imageModels.length > 0) {
-          onModelChange(imageModels[0]?.id || DEFAULT_IMAGE_MODEL);
-        }
       } catch (error) {
         console.error('Failed to fetch models:', error);
       } finally {
@@ -58,10 +54,20 @@ const ImageProviderSelector: React.FC<ImageProviderSelectorProps> = ({
     fetchModels();
   }, [provider]);
 
+  useEffect(() => {
+    if (!providerRequiresModel(provider)) {
+      return;
+    }
+
+    if (!model && models.length > 0) {
+      onModelChange(models[0]?.id || DEFAULT_IMAGE_MODEL);
+    }
+  }, [provider, model, models, onModelChange]);
+
   // Reset settings when model changes (clears stale fields from previous model)
   useEffect(() => {
     onSettingsChange({});
-  }, [model]);
+  }, [model, onSettingsChange]);
 
   // Pre-fetch constraints so modal opens instantly
   useEffect(() => {

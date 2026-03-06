@@ -34,7 +34,7 @@ const IdeaGeneratorPanel: React.FC<IdeaGeneratorPanelProps> = ({
   // Load templates
   useEffect(() => {
     PipelineAPI.listPipelineTemplates().then(setTemplates);
-  }, []);
+  });
 
   // Handle completed runs
   useEffect(() => {

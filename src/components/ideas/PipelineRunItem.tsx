@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { PipelineRun, PipelineTemplate, CheckpointResult } from '../../api/structs';
+import { PipelineRun, PipelineTemplate } from '../../api/structs';
 import { Button, Badge } from '../ui';
 
 interface Props {
@@ -24,7 +24,6 @@ const PipelineRunItem: React.FC<Props> = ({
 
   const isTerminal = ['completed', 'failed', 'cancelled'].includes(run.status);
   const isPaused = run.status === 'paused';
-  const currentCheckpoint = template.checkpoints[run.current_checkpoint];
 
   const getStatusBadge = () => {
     switch (run.status) {

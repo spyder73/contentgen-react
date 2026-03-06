@@ -73,7 +73,7 @@ const ModelSettingsModal: React.FC<ModelSettingsModalProps> = ({
     return () => {
       cancelled = true;
     };
-  }, [isOpen, modelId, externalConstraints]);
+  }, [isOpen, modelId, modality, externalConstraints]);
 
   // Merge defaults + current settings when constraints become available
   useEffect(() => {
@@ -86,7 +86,7 @@ const ModelSettingsModal: React.FC<ModelSettingsModalProps> = ({
     const merged = { ...defaults, ...settings };
     const validated = validateSettings(merged, constraints);
     setLocalSettings(validated);
-  }, [constraints, isOpen]);
+  }, [constraints, isOpen, settings]);
 
   const handleFieldChange = useCallback(
     (key: string, value: unknown) => {

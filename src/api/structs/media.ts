@@ -1,15 +1,6 @@
+import { MediaOutputSpec } from './media-spec';
 export type MediaType = 'image' | 'ai_video' | 'audio';
 
-
-export interface MediaOutputSpec {
-  width?: number;
-  height?: number;
-  duration?: number;
-  fps?: number;
-  steps?: number;
-  provider?: string;
-  model?: string;
-}
 
 export interface MediaItem {
   id: string;

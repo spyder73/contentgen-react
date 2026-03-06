@@ -5,16 +5,19 @@ import ClipAPI from '../../api/clip';
 import IdeaInputForm from './IdeaInputForm';
 import PipelineRunItem from './PipelineRunItem';
 import { usePipelineRuns } from '../../hooks/usePipelineRuns';
+import { MediaProfile } from '../../api/structs/media-spec';
 
-interface Props {
+interface IdeaGeneratorPanelProps {
   chatProvider: string;
   chatModel: string;
+  mediaProfile: MediaProfile;
   onIdeasCreated: () => void;
 }
 
-const IdeaGeneratorPanel: React.FC<Props> = ({
+const IdeaGeneratorPanel: React.FC<IdeaGeneratorPanelProps> = ({
   chatProvider,
   chatModel,
+  mediaProfile,
   onIdeasCreated,
 }) => {
   const [templates, setTemplates] = useState<PipelineTemplate[]>([]);
@@ -49,6 +52,7 @@ const IdeaGeneratorPanel: React.FC<Props> = ({
       autoMode,
       provider: chatProvider,
       model: chatModel,
+      mediaProfile,
     });
   };
 
@@ -71,7 +75,7 @@ const IdeaGeneratorPanel: React.FC<Props> = ({
       } else {
         await ClipAPI.createIdea(run.initial_input, output);
       }*/
-     await ClipAPI.createIdea(run.initial_input, output);
+      await ClipAPI.createIdea(run.initial_input, output);
 
       onIdeasCreated();
       removeRun(runId);

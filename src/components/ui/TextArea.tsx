@@ -1,10 +1,12 @@
 import React from 'react';
 
 interface TextAreaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {
+  label?: string;
   error?: string;
 }
 
 const TextArea: React.FC<TextAreaProps> = ({
+  label,
   error,
   className = '',
   rows = 3,
@@ -14,6 +16,11 @@ const TextArea: React.FC<TextAreaProps> = ({
 
   return (
     <div className="w-full">
+      {label && (
+        <label className="block text-sm font-medium text-slate-300 mb-1">
+          {label}
+        </label>
+      )}
       <textarea
         className={`textarea ${errorClass} ${className}`}
         rows={rows}

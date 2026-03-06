@@ -1,24 +1,9 @@
 import axios from 'axios';
 import { BASE_URL } from './helpers';
 import { ClipMetadata } from './structs';
+import { MediaOutputSpec, MediaProfile, MediaPrompt } from './structs/media-spec';
 
 // ==================== Request Types ====================
-
-interface MediaOutputSpec {
-  width?: number;
-  height?: number;
-  duration?: number;
-  fps?: number;
-  steps?: number;
-  provider?: string;
-  model?: string;
-}
-
-interface MediaPrompt {
-  prompt: string;
-  outputSpec?: MediaOutputSpec;
-  [key: string]: any;
-}
 
 interface NewClipPromptRequest {
   name?: string;
@@ -27,13 +12,6 @@ interface NewClipPromptRequest {
   audioPrompts?: MediaPrompt[];
   metadata?: ClipMetadata;
   clipStyle?: string;
-  imageGenerator?: string;
-  imageModel?: string;
-  videoGenerator?: string;
-  videoModel?: string;
-  audioGenerator?: string;
-  audioModel?: string;
-  config?: Record<string, any>;
 }
 
 interface EditClipPromptRequest {
@@ -48,6 +26,21 @@ interface NewClipIdeaRequest {
   clip_prompt_list?: string[];
 }
 
+// ==================== Helpers ====================
+
+const withDefaultOutputSpec = (
+  prompts: MediaPrompt[] | undefined,
+  fallback?: MediaOutputSpec
+): MediaPrompt[] | undefined => {
+  if (!prompts?.length) return prompts;
+  if (!fallback) return prompts;
+
+  return prompts.map((p) => {
+    const mergedSpec = p.outputSpec ? { ...fallback, ...p.outputSpec } : { ...fallback };
+    return { ...p, outputSpec: mergedSpec };
+  });
+};
+
 // ==================== Clip API ====================
 
 const getClipPrompt = (clipId: string) =>
@@ -59,25 +52,21 @@ const getClipPrompts = () =>
 const createClipPrompt = (request: NewClipPromptRequest) =>
   axios.post(`${BASE_URL}/clips`, request).then((res) => res.data.clip_prompt_id);
 
+/**
+ * Parses a clip prompt JSON and optionally hydrates missing/partial per-item outputSpec
+ * from run-level mediaProfile defaults.
+ */
 const createClipPromptFromJson = (
   json: string,
-  imageGenerator: string,
-  imageModel: string,
-  videoGenerator: string,
-  videoModel: string,
-  audioGenerator: string,
-  audioModel: string
+  mediaProfile?: MediaProfile
 ) => {
   const parsed = JSON.parse(json) as NewClipPromptRequest;
+
   return createClipPrompt({
     ...parsed,
-    // Per-item outputSpec.provider/model takes priority over these fallbacks
-    imageGenerator: parsed.imageGenerator || imageGenerator,
-    imageModel: parsed.imageModel || imageModel,
-    videoGenerator: parsed.videoGenerator || videoGenerator,
-    videoModel: parsed.videoModel || videoModel,
-    audioGenerator: parsed.audioGenerator || audioGenerator,
-    audioModel: parsed.audioModel || audioModel,
+    imagePrompts: withDefaultOutputSpec(parsed.imagePrompts, mediaProfile?.image),
+    aiVideoPrompts: withDefaultOutputSpec(parsed.aiVideoPrompts, mediaProfile?.video),
+    audioPrompts: withDefaultOutputSpec(parsed.audioPrompts, mediaProfile?.audio),
   });
 };
 

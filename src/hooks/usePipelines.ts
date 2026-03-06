@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { PipelineTemplate, CheckpointConfig } from '../api/structs';
+import { PipelineTemplate, CheckpointConfig, PipelineOutputFormat } from '../api/structs';
 import PipelineAPI from '../api/pipeline';
 
 export function usePipelines() {
@@ -28,9 +28,16 @@ export function usePipelines() {
     id: string,
     name: string,
     checkpoints: CheckpointConfig[],
-    description?: string
+    description?: string,
+    outputFormat?: PipelineOutputFormat
   ) => {
-    const created = await PipelineAPI.createPipelineTemplate(id, name, checkpoints, description);
+    const created = await PipelineAPI.createPipelineTemplate(
+      id,
+      name,
+      checkpoints,
+      description,
+      outputFormat
+    );
     setPipelines((prev) => [...prev, created]);
     return created;
   };

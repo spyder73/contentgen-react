@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { MediaItem, MediaType } from '../../../api/structs/media';
-import { Generator } from '../../../api/structs/providers';
+import { MediaProfile, MediaOutputSpec } from '../../../api/structs/media-spec';
 import { MediaSection } from '../../ui';
 import { AddMediaModal, MediaPreviewModal } from '../../modals';
 
@@ -11,12 +11,7 @@ interface MediaEditorSectionProps {
   audios: MediaItem[];
   clipStyle: string;
   onRefresh: () => void;
-  imageGenerator: Generator;
-  imageModel: string;
-  videoGenerator: Generator;
-  videoModel: string;
-  audioGenerator: Generator;
-  audioModel: string;
+  mediaProfile: MediaProfile;
 }
 
 const MediaEditorSection: React.FC<MediaEditorSectionProps> = ({
@@ -26,31 +21,18 @@ const MediaEditorSection: React.FC<MediaEditorSectionProps> = ({
   audios,
   clipStyle,
   onRefresh,
-  imageGenerator,
-  imageModel,
-  videoGenerator,
-  videoModel,
-  audioGenerator,
-  audioModel,
+  mediaProfile,
 }) => {
   const [showAddMediaModal, setShowAddMediaModal] = useState(false);
   const [addMediaType, setAddMediaType] = useState<MediaType>('image');
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewType, setPreviewType] = useState<'image' | 'video'>('image');
 
-  const getGenerator = (type: MediaType): Generator => {
+  const getOutputSpec = (type: MediaType): MediaOutputSpec | undefined => {
     switch (type) {
-      case 'image': return imageGenerator;
-      case 'ai_video': return videoGenerator;
-      case 'audio': return audioGenerator;
-    }
-  };
-
-  const getModel = (type: MediaType): string => {
-    switch (type) {
-      case 'image': return imageModel;
-      case 'ai_video': return videoModel;
-      case 'audio': return audioModel;
+      case 'image': return mediaProfile.image;
+      case 'ai_video': return mediaProfile.video;
+      case 'audio': return mediaProfile.audio;
     }
   };
 
@@ -73,8 +55,7 @@ const MediaEditorSection: React.FC<MediaEditorSectionProps> = ({
           items={images}
           clipStyle={clipStyle}
           onRefresh={onRefresh}
-          generator={getGenerator('image')}
-          model={getModel('image')}
+          outputSpec={getOutputSpec('image')}
           onPreview={(url) => handlePreview(url, 'image')}
           onAdd={() => openAddMedia('image')}
         />
@@ -85,8 +66,7 @@ const MediaEditorSection: React.FC<MediaEditorSectionProps> = ({
           items={aiVideos}
           clipStyle={clipStyle}
           onRefresh={onRefresh}
-          generator={getGenerator('ai_video')}
-          model={getModel('ai_video')}
+          outputSpec={getOutputSpec('ai_video')}
           onPreview={(url) => handlePreview(url, 'ai_video')}
           onAdd={() => openAddMedia('ai_video')}
         />
@@ -97,8 +77,7 @@ const MediaEditorSection: React.FC<MediaEditorSectionProps> = ({
           items={audios}
           clipStyle={clipStyle}
           onRefresh={onRefresh}
-          generator={getGenerator('audio')}
-          model={getModel('audio')}
+          outputSpec={getOutputSpec('audio')}
           onAdd={() => openAddMedia('audio')}
         />
       </div>
@@ -109,12 +88,7 @@ const MediaEditorSection: React.FC<MediaEditorSectionProps> = ({
         clipId={clipId}
         onSuccess={onRefresh}
         defaultType={addMediaType}
-        imageGenerator={imageGenerator}
-        imageModel={imageModel}
-        videoGenerator={videoGenerator}
-        videoModel={videoModel}
-        audioGenerator={audioGenerator}
-        audioModel={audioModel}
+        mediaProfile={mediaProfile}
       />
 
       <MediaPreviewModal

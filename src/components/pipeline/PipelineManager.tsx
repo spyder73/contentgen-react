@@ -1,11 +1,18 @@
 import React, { useState } from 'react';
 import { PipelineManagerProps } from './types';
-import { PipelineTemplate, PromptTemplate, CheckpointConfig } from '../../api/structs';
+import { PipelineTemplate, PromptTemplate } from '../../api/structs';
 import { usePipelines } from '../../hooks/usePipelines';
 import { usePromptTemplates } from '../../hooks/usePromptTemplates';
 import PipelineList from './PipelineList';
 import PipelineEditor from './PipelineEditor';
 import PromptTemplateEditor from './PromptTemplateEditor';
+
+const DEFAULT_OUTPUT_FORMAT = {
+  enabled: true,
+  aspect_ratio: '9:16',
+  image_long_edge: 1920,
+  video_long_edge: 1920,
+};
 
 const PipelineManager: React.FC<PipelineManagerProps> = ({ isOpen, onClose }) => {
   const {
@@ -36,7 +43,7 @@ const PipelineManager: React.FC<PipelineManagerProps> = ({ isOpen, onClose }) =>
     if (!name) return;
 
     try {
-      const created = await createPipeline(id, name, [], '');
+      const created = await createPipeline(id, name, [], '', DEFAULT_OUTPUT_FORMAT);
       setSelectedPipelineId(created.id);
     } catch (err: any) {
       alert(`Failed to create: ${err.message}`);
@@ -47,6 +54,7 @@ const PipelineManager: React.FC<PipelineManagerProps> = ({ isOpen, onClose }) =>
     await updatePipeline(pipeline.id, {
       name: pipeline.name,
       description: pipeline.description,
+      output_format: pipeline.output_format,
       checkpoints: pipeline.checkpoints,
     });
   };

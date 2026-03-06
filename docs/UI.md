@@ -1,280 +1,75 @@
-# UI System Documentation
+# Frontend UI Brief
 
-The UI system provides reusable primitives and CSS classes for consistent styling.
+## Objective
+Improve usability while preserving current generation workflow.
+Shift from hardcoded configuration forms to schema-driven rendering where possible.
 
-## 📁 Structure
+## Current UI Architecture
+Main layout in `App.tsx`:
+- left: ideas/pipeline generation
+- right: clips/media editing and render outputs
+- top header: provider/model selectors + user/account controls
 
-```
-src/
-├── components/ui/          # React UI components
-│   ├── Button.tsx
-│   ├── Input.tsx
-│   ├── Select.tsx
-│   ├── TextArea.tsx
-│   ├── Card.tsx
-│   ├── Badge.tsx
-│   ├── Dropdown.tsx
-│   └── index.ts
-└── index.css               # Tailwind + custom classes
-```
+Key component domains:
+- `components/ideas/*`
+- `components/clips/*`
+- `components/pipeline/*`
+- `components/selectors/*`
 
----
+## What Already Works
+- dynamic model settings modal built from backend constraints fields.
+- provider/model selection with constraints prefetch.
+- pipeline run controls with pause/continue/regenerate flow.
+- real-time refresh via websocket.
 
-## 🧩 UI Components
+## UX Debt
+1. Clipstyle forms are hardcoded (`src/clipStyles/*`).
+2. Pipeline checkpoint editor still uses raw prompt dialogs for some actions.
+3. Event feedback is generic; action-level progress context is thin.
+4. Large cards can feel cluttered during multi-clip runs.
 
-### Button
+## Redesign Direction (Current Phase)
+- keep existing IA and component boundaries.
+- improve clarity with explicit sections and progressive disclosure.
+- avoid full visual rewrite before contract cleanup lands.
 
-```tsx
-import { Button } from './components/ui';
+## Schema-Driven Form Strategy
+Priority: clipstyle metadata forms.
 
-<Button variant="primary" size="md" loading={false}>
-  Click me
-</Button>
+Target flow:
+1. frontend fetches clipstyle schema from backend passthrough routes.
+2. style selector renders available styles from API, not hardcoded list.
+3. edit modal renders clip metadata fields from schema metadata.
+4. only style-specific presentation rules remain local.
 
-<Button variant="danger" size="sm">Delete</Button>
+Model settings path is already schema-driven and should remain the pattern.
 
-<Button icon onClick={handleClick}>🔄</Button>
-```
+## Component Priorities
+1. `EditClipPromptModal`
+   - replace static `getStyleConfig` usage with schema-based field rendering.
+2. `ClipStyleSelector`
+   - fetch options from API instead of `clipStyles/index.ts`.
+3. pipeline editor
+   - improve checkpoint add/edit interactions (remove prompt() calls).
+4. websocket notifications
+   - map event names to precise, user-readable progress messages.
 
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `variant` | `'primary' \| 'secondary' \| 'success' \| 'danger' \| 'purple' \| 'ghost'` | `'primary'` | Button style |
-| `size` | `'sm' \| 'md' \| 'lg'` | `'md'` | Button size |
-| `icon` | `boolean` | `false` | Icon-only button |
-| `loading` | `boolean` | `false` | Show loading state |
-| `disabled` | `boolean` | `false` | Disable button |
+## Accessibility and Clarity Rules
+- keep labels explicit and tied to API field names where relevant.
+- show defaults and ranges for constrained numeric fields.
+- show validation errors inline before submission.
+- avoid hidden auto-mutations of user text except normalized array fields.
 
-### Input
+## Non-Goals
+- new design system migration.
+- animation-heavy redesign.
+- introducing deep routing/state framework changes.
 
-```tsx
-import { Input } from './components/ui';
+## Acceptance Criteria
+- no hardcoded clipstyle field definitions required for standard flow.
+- user can create/edit clips using API-provided style schemas.
+- pipeline and clip actions remain at most two clicks from current cards.
+- build passes (`npm run build`) and behavior parity is preserved.
 
-<Input
-  placeholder="Enter text..."
-  inputSize="md"
-  error="This field is required"
-/>
-```
-
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `inputSize` | `'sm' \| 'md'` | `'md'` | Input size |
-| `error` | `string` | - | Error message |
-
-### TextArea
-
-```tsx
-import { TextArea } from './components/ui';
-
-<TextArea
-  rows={4}
-  placeholder="Enter description..."
-  error="Required"
-/>
-```
-
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `rows` | `number` | `3` | Number of rows |
-| `error` | `string` | - | Error message |
-
-### Select
-
-```tsx
-import { Select } from './components/ui';
-
-<Select
-  options={[
-    { value: 'a', label: 'Option A' },
-    { value: 'b', label: 'Option B' },
-  ]}
-  value={selected}
-  onChange={(e) => setSelected(e.target.value)}
-  selectSize="sm"
-  placeholder="Choose..."
-/>
-```
-
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `options` | `{ value: string, label: string }[]` | - | Options list |
-| `selectSize` | `'sm' \| 'md'` | `'md'` | Select size |
-| `placeholder` | `string` | - | Placeholder option |
-
-### Dropdown
-
-Searchable dropdown with custom options.
-
-```tsx
-import { Dropdown } from './components/ui';
-
-<Dropdown
-  options={[
-    { value: 'model-1', label: 'Model 1', sublabel: 'Fast', rightLabel: 'Free' },
-    { value: 'model-2', label: 'Model 2', sublabel: 'Quality', rightLabel: '$0.01' },
-  ]}
-  value={selected}
-  onChange={setSelected}
-  placeholder="Select model"
-  searchable
-  loading={false}
-/>
-```
-
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `options` | `DropdownOption[]` | - | Options with label, sublabel, rightLabel |
-| `value` | `string` | - | Selected value |
-| `onChange` | `(value: string) => void` | - | Change handler |
-| `searchable` | `boolean` | `false` | Enable search |
-| `loading` | `boolean` | `false` | Loading state |
-
-### Card
-
-```tsx
-import { Card } from './components/ui';
-
-<Card hover onClick={handleClick}>
-  <Card.Header>Title</Card.Header>
-  <Card.Body>Content here</Card.Body>
-</Card>
-```
-
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `hover` | `boolean` | `false` | Hover effect |
-| `onClick` | `() => void` | - | Click handler |
-
-### Badge
-
-```tsx
-import { Badge } from './components/ui';
-
-<Badge variant="green">Active</Badge>
-<Badge variant="yellow">Pending</Badge>
-<Badge variant="red">Error</Badge>
-```
-
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `variant` | `'blue' \| 'green' \| 'yellow' \| 'red' \| 'purple'` | `'blue'` | Badge color |
-
----
-
-## 🎨 CSS Classes
-
-Custom Tailwind `@apply` classes in `index.css`.
-
-### Buttons
-
-| Class | Description |
-|-------|-------------|
-| `.btn` | Base button styles |
-| `.btn-primary` | Blue primary button |
-| `.btn-secondary` | Gray secondary button |
-| `.btn-success` | Green success button |
-| `.btn-danger` | Red danger button |
-| `.btn-purple` | Purple button |
-| `.btn-ghost` | Transparent ghost button |
-| `.btn-sm` | Small button size |
-| `.btn-icon` | Icon-only button |
-
-### Inputs
-
-| Class | Description |
-|-------|-------------|
-| `.input` | Text input styling |
-| `.input-sm` | Small input |
-| `.select` | Select dropdown styling |
-| `.select-sm` | Small select |
-| `.textarea` | Textarea styling |
-
-### Cards
-
-| Class | Description |
-|-------|-------------|
-| `.card` | Card container |
-| `.card-hover` | Card with hover effect |
-| `.card-header` | Card header section |
-| `.card-body` | Card body section |
-
-### Dropdowns
-
-| Class | Description |
-|-------|-------------|
-| `.dropdown` | Dropdown container |
-| `.dropdown-item` | Dropdown option |
-| `.dropdown-item-active` | Selected option |
-
-### Badges
-
-| Class | Description |
-|-------|-------------|
-| `.badge` | Base badge |
-| `.badge-blue` | Blue badge |
-| `.badge-green` | Green badge |
-| `.badge-yellow` | Yellow badge |
-| `.badge-red` | Red badge |
-| `.badge-purple` | Purple badge |
-
-### Modals
-
-| Class | Description |
-|-------|-------------|
-| `.modal-overlay` | Modal backdrop |
-| `.modal-content` | Modal container |
-| `.modal-header` | Modal header |
-| `.modal-title` | Modal title text |
-| `.modal-body` | Modal content area |
-| `.modal-footer` | Modal footer |
-
-### Layout
-
-| Class | Description |
-|-------|-------------|
-| `.page-header` | App header |
-| `.page-container` | Max-width container |
-| `.section-title` | Section heading |
-| `.section-subtitle` | Section subheading |
-
-### Lists
-
-| Class | Description |
-|-------|-------------|
-| `.list-container` | Scrollable list |
-| `.list-item` | List item card |
-| `.list-empty` | Empty state |
-
-### Utilities
-
-| Class | Description |
-|-------|-------------|
-| `.text-muted` | Gray muted text |
-| `.text-success` | Green success text |
-| `.text-danger` | Red error text |
-| `.text-warning` | Yellow warning text |
-| `.truncate-2` | 2-line truncation |
-| `.truncate-3` | 3-line truncation |
-
-### Animations
-
-| Class | Description |
-|-------|-------------|
-| `.animate-fade-in` | Fade in animation |
-| `.animate-slide-up` | Slide up animation |
-
----
-
-## 🎨 Color Palette
-
-| Color | Usage | Tailwind Class |
-|-------|-------|----------------|
-| Slate 900 | Background | `bg-slate-900` |
-| Slate 800 | Cards | `bg-slate-800` |
-| Slate 700 | Inputs/Borders | `bg-slate-700`, `border-slate-700` |
-| Slate 600 | Hover states | `hover:bg-slate-600` |
-| Slate 400 | Muted text | `text-slate-400` |
-| Blue 600 | Primary actions | `bg-blue-600` |
-| Green 600 | Success actions | `bg-green-600` |
-| Red 600 | Danger actions | `bg-red-600` |
-| Purple 600 | Special actions | `bg-purple-600` |
+## Follow-up
+After contract cleanup and schema-driven forms are stable, evaluate full UX redesign pass.

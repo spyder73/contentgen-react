@@ -62,6 +62,7 @@ const API = {
   getChatModels: ModelsAPI.getChatModels,
   getImageModels: ModelsAPI.getImageModels,
   getVideoModels: ModelsAPI.getVideoModels,
+  getModelConstraints: ModelsAPI.getModelConstraints,
   getModelsForProvider: ModelsAPI.getModelsForProvider,
 
   // Music

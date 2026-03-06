@@ -1,38 +1,26 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
 import API from '../../api/api';
 import { ClipPrompt } from '../../api/structs/clip';
 import { Account } from '../../api/structs/user';
-import { ImageProvider, VideoProvider, AudioProvider } from '../../api/structs/providers';
+import { MediaProfile } from '../../api/structs/media-spec';
 import ClipPromptItem from './ClipPromptItem';
 
 interface ClipPromptsListProps {
   refreshTrigger: number;
-  imageProvider: ImageProvider;
-  imageModel: string;
-  videoProvider: VideoProvider;
-  videoModel: string;
-  audioProvider: AudioProvider;
-  audioModel: string;
+  mediaProfile: MediaProfile;
   activeAccount: Account | null;
 }
 
 const ClipPromptsList: React.FC<ClipPromptsListProps> = ({
   refreshTrigger,
-  imageProvider,
-  imageModel,
-  videoProvider,
-  videoModel,
-  audioProvider,
-  audioModel,
+  mediaProfile,
   activeAccount,
 }) => {
-  // useState always re-renders the component when a change is noticed
   const [clips, setClips] = useState<ClipPrompt[]>([]);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
 
   const fetchClips = async () => {
-
     try {
       const data = await API.getClipPrompts();
       setClips(data || []);
@@ -80,12 +68,7 @@ const ClipPromptsList: React.FC<ClipPromptsListProps> = ({
               isExpanded={expandedId === clip.id}
               onToggleExpand={() => setExpandedId(expandedId === clip.id ? null : clip.id)}
               onRefresh={fetchClips}
-              imageProvider={imageProvider}
-              imageModel={imageModel}
-              videoProvider={videoProvider}
-              videoModel={videoModel}
-              audioProvider={audioProvider}
-              audioModel={audioModel}
+              mediaProfile={mediaProfile}
               activeAccount={activeAccount}
             />
           ))}

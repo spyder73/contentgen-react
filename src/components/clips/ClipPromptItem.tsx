@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { ClipPrompt } from '../../api/structs/clip';
+import { MediaProfile } from '../../api/structs/media-spec';
 import { Account } from '../../api/structs/user';
-import { ImageProvider, VideoProvider, AudioProvider } from '../../api/structs/providers';
 import { Card, Button, Badge, Thumbnail, ExpandableSection } from '../ui';
 import { constructMediaUrl } from '../../api/helpers';
 import OutputGallery from './OutputGallery';
@@ -14,12 +14,7 @@ interface ClipPromptItemProps {
   isExpanded: boolean;
   onToggleExpand: () => void;
   onRefresh: () => void;
-  imageProvider: ImageProvider;
-  imageModel: string;
-  videoProvider: VideoProvider;
-  videoModel: string;
-  audioProvider: AudioProvider;
-  audioModel: string;
+  mediaProfile: MediaProfile;
   activeAccount: Account | null;
 }
 
@@ -28,12 +23,7 @@ const ClipPromptItem: React.FC<ClipPromptItemProps> = ({
   isExpanded,
   onToggleExpand,
   onRefresh,
-  imageProvider,
-  imageModel,
-  videoProvider,
-  videoModel,
-  audioProvider,
-  audioModel,
+  mediaProfile,
   activeAccount,
 }) => {
   const [showEditModal, setShowEditModal] = useState(false);
@@ -131,12 +121,7 @@ const ClipPromptItem: React.FC<ClipPromptItemProps> = ({
                   audios={audios}
                   clipStyle={clipStyle}
                   onRefresh={onRefresh}
-                  imageGenerator={imageProvider}
-                  imageModel={imageModel}
-                  videoGenerator={videoProvider}
-                  videoModel={videoModel}
-                  audioGenerator={audioProvider}
-                  audioModel={audioModel}
+                  mediaProfile={mediaProfile}
                 />
               </ExpandableSection>
 

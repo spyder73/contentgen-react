@@ -6,14 +6,17 @@ import {
   PromptTemplate,
   MediaAttachment,
   CheckpointConfig,
+  PipelineOutputFormat,
 } from './structs';
+import { MediaProfile } from './structs/media-spec';
 
 // ==================== Request Types ====================
 
 interface StartPipelineRequest {
-  template_id: string;       // Fixed: was pipeline_template_id
+  template_id: string;
   initial_input: string;
   auto_mode?: boolean;
+  media_profile?: MediaProfile;
   provider?: string;
   model?: string;
 }
@@ -31,12 +34,14 @@ interface CreatePipelineTemplateRequest {
   id: string;
   name: string;
   description?: string;
+  output_format?: PipelineOutputFormat;
   checkpoints: CheckpointConfig[];
 }
 
 interface UpdatePipelineTemplateRequest {
   name?: string;
   description?: string;
+  output_format?: PipelineOutputFormat;
   checkpoints?: CheckpointConfig[];
 }
 
@@ -59,8 +64,6 @@ interface PipelineOutputResponse {
   output?: string;
 }
 
-// Update the startPipeline return type
-
 interface StartPipelineResponse {
   run_id: string;
   status: string;
@@ -73,15 +76,17 @@ const startPipeline = (
   initialInput: string,
   options?: {
     autoMode?: boolean;
+    mediaProfile?: MediaProfile;
     provider?: string;
     model?: string;
   }
-): Promise<StartPipelineResponse> => 
+): Promise<StartPipelineResponse> =>
   axios
     .post(`${BASE_URL}/pipelines/start`, {
       template_id: templateId,
       initial_input: initialInput,
       auto_mode: options?.autoMode ?? true,
+      media_profile: options?.mediaProfile,
       provider: options?.provider,
       model: options?.model,
     } as StartPipelineRequest)
@@ -132,13 +137,15 @@ const createPipelineTemplate = (
   id: string,
   name: string,
   checkpoints: CheckpointConfig[],
-  description?: string
+  description?: string,
+  outputFormat?: PipelineOutputFormat
 ) =>
   axios
     .post<PipelineTemplate>(`${BASE_URL}/pipeline-templates`, {
       id,
       name,
       description,
+      output_format: outputFormat,
       checkpoints,
     } as CreatePipelineTemplateRequest)
     .then((res) => res.data);
@@ -214,7 +221,6 @@ const deletePromptTemplate = (templateId: string) =>
 // ==================== Export ====================
 
 const PipelineAPI = {
-  // Pipeline Runs
   startPipeline,
   getPipeline,
   listPipelines,
@@ -222,22 +228,16 @@ const PipelineAPI = {
   regenerateCheckpoint,
   addAttachment,
   cancelPipeline,
-
-  // Pipeline Templates
   createPipelineTemplate,
   getPipelineTemplate,
   listPipelineTemplates,
   updatePipelineTemplate,
   deletePipelineTemplate,
-
-  // Prompt Templates
   createPromptTemplate,
   getPromptTemplate,
   listPromptTemplates,
   updatePromptTemplate,
   deletePromptTemplate,
-
-  // Pipeline Output
   getPipelineOutput,
 };
 

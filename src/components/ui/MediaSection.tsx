@@ -1,8 +1,8 @@
 import React from 'react';
 import { MediaItem } from '../../api/structs/media';
-import { Generator } from '../../api/structs/providers';
+import { MediaOutputSpec } from '../../api/structs/media-spec';
 import { MediaItemComponent } from '../clips';
-import Button from './Button';
+import { Button } from '../ui';
 
 interface MediaSectionProps {
   title: string;
@@ -10,10 +10,9 @@ interface MediaSectionProps {
   items: MediaItem[];
   clipStyle: string;
   onRefresh: () => void;
-  generator: Generator;
-  model: string;
+  outputSpec?: MediaOutputSpec;
   onPreview?: (url: string) => void;
-  onAdd: () => void;
+  onAdd?: () => void;
 }
 
 const MediaSection: React.FC<MediaSectionProps> = ({
@@ -22,38 +21,38 @@ const MediaSection: React.FC<MediaSectionProps> = ({
   items,
   clipStyle,
   onRefresh,
-  generator,
-  model,
+  outputSpec,
   onPreview,
   onAdd,
 }) => {
   return (
     <div>
       <div className="flex items-center justify-between mb-2">
-        <p className="text-slate-400 text-sm font-medium">
+        <h4 className="text-sm font-medium text-slate-300">
           {icon} {title} ({items.length})
-        </p>
-        <Button variant="ghost" size="sm" onClick={onAdd}>
-          ➕
-        </Button>
+        </h4>
+        {onAdd && (
+          <Button size="sm" variant="ghost" onClick={onAdd}>
+            + Add
+          </Button>
+        )}
       </div>
 
-      {items.length > 0 ? (
+      {items.length === 0 ? (
+        <p className="text-xs text-slate-500 italic">None yet</p>
+      ) : (
         <div className="space-y-2">
           {items.map((item) => (
             <MediaItemComponent
               key={item.id}
-              mediaItem={item}
+              item={item}
               clipStyle={clipStyle}
               onRefresh={onRefresh}
-              generator={generator}
-              model={model}
+              outputSpec={item.output_spec ?? outputSpec}
               onPreview={onPreview}
             />
           ))}
         </div>
-      ) : (
-        <p className="text-slate-600 text-xs">No {title.toLowerCase()} yet</p>
       )}
     </div>
   );

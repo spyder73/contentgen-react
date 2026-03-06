@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { BASE_URL } from './helpers';
-import { MediaType, Generator } from './structs';
+import { MediaType } from './structs';
+import { MediaOutputSpec } from './structs/media-spec';
 
 // ==================== Request Types ====================
 
@@ -9,14 +10,16 @@ interface NewMediaItemRequest {
   type: MediaType;
   prompt: string;
   metadata?: Record<string, any>;
-  generator?: Generator;
-  model?: string;
+  output_spec?: MediaOutputSpec;
 }
 
 interface EditMediaItemRequest {
-  new_prompt_string: string;
-  generator?: Generator;
-  model?: string;
+  new_prompt_string?: string;
+  output_spec?: MediaOutputSpec;
+}
+
+interface RegenerateMediaRequest {
+  output_spec?: MediaOutputSpec;
 }
 
 // ==================== API Functions ====================
@@ -31,34 +34,51 @@ const createImage = (
   clipId: string,
   prompt: string,
   metadata?: Record<string, any>,
-  generator?: Generator,
-  model?: string
+  outputSpec?: MediaOutputSpec
 ) =>
-  createMediaItem({ clip_id: clipId, type: 'image', prompt, metadata, generator, model });
+  createMediaItem({
+    clip_id: clipId,
+    type: 'image',
+    prompt,
+    metadata,
+    output_spec: outputSpec,
+  });
 
 const createAIVideo = (
   clipId: string,
   prompt: string,
   metadata?: Record<string, any>,
-  generator?: Generator,
-  model?: string
+  outputSpec?: MediaOutputSpec
 ) =>
-  createMediaItem({ clip_id: clipId, type: 'ai_video', prompt, metadata, generator, model });
+  createMediaItem({
+    clip_id: clipId,
+    type: 'ai_video',
+    prompt,
+    metadata,
+    output_spec: outputSpec,
+  });
 
 const createAudio = (
   clipId: string,
   prompt: string,
   metadata?: Record<string, any>,
-  generator?: Generator,
-  model?: string
+  outputSpec?: MediaOutputSpec
 ) =>
-  createMediaItem({ clip_id: clipId, type: 'audio', prompt, metadata, generator, model });
+  createMediaItem({
+    clip_id: clipId,
+    type: 'audio',
+    prompt,
+    metadata,
+    output_spec: outputSpec,
+  });
 
 const editMediaItem = (mediaId: string, request: EditMediaItemRequest) =>
   axios.put(`${BASE_URL}/media/${mediaId}`, request).then((res) => res.data);
 
-const regenerateMedia = (mediaId: string, generator?: Generator, model?: string) =>
-  axios.post(`${BASE_URL}/media/${mediaId}/regenerate`, { generator, model }).then((res) => res.data);
+const regenerateMedia = (mediaId: string, request?: RegenerateMediaRequest) =>
+  axios
+    .post(`${BASE_URL}/media/${mediaId}/regenerate`, request ?? {})
+    .then((res) => res.data);
 
 const editMediaMetadata = (mediaId: string, key: string, value: any) =>
   axios.put(`${BASE_URL}/media/${mediaId}/metadata`, { key, value }).then((res) => res.data);

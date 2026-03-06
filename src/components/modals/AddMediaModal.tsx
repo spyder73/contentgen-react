@@ -1,24 +1,17 @@
 import React, { useState } from 'react';
 import API from '../../api/api';
 import { MediaType } from '../../api/structs/media';
-import { Generator } from '../../api/structs/providers';
-import { Button, TextArea } from '../ui';
-import Modal from './Modal';
+import { MediaProfile, MediaOutputSpec } from '../../api/structs/media-spec';
+import { Modal } from '../modals';
+import { Button, TextArea, Select } from '../ui';
 
 interface AddMediaModalProps {
   isOpen: boolean;
   onClose: () => void;
   clipId: string;
   onSuccess: () => void;
-  // Default type, can be overridden
-  defaultType?: MediaType;
-  // Generators for each type
-  imageGenerator: Generator;
-  imageModel: string;
-  videoGenerator: Generator;
-  videoModel: string;
-  audioGenerator?: Generator;
-  audioModel?: string;
+  defaultType: MediaType;
+  mediaProfile: MediaProfile;
 }
 
 const AddMediaModal: React.FC<AddMediaModalProps> = ({
@@ -26,115 +19,97 @@ const AddMediaModal: React.FC<AddMediaModalProps> = ({
   onClose,
   clipId,
   onSuccess,
-  defaultType = 'image',
-  imageGenerator,
-  imageModel,
-  videoGenerator,
-  videoModel,
-  audioGenerator = 'suno',
-  audioModel = '',
+  defaultType,
+  mediaProfile,
 }) => {
-  const [mediaType, setMediaType] = useState<MediaType>(defaultType);
+  const [type, setType] = useState<MediaType>(defaultType);
   const [prompt, setPrompt] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const getGeneratorForType = (type: MediaType): { generator: Generator; model: string } => {
+  const getOutputSpec = (): MediaOutputSpec | undefined => {
     switch (type) {
-      case 'image':
-        return { generator: imageGenerator, model: imageModel };
-      case 'ai_video':
-        return { generator: videoGenerator, model: videoModel };
-      case 'audio':
-        return { generator: audioGenerator, model: audioModel };
+      case 'image': return mediaProfile.image;
+      case 'ai_video': return mediaProfile.video;
+      case 'audio': return mediaProfile.audio;
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async () => {
     if (!prompt.trim()) return;
 
-    setIsLoading(true);
+    setIsSubmitting(true);
     try {
-      const { generator, model } = getGeneratorForType(mediaType);
-      
-      await API.createMediaItem({
-        clip_id: clipId,
-        type: mediaType,
-        prompt,
-        generator,
-        model,
-      });
-      
+      const outputSpec = getOutputSpec();
+
+      switch (type) {
+        case 'image':
+          await API.createImage(clipId, prompt, undefined, outputSpec);
+          break;
+        case 'ai_video':
+          await API.createAIVideo(clipId, prompt, undefined, outputSpec);
+          break;
+        case 'audio':
+          await API.createAudio(clipId, prompt, undefined, outputSpec);
+          break;
+      }
+
       setPrompt('');
-      onSuccess();
       onClose();
+      onSuccess();
     } catch (error: any) {
       alert(`Failed: ${error.message}`);
     } finally {
-      setIsLoading(false);
+      setIsSubmitting(false);
     }
   };
 
-  const { generator, model } = getGeneratorForType(mediaType);
+  const outputSpec = getOutputSpec();
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Add Media">
-      <form onSubmit={handleSubmit} className="space-y-4">
-        
-        {/* Media Type Selector */}
+    <Modal isOpen={isOpen} onClose={onClose} title={`Add ${type}`}>
+      <div className="space-y-4">
         <div>
-          <label className="block text-sm text-slate-400 mb-2">Media Type</label>
-          <div className="flex gap-2">
-            {(['image', 'ai_video', 'audio'] as MediaType[]).map((type) => (
-              <button
-                key={type}
-                type="button"
-                onClick={() => setMediaType(type)}
-                className={`flex-1 py-2 px-3 rounded text-sm transition-colors ${
-                  mediaType === type
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
-                }`}
-              >
-                {type === 'image' && '🖼️ Image'}
-                {type === 'ai_video' && '🎬 Video'}
-                {type === 'audio' && '🎵 Audio'}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Prompt */}
-        <div>
-          <label className="block text-sm text-slate-400 mb-1">Prompt</label>
-          <TextArea
-            value={prompt}
-            onChange={(e) => setPrompt(e.target.value)}
-            placeholder={`Describe the ${mediaType.replace('_', ' ')} you want to generate...`}
-            rows={4}
+          <label className="block text-sm font-medium text-slate-300 mb-1">
+            Type
+          </label>
+          <Select
+            value={type}
+            onChange={(e) => setType(e.target.value as MediaType)}
+            options={[
+              { value: 'image', label: '🖼️ Image' },
+              { value: 'ai_video', label: '🎬 AI Video' },
+              { value: 'audio', label: '🎵 Audio' },
+            ]}
+            selectSize="sm"
           />
         </div>
 
-        {/* Generator Info */}
-        <div className="text-xs text-slate-500">
-          Using: {generator} • {model || 'default'}
-        </div>
+        <TextArea
+          value={prompt}
+          onChange={(e) => setPrompt(e.target.value)}
+          placeholder="Describe what to generate..."
+          rows={4}
+        />
 
-        {/* Actions */}
-        <div className="flex justify-end gap-3">
-          <Button variant="secondary" onClick={onClose} type="button">
+        {outputSpec && (
+          <div className="text-xs text-slate-500 bg-slate-800/50 rounded p-2">
+            <span className="font-medium">Output:</span>{' '}
+            {outputSpec.provider}/{outputSpec.model}
+            {outputSpec.width && outputSpec.height
+              ? ` · ${outputSpec.width}×${outputSpec.height}`
+              : ''}
+          </div>
+        )}
+
+        <div className="flex justify-end gap-2">
+          <Button variant="ghost" onClick={onClose}>
             Cancel
           </Button>
-          <Button
-            variant="primary"
-            type="submit"
-            loading={isLoading}
-            disabled={!prompt.trim()}
-          >
-            Generate
+          <Button onClick={handleSubmit} disabled={isSubmitting || !prompt.trim()}>
+            {isSubmitting ? 'Creating...' : 'Create'}
           </Button>
         </div>
-      </form>
+      </div>
     </Modal>
   );
 };

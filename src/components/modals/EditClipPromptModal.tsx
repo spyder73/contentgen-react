@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import API from '../../api/api';
 import { ClipPrompt } from '../../api/structs';
-import { ClipStyleSelector } from '../selectors';
 import { getStyleConfig, MetadataFieldConfig } from '../../clipStyles';
+import { ClipStyleSelector } from '../selectors';
 import { Button, Input, TextArea } from '../ui';
 import Modal from './Modal';
 
@@ -13,26 +13,28 @@ interface EditClipPromptModalProps {
   onSave: () => void;
 }
 
-const EditClipPromptModal: React.FC<EditClipPromptModalProps> = ({
-  isOpen,
-  onClose,
-  clip,
-  onSave,
-}) => {
+const EditClipPromptModal: React.FC<EditClipPromptModalProps> = ({ isOpen, onClose, clip, onSave }) => {
   const [name, setName] = useState('');
   const [style, setStyle] = useState('standard');
   const [metadata, setMetadata] = useState<Record<string, any>>({});
   const [isLoading, setIsLoading] = useState(false);
-
   const styleConfig = getStyleConfig(style);
-  const clipStyle = clip.style?.style;
 
   useEffect(() => {
-    if (clip) {
-      setName(clip.name || '');
-      setStyle(clipStyle || 'standard');
-      setMetadata(clip.metadata || {});
+    const nextStyle = clip.style?.style || 'standard';
+    const nextMetadata = { ...(clip.metadata || {}) };
+    if (nextMetadata.frontText !== undefined) {
+      if (Array.isArray(nextMetadata.frontText)) {
+        nextMetadata.frontText = nextMetadata.frontText.map((v: any) => String(v).trim()).filter(Boolean);
+      } else if (typeof nextMetadata.frontText === 'string') {
+        nextMetadata.frontText = nextMetadata.frontText.split(/\r?\n/).map((v: string) => v.trim()).filter(Boolean);
+      } else {
+        nextMetadata.frontText = [];
+      }
     }
+    setName(clip.name || '');
+    setStyle(nextStyle);
+    setMetadata(nextMetadata);
   }, [clip]);
 
   const handleMetadataChange = (key: string, value: any) => {
@@ -43,10 +45,21 @@ const EditClipPromptModal: React.FC<EditClipPromptModalProps> = ({
     e.preventDefault();
     setIsLoading(true);
     try {
+      const normalizedMetadata = { ...metadata };
+      if (normalizedMetadata.frontText !== undefined) {
+        if (Array.isArray(normalizedMetadata.frontText)) {
+          normalizedMetadata.frontText = normalizedMetadata.frontText.map((v: any) => String(v).trim()).filter(Boolean);
+        } else if (typeof normalizedMetadata.frontText === 'string') {
+          normalizedMetadata.frontText = normalizedMetadata.frontText.split(/\r?\n/).map((v: string) => v.trim()).filter(Boolean);
+        } else {
+          normalizedMetadata.frontText = [];
+        }
+      }
+
       await API.editClipPrompt(clip.id, {
         name,
         clipStyle: style,
-        metadata,
+        metadata: normalizedMetadata,
       });
       onSave();
       onClose();
@@ -60,104 +73,83 @@ const EditClipPromptModal: React.FC<EditClipPromptModalProps> = ({
   const renderMetadataField = (field: MetadataFieldConfig) => {
     const value = metadata[field.key] ?? '';
 
-    switch (field.type) {
-      case 'textarea':
-        return (
-          <div key={field.key}>
-            <label className="block text-sm text-slate-400 mb-1">
-              {field.label}
-              {field.description && (
-                <span className="text-xs text-slate-500 ml-2">({field.description})</span>
-              )}
-            </label>
-            <TextArea
-              value={Array.isArray(value) ? value.join('\n') : value}
-              onChange={(e) => {
-                // Split by newlines for array fields
-                const newValue = field.description?.includes('per line')
-                  ? e.target.value.split('\n')
-                  : e.target.value;
-                handleMetadataChange(field.key, newValue);
-              }}
-              placeholder={field.placeholder}
-              rows={3}
-            />
-          </div>
-        );
-
-      case 'select':
-        return (
-          <div key={field.key}>
-            <label className="block text-sm text-slate-400 mb-1">{field.label}</label>
-            <select
-              value={value}
-              onChange={(e) => handleMetadataChange(field.key, e.target.value)}
-              className="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2 text-white"
-            >
-              <option value="">Select...</option>
-              {field.options?.map((opt) => (
-                <option key={opt} value={opt}>{opt}</option>
-              ))}
-            </select>
-          </div>
-        );
-
-      case 'select-media':
-        // TODO: fetch available media and show selector
-        return (
-          <div key={field.key}>
-            <label className="block text-sm text-slate-400 mb-1">{field.label}</label>
-            <Input
-              value={value}
-              onChange={(e) => handleMetadataChange(field.key, e.target.value)}
-              placeholder={field.placeholder || 'Media path...'}
-            />
-          </div>
-        );
-
-      case 'text':
-      default:
-        return (
-          <div key={field.key}>
-            <label className="block text-sm text-slate-400 mb-1">{field.label}</label>
-            <Input
-              value={value}
-              onChange={(e) => handleMetadataChange(field.key, e.target.value)}
-              placeholder={field.placeholder}
-            />
-          </div>
-        );
+    if (field.type === 'textarea') {
+      const fieldValue =
+        field.key === 'frontText'
+          ? (Array.isArray(value) ? value.map((v) => String(v)).join('\n') : String(value))
+          : String(value);
+      return (
+        <div key={field.key}>
+          <label className="block text-sm text-slate-400 mb-1">
+            {field.label}
+            {field.description && <span className="text-xs text-slate-500 ml-2">({field.description})</span>}
+          </label>
+          <TextArea
+            value={fieldValue}
+            onChange={(e) =>
+              handleMetadataChange(
+                field.key,
+                field.key === 'frontText'
+                  ? e.target.value.split(/\r?\n/).map((v) => v.trim()).filter(Boolean)
+                  : e.target.value
+              )
+            }
+            placeholder={field.placeholder}
+            rows={3}
+          />
+        </div>
+      );
     }
+
+    if (field.type === 'select') {
+      return (
+        <div key={field.key}>
+          <label className="block text-sm text-slate-400 mb-1">{field.label}</label>
+          <select
+            value={value}
+            onChange={(e) => handleMetadataChange(field.key, e.target.value)}
+            className="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2 text-white"
+          >
+            <option value="">Select...</option>
+            {field.options?.map((opt) => (
+              <option key={opt} value={opt}>
+                {opt}
+              </option>
+            ))}
+          </select>
+        </div>
+      );
+    }
+
+    return (
+      <div key={field.key}>
+        <label className="block text-sm text-slate-400 mb-1">{field.label}</label>
+        <Input
+          value={value}
+          onChange={(e) => handleMetadataChange(field.key, e.target.value)}
+          placeholder={field.placeholder || (field.type === 'select-media' ? 'Media path...' : undefined)}
+        />
+      </div>
+    );
   };
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Edit Clip" size="lg">
       <form onSubmit={handleSubmit} className="space-y-4">
-        
-        {/* Name */}
         <div>
           <label className="block text-sm text-slate-400 mb-1">Name</label>
-          <Input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Clip name..."
-          />
+          <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Clip name..." />
         </div>
 
-        {/* Style */}
         <ClipStyleSelector value={style} onChange={setStyle} />
 
-        {/* Dynamic Metadata Fields */}
         {styleConfig.metadataFields.length > 0 && (
           <div className="space-y-3 pt-3 border-t border-slate-700">
-            <p className="text-sm text-white font-medium">
-              {styleConfig.name} Settings
-            </p>
+            <p className="text-sm text-white font-medium">{styleConfig.name} Settings</p>
             {styleConfig.metadataFields.map(renderMetadataField)}
           </div>
         )}
 
-        {/* Actions */}
         <div className="flex justify-end gap-3 pt-4 border-t border-slate-700">
           <Button variant="secondary" onClick={onClose} type="button">
             Cancel

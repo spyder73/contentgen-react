@@ -1,27 +1,17 @@
 import axios from 'axios';
 import { BASE_URL } from './helpers';
 import { ClipMetadata } from './structs';
+import { MediaOutputSpec, MediaProfile, MediaPrompt } from './structs/media-spec';
 
 // ==================== Request Types ====================
 
 interface NewClipPromptRequest {
   name?: string;
-
-  imagePrompts?: Array<[string, ...string[]]>;
-  aiVideoPrompts?: Array<[string, ...string[]]>;
-  audioPrompts?: Array<[string, ...string[]]>;
-
+  imagePrompts?: MediaPrompt[];
+  aiVideoPrompts?: MediaPrompt[];
+  audioPrompts?: MediaPrompt[];
   metadata?: ClipMetadata;
   clipStyle?: string;
-
-  imageGenerator?: string;
-  imageModel?: string;
-
-  videoGenerator?: string;
-  videoModel?: string;
-
-  audioGenerator?: string;
-  audioModel?: string;
 }
 
 interface EditClipPromptRequest {
@@ -32,10 +22,24 @@ interface EditClipPromptRequest {
 
 interface NewClipIdeaRequest {
   clip_idea: string;
-  provider?: string;
-  model?: string;
+  clip_prompt_json?: string;
+  clip_prompt_list?: string[];
 }
 
+// ==================== Helpers ====================
+
+const withDefaultOutputSpec = (
+  prompts: MediaPrompt[] | undefined,
+  fallback?: MediaOutputSpec
+): MediaPrompt[] | undefined => {
+  if (!prompts?.length) return prompts;
+  if (!fallback) return prompts;
+
+  return prompts.map((p) => {
+    const mergedSpec = p.outputSpec ? { ...fallback, ...p.outputSpec } : { ...fallback };
+    return { ...p, outputSpec: mergedSpec };
+  });
+};
 
 // ==================== Clip API ====================
 
@@ -48,25 +52,21 @@ const getClipPrompts = () =>
 const createClipPrompt = (request: NewClipPromptRequest) =>
   axios.post(`${BASE_URL}/clips`, request).then((res) => res.data.clip_prompt_id);
 
-// Helper to create from JSON + generators
+/**
+ * Parses a clip prompt JSON and optionally hydrates missing/partial per-item outputSpec
+ * from run-level mediaProfile defaults.
+ */
 const createClipPromptFromJson = (
   json: string,
-  imageGenerator: string,
-  imageModel: string,
-  videoGenerator: string,
-  videoModel: string,
-  audioGenerator: string,
-  audioModel: string
+  mediaProfile?: MediaProfile
 ) => {
-  const parsed = JSON.parse(json);
+  const parsed = JSON.parse(json) as NewClipPromptRequest;
+
   return createClipPrompt({
     ...parsed,
-    imageGenerator,
-    imageModel,
-    videoGenerator,
-    videoModel,
-    audioGenerator,
-    audioModel,
+    imagePrompts: withDefaultOutputSpec(parsed.imagePrompts, mediaProfile?.image),
+    aiVideoPrompts: withDefaultOutputSpec(parsed.aiVideoPrompts, mediaProfile?.video),
+    audioPrompts: withDefaultOutputSpec(parsed.audioPrompts, mediaProfile?.audio),
   });
 };
 
@@ -84,31 +84,27 @@ const deleteClipPrompt = (clipId: string) =>
 const getIdeas = () =>
   axios.get(`${BASE_URL}/clip-ideas`).then((res) => res.data.prompt_ideas || []);
 
-// Create idea(s) from pipeline output - single JSON or array
 const createIdea = (clipIdea: string, clipPromptJson: string) =>
   axios.post(`${BASE_URL}/clip-ideas`, {
     clip_idea: clipIdea,
     clip_prompt_json: clipPromptJson,
   } as NewClipIdeaRequest).then((res) => res.data);
 
-// Create multiple ideas from distributor output
 const createIdeas = (clipIdea: string, clipPromptList: string[]) =>
   axios.post(`${BASE_URL}/clip-ideas`, {
     clip_idea: clipIdea,
     clip_prompt_list: clipPromptList,
   } as NewClipIdeaRequest).then((res) => res.data);
 
-// Delete an Idea
 const deleteIdea = (clipIdea: string) =>
   axios.delete(`${BASE_URL}/clip-ideas`, {
-    data: { clip_idea: clipIdea }  
+    data: { clip_idea: clipIdea },
   }).then((res) => res.data);
 
 // ==================== Available Media ====================
 
 const getAvailableMedia = () =>
   axios.get(`${BASE_URL}/clips/available-media`).then((res) => res.data.media_files || []);
-
 
 // ==================== Export ====================
 

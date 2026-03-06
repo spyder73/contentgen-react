@@ -36,10 +36,6 @@ const ChatProviderSelector: React.FC<ChatProviderSelectorProps> = ({
       try {
         const chatModels = await ModelsAPI.getChatModels();
         setModels(chatModels);
-
-        if (!model && chatModels.length > 0) {
-          onModelChange(chatModels[0]?.id || DEFAULT_CHAT_MODEL);
-        }
       } catch (error) {
         console.error('Failed to fetch models:', error);
       } finally {
@@ -49,6 +45,16 @@ const ChatProviderSelector: React.FC<ChatProviderSelectorProps> = ({
 
     fetchModels();
   }, [provider]);
+
+  useEffect(() => {
+    if (!providerRequiresModel(provider)) {
+      return;
+    }
+
+    if (!model && models.length > 0) {
+      onModelChange(models[0]?.id || DEFAULT_CHAT_MODEL);
+    }
+  }, [provider, model, models, onModelChange]);
 
   const dropdownOptions = models.map((m) => ({
     value: m.id,

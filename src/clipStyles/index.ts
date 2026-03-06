@@ -1,19 +1,24 @@
-import { ClipStyleConfig } from './types';
 import { standardStyle } from './standard';
-import { genericCarousel } from './genericCarousel'
+import { medievalStyle } from './medieval';
+import { genericCarouselStyle } from './genericCarousel';
+import { ClipStyleConfig, MetadataFieldConfig } from './types';
 
-export * from './types';
+export type { MetadataFieldConfig };
 
-// Registry of all styles
 export const clipStyles: Record<string, ClipStyleConfig> = {
   standard: standardStyle,
-  genericCarousel: genericCarousel,
+  medieval: medievalStyle,
+  genericCarousel: genericCarouselStyle,
 };
 
-// Get all style IDs
-export const getStyleIds = (): string[] => Object.keys(clipStyles);
+export function getStyleConfig(styleId: string): ClipStyleConfig {
+  return clipStyles[styleId] || standardStyle;
+}
 
-// Get a style config by ID
-export const getStyleConfig = (styleId: string): ClipStyleConfig => {
-  return clipStyles[styleId] || clipStyles.standard;
-};
+export function getAllStyles(): ClipStyleConfig[] {
+  return Object.values(clipStyles);
+}
+
+export function getStyleIds(): string[] {
+  return Object.keys(clipStyles);
+}

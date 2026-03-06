@@ -1,4 +1,6 @@
+import { MediaOutputSpec } from './media-spec';
 export type MediaType = 'image' | 'ai_video' | 'audio';
+
 
 export interface MediaItem {
   id: string;
@@ -6,4 +8,5 @@ export interface MediaItem {
   prompt: string;
   file_url: string;
   metadata: Record<string, any>;
+  output_spec?: MediaOutputSpec;
 }

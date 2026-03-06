@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { Button } from '../ui';
 import { constructMediaUrl } from '../../api/helpers';
 import { getFileType } from '../../api/structs/clip';
 import { ImageGallery, ImageComparison, VideoGallery } from './output';

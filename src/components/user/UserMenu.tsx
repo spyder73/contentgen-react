@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { User, Account } from '../../api/structs/user';
-import { Button } from '../ui';
 
 interface UserMenuProps {
   users: User[];

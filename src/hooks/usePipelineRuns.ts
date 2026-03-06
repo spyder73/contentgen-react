@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { PipelineRun } from '../api/structs';
 import PipelineAPI from '../api/pipeline';
+import { MediaProfile } from '../api/structs/media-spec';
 
 const STORAGE_KEY = 'active_pipeline_runs';
 const TERMINAL_STATES = ['completed', 'failed', 'cancelled'];
@@ -99,7 +100,12 @@ export function usePipelineRuns() {
     async (
       templateId: string,
       input: string,
-      options: { autoMode: boolean; provider: string; model: string }
+      options: {
+        autoMode: boolean;
+        provider: string;
+        model: string;
+        mediaProfile?: MediaProfile;
+      }
     ): Promise<PipelineRun> => {
       const response = await PipelineAPI.startPipeline(templateId, input, options);
       const fullRun = await PipelineAPI.getPipeline(response.run_id);

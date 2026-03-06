@@ -3,6 +3,7 @@ import { PipelineEditorProps } from './types';
 import PipelineFlow from './PipelineFlow';
 import CheckpointPanel from './CheckpointPanel';
 import { PipelineTemplate, CheckpointConfig } from '../../api/structs';
+import PipelineOutputFormatPanel from './PipelineOutputFormatPanel';
 
 const PipelineEditor: React.FC<PipelineEditorProps> = ({
   pipeline,
@@ -102,9 +103,13 @@ const PipelineEditor: React.FC<PipelineEditorProps> = ({
     setHasChanges(true);
   };
 
+  const handleOutputFormatChange = (output_format: PipelineTemplate['output_format']) => {
+    setLocalPipeline((prev) => ({ ...prev, output_format }));
+    setHasChanges(true);
+  };
+
   return (
     <div className="flex flex-col h-full">
-      {/* Header with Pipeline Info */}
       <div className="flex-shrink-0 p-4 border-b border-gray-700 bg-gray-800/50">
         <div className="flex items-center justify-between mb-3">
           <div className="flex-1 mr-4">
@@ -143,11 +148,12 @@ const PipelineEditor: React.FC<PipelineEditorProps> = ({
             </button>
           </div>
         </div>
+        <PipelineOutputFormatPanel
+          value={localPipeline.output_format}
+          onChange={handleOutputFormatChange}
+        />
       </div>
-
-      {/* Main Content: Flow + Panel */}
       <div className="flex flex-1 overflow-hidden">
-        {/* Pipeline Flow - Scrollable */}
         <div className="flex-1 overflow-auto p-4 bg-gray-900/50">
           <div className="mb-4 flex items-center justify-between">
             <h3 className="text-sm font-medium text-gray-400">Pipeline Flow</h3>
@@ -181,8 +187,6 @@ const PipelineEditor: React.FC<PipelineEditorProps> = ({
             </div>
           )}
         </div>
-
-        {/* Checkpoint Panel - Fixed Width */}
         {selectedCheckpoint && (
           <div className="w-96 border-l border-gray-700 bg-gray-800/70 overflow-auto">
             <CheckpointPanel

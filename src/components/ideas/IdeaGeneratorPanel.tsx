@@ -1,23 +1,27 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { PipelineTemplate } from '../../api/structs';
 import PipelineAPI from '../../api/pipeline';
 import ClipAPI from '../../api/clip';
 import IdeaInputForm from './IdeaInputForm';
 import PipelineRunItem from './PipelineRunItem';
 import { usePipelineRuns } from '../../hooks/usePipelineRuns';
+import { MediaProfile } from '../../api/structs/media-spec';
 
-interface Props {
+interface IdeaGeneratorPanelProps {
   chatProvider: string;
   chatModel: string;
+  mediaProfile: MediaProfile;
   onIdeasCreated: () => void;
 }
 
-const IdeaGeneratorPanel: React.FC<Props> = ({
+const IdeaGeneratorPanel: React.FC<IdeaGeneratorPanelProps> = ({
   chatProvider,
   chatModel,
+  mediaProfile,
   onIdeasCreated,
 }) => {
   const [templates, setTemplates] = useState<PipelineTemplate[]>([]);
+  const processingRef = useRef<Set<string>>(new Set());
   const {
     runs,
     startRun,
@@ -32,49 +36,50 @@ const IdeaGeneratorPanel: React.FC<Props> = ({
     PipelineAPI.listPipelineTemplates().then(setTemplates);
   }, []);
 
+  const handleCompleted = useCallback(
+    async (runId: string) => {
+      try {
+        const { ready, output } = await PipelineAPI.getPipelineOutput(runId);
+        if (!ready || !output) {
+          removeRun(runId);
+          return;
+        }
+
+        const run = runs.find((r) => r.id === runId);
+        if (!run) return;
+
+        await ClipAPI.createIdea(run.initial_input, output);
+
+        onIdeasCreated();
+        removeRun(runId);
+      } catch (err) {
+        console.error('Failed to create ideas:', err);
+        removeRun(runId);
+      } finally {
+        processingRef.current.delete(runId);
+      }
+    },
+    [runs, onIdeasCreated, removeRun]
+  );
+
   // Handle completed runs
   useEffect(() => {
     const completedRuns = runs.filter((r) => r.status === 'completed');
-
     for (const run of completedRuns) {
-      handleCompleted(run.id);
+      if (!processingRef.current.has(run.id)) {
+        processingRef.current.add(run.id);
+        handleCompleted(run.id);
+      }
     }
-  }, [runs]);
+  }, [runs, handleCompleted]);
 
   const handleStart = async (input: string, templateId: string, autoMode: boolean) => {
     await startRun(templateId, input, {
       autoMode,
       provider: chatProvider,
       model: chatModel,
+      mediaProfile,
     });
-  };
-
-  const handleCompleted = async (runId: string) => {
-    try {
-      const { ready, output } = await PipelineAPI.getPipelineOutput(runId);
-      if (!ready || !output) {
-        removeRun(runId);
-        return;
-      }
-
-      // Find the run to get initial input
-      const run = runs.find((r) => r.id === runId);
-      if (!run) return;
-
-      // Create idea(s) from output
-      if (output.startsWith('[')) {
-        const list = JSON.parse(output) as string[];
-        await ClipAPI.createIdeas(run.initial_input, list);
-      } else {
-        await ClipAPI.createIdea(run.initial_input, output);
-      }
-
-      onIdeasCreated();
-      removeRun(runId);
-    } catch (err) {
-      console.error('Failed to create ideas:', err);
-      removeRun(runId);
-    }
   };
 
   const getTemplate = (templateId: string) =>

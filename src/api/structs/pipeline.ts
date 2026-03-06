@@ -1,5 +1,7 @@
 // ==================== Pipeline Run Types ====================
 
+import { MediaProfile } from './media-spec';
+
 export type PipelineRunStatus = 
   | 'pending' 
   | 'running' 
@@ -37,19 +39,20 @@ export interface CheckpointResult {
   started_at?: string;
   completed_at?: string;
   regenerate_count: number;
-  child_pipeline_ids?: string[]; // For distributor checkpoints
+  child_pipeline_ids?: string[];
 }
 
 export interface PipelineRun {
   id: string;
   pipeline_template_id: string;
-  parent_run_id?: string; // For child pipelines
+  parent_run_id?: string;
   initial_input: string;
   initial_attachments?: MediaAttachment[];
   current_checkpoint: number;
   status: PipelineRunStatus;
   results: CheckpointResult[];
   auto_mode: boolean;
+  media_profile?: MediaProfile;
   provider?: string;
   model?: string;
   created_at: string;
@@ -70,7 +73,7 @@ export interface DistributorConfig {
 export interface CheckpointConfig {
   id: string;
   name: string;
-  type?: CheckpointType; // 'prompt' | 'distributor', defaults to 'prompt'
+  type?: CheckpointType;
   prompt_template_id: string;
   input_mapping: InputMapping;
   requires_confirm: boolean;
@@ -78,13 +81,21 @@ export interface CheckpointConfig {
   allow_attachments: boolean;
   provider?: string;
   model?: string;
-  distributor?: DistributorConfig; // Only for type='distributor'
+  distributor?: DistributorConfig;
+}
+
+export interface PipelineOutputFormat {
+  enabled: boolean;
+  aspect_ratio?: string;
+  image_long_edge?: number;
+  video_long_edge?: number;
 }
 
 export interface PipelineTemplate {
   id: string;
   name: string;
   description: string;
+  output_format?: PipelineOutputFormat;
   checkpoints: CheckpointConfig[];
   version: number;
   created_at: string;

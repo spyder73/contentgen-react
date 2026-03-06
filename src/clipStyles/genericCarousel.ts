@@ -1,6 +1,6 @@
 import { ClipStyleConfig } from './types';
 
-export const genericCarousel: ClipStyleConfig = {
+export const genericCarouselStyle: ClipStyleConfig = {
   id: 'genericCarousel',
   name: 'genericCarousel',
   description: 'Carousel Instagram Post',

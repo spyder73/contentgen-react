@@ -6,14 +6,18 @@ import {
   IMAGE_PROVIDERS,
   providerRequiresModel,
 } from '../../api/structs/providers';
-import { AIModel, formatPrice } from '../../api/structs/model';
+import { AIModel, formatPrice, ModelConstraintsResponse } from '../../api/structs/model';
+import { MediaOutputSpec } from '../../api/structs/media-spec';
 import { Select, Dropdown } from '../ui';
+import ModelSettingsModal from './ModelSettingsModal';
 
 interface ImageProviderSelectorProps {
   provider: ImageProvider;
   model: string;
   onProviderChange: (provider: ImageProvider) => void;
   onModelChange: (model: string) => void;
+  settings: Partial<MediaOutputSpec>;
+  onSettingsChange: (settings: Partial<MediaOutputSpec>) => void;
 }
 
 const ImageProviderSelector: React.FC<ImageProviderSelectorProps> = ({
@@ -21,9 +25,13 @@ const ImageProviderSelector: React.FC<ImageProviderSelectorProps> = ({
   model,
   onProviderChange,
   onModelChange,
+  settings,
+  onSettingsChange,
 }) => {
   const [models, setModels] = useState<AIModel[]>([]);
   const [loading, setLoading] = useState(false);
+  const [constraints, setConstraints] = useState<ModelConstraintsResponse | undefined>();
+  const [showSettings, setShowSettings] = useState(false);
 
   useEffect(() => {
     if (!providerRequiresModel(provider)) {
@@ -36,10 +44,6 @@ const ImageProviderSelector: React.FC<ImageProviderSelectorProps> = ({
       try {
         const imageModels = await ModelsAPI.getImageModels(provider);
         setModels(imageModels);
-
-        if (!model && imageModels.length > 0) {
-          onModelChange(imageModels[0]?.id || DEFAULT_IMAGE_MODEL);
-        }
       } catch (error) {
         console.error('Failed to fetch models:', error);
       } finally {
@@ -50,6 +54,33 @@ const ImageProviderSelector: React.FC<ImageProviderSelectorProps> = ({
     fetchModels();
   }, [provider]);
 
+  useEffect(() => {
+    if (!providerRequiresModel(provider)) {
+      return;
+    }
+
+    if (!model && models.length > 0) {
+      onModelChange(models[0]?.id || DEFAULT_IMAGE_MODEL);
+    }
+  }, [provider, model, models, onModelChange]);
+
+  // Reset settings when model changes (clears stale fields from previous model)
+  useEffect(() => {
+    onSettingsChange({});
+  }, [model, onSettingsChange]);
+
+  // Pre-fetch constraints so modal opens instantly
+  useEffect(() => {
+    if (!providerRequiresModel(provider) || !model) {
+      setConstraints(undefined);
+      return;
+    }
+
+    ModelsAPI.getModelConstraints(model, 'image')
+      .then(setConstraints)
+      .catch(() => setConstraints(undefined));
+  }, [provider, model]);
+
   const dropdownOptions = models.map((m) => ({
     value: m.id,
     label: m.name,
@@ -58,27 +89,46 @@ const ImageProviderSelector: React.FC<ImageProviderSelectorProps> = ({
   }));
 
   return (
-    <div className="flex gap-2 items-center">
-      <span className="text-muted text-sm">🖼️</span>
-
-      <Select
-        options={IMAGE_PROVIDERS}
-        value={provider}
-        onChange={(e) => onProviderChange(e.target.value as ImageProvider)}
-        selectSize="sm"
-      />
-
-      {providerRequiresModel(provider) && (
-        <Dropdown
-          options={dropdownOptions}
-          value={model}
-          onChange={onModelChange}
-          placeholder="Select model"
-          searchable
-          loading={loading}
+    <>
+      <div className="flex gap-2 items-center">
+        <Select
+          options={IMAGE_PROVIDERS}
+          value={provider}
+          onChange={(e) => onProviderChange(e.target.value as ImageProvider)}
+          selectSize="sm"
         />
-      )}
-    </div>
+
+        {providerRequiresModel(provider) && (
+          <Dropdown
+            options={dropdownOptions}
+            value={model}
+            onChange={onModelChange}
+            placeholder="Select model"
+            searchable
+            loading={loading}
+          />
+        )}
+
+        <button
+          type="button"
+          onClick={() => setShowSettings(true)}
+          className="btn-ghost btn-sm"
+          title="Image model settings"
+        >
+          ⚙️
+        </button>
+      </div>
+
+      <ModelSettingsModal
+        isOpen={showSettings}
+        onClose={() => setShowSettings(false)}
+        modelId={model}
+        modality="image"
+        settings={settings}
+        onSettingsChange={onSettingsChange}
+        constraints={constraints}
+      />
+    </>
   );
 };
 

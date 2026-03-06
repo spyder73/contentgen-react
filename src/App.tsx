@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import API from './api/api';
 import { 
   ImageProvider, 
@@ -14,6 +14,8 @@ import {
   DEFAULT_CHAT_PROVIDER,
   DEFAULT_CHAT_MODEL,
 } from './api/structs/providers';
+import { MediaOutputSpec, MediaProfile } from './api/structs/media-spec';
+import { settingsToOutputSpec } from './components/selectors/modelSettingsHelpers';
 import { User, Account } from './api/structs/user';
 import { Header, Toast } from './components/layout';
 import { AddUserModal, ProxyModal } from './components/modals';
@@ -43,6 +45,11 @@ function App() {
   const [chatProvider, setChatProvider] = useLocalStorage<ChatProvider>('chatProvider', DEFAULT_CHAT_PROVIDER);
   const [chatModel, setChatModel] = useLocalStorage('chatModel', DEFAULT_CHAT_MODEL);
 
+  // Per-modality settings (provider-specific extras like width, height, steps, etc.)
+  const [imageSettings, setImageSettings] = useLocalStorage<Partial<MediaOutputSpec>>('imageSettings', {});
+  const [videoSettings, setVideoSettings] = useLocalStorage<Partial<MediaOutputSpec>>('videoSettings', {});
+  const [audioSettings, setAudioSettings] = useLocalStorage<Partial<MediaOutputSpec>>('audioSettings', {});
+
   // User state
   const [users, setUsers] = useState<User[]>([]);
   const [activeUser, setActiveUser] = useState<User | null>(null);
@@ -51,6 +58,22 @@ function App() {
   // Modal state
   const [showProxyModal, setShowProxyModal] = useState(false);
   const [showAddUserModal, setShowAddUserModal] = useState(false);
+
+  const mediaProfile = useMemo<MediaProfile>(() => {
+    const profile: MediaProfile = {};
+
+    if (imageProvider && imageModel) {
+      profile.image = { provider: imageProvider, model: imageModel, ...settingsToOutputSpec(imageSettings) };
+    }
+    if (videoProvider && videoModel) {
+      profile.video = { provider: videoProvider, model: videoModel, ...settingsToOutputSpec(videoSettings) };
+    }
+    if (audioProvider && audioModel) {
+      profile.audio = { provider: audioProvider, model: audioModel, ...settingsToOutputSpec(audioSettings) };
+    }
+
+    return profile;
+  }, [imageProvider, imageModel, imageSettings, videoProvider, videoModel, videoSettings, audioProvider, audioModel, audioSettings]);
 
   // WebSocket for real-time updates
   const refreshIdeas = useCallback(() => setIdeasRefreshTrigger((r) => r + 1), []);
@@ -147,14 +170,20 @@ function App() {
         imageModel={imageModel}
         onImageProviderChange={setImageProvider}
         onImageModelChange={setImageModel}
+        imageSettings={imageSettings}
+        onImageSettingsChange={setImageSettings}
         videoProvider={videoProvider}
         videoModel={videoModel}
         onVideoProviderChange={setVideoProvider}
         onVideoModelChange={setVideoModel}
+        videoSettings={videoSettings}
+        onVideoSettingsChange={setVideoSettings}
         audioProvider={audioProvider}
         audioModel={audioModel}
         onAudioProviderChange={setAudioProvider}
         onAudioModelChange={setAudioModel}
+        audioSettings={audioSettings}
+        onAudioSettingsChange={setAudioSettings}
         chatProvider={chatProvider}
         chatModel={chatModel}
         onChatProviderChange={setChatProvider}
@@ -180,12 +209,7 @@ function App() {
                   refreshTrigger={ideasRefreshTrigger}
                   chatProvider={chatProvider}
                   chatModel={chatModel}
-                  imageProvider={imageProvider}
-                  imageModel={imageModel}
-                  videoProvider={videoProvider}
-                  videoModel={videoModel}
-                  audioProvider={audioProvider}
-                  audioModel={audioModel}
+                  mediaProfile={mediaProfile}
                 />
               </div>
             </div>
@@ -195,12 +219,7 @@ function App() {
               <div className="card-body flex-1 flex flex-col overflow-hidden">
                 <ClipPromptsList
                   refreshTrigger={clipsRefreshTrigger}
-                  imageProvider={imageProvider}
-                  imageModel={imageModel}
-                  videoProvider={videoProvider}
-                  videoModel={videoModel}
-                  audioProvider={audioProvider}
-                  audioModel={audioModel}
+                  mediaProfile={mediaProfile}
                   activeAccount={activeAccount}
                 />
               </div>

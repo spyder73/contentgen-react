@@ -1,38 +1,25 @@
 import React, { useEffect, useState } from 'react';
 import API from '../../api/api';
 import { Idea } from '../../api/structs/clip';
-import { ImageProvider, VideoProvider, AudioProvider, ChatProvider } from '../../api/structs/providers';
+import { ChatProvider } from '../../api/structs/providers';
+import { MediaProfile } from '../../api/structs/media-spec';
 import IdeaGeneratorPanel from './IdeaGeneratorPanel';
 import IdeaItem from './IdeaItem';
 
 interface IdeasListProps {
   refreshTrigger: number;
-  // Chat (for generating ideas)
   chatProvider: ChatProvider;
   chatModel: string;
-
-  // Media generators (passed when creating clip from idea)
-  imageProvider: ImageProvider;
-  imageModel: string;
-  videoProvider: VideoProvider;
-  videoModel: string;
-  audioProvider: AudioProvider;
-  audioModel: string;
+  mediaProfile: MediaProfile;
 }
 
 const IdeasList: React.FC<IdeasListProps> = ({
   refreshTrigger,
   chatProvider,
   chatModel,
-  imageProvider,
-  imageModel,
-  videoProvider,
-  videoModel,
-  audioProvider,
-  audioModel,
+  mediaProfile,
 }) => {
   const [ideas, setIdeas] = useState<Idea[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
 
   const fetchIdeas = async () => {
     try {
@@ -56,24 +43,13 @@ const IdeasList: React.FC<IdeasListProps> = ({
     }
   };
 
-  // Use media providers when creating clip from idea
   const handleCreatePrompt = async (idea: Idea) => {
     if (!idea.clip_prompt_json) {
       alert('Idea still generating...');
       return;
     }
     try {
-      await API.createClipPromptFromJson(
-        idea.clip_prompt_json,
-        imageProvider,
-        imageModel,
-        videoProvider,
-        videoModel,
-        audioProvider,
-        audioModel
-      );
-      console.log('idea', idea);
-      console.log('idea.clip_idea', idea.clip_idea);
+      await API.createClipPromptFromJson(idea.clip_prompt_json, mediaProfile);
       await API.deleteIdea(idea.clip_idea);
       fetchIdeas();
     } catch (error: any) {
@@ -96,6 +72,7 @@ const IdeasList: React.FC<IdeasListProps> = ({
             <IdeaGeneratorPanel
               chatProvider={chatProvider}
               chatModel={chatModel}
+              mediaProfile={mediaProfile}
               onIdeasCreated={fetchIdeas}
             />
           </div>

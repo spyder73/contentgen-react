@@ -8,47 +8,49 @@ import {
 import UserMenu from '../user/UserMenu';
 import { Button } from '../ui';
 import { PipelineManager } from '../pipeline';
-import { 
-  ImageProvider, 
-  VideoProvider,
-  AudioProvider,
-  ChatProvider,
-} from '../../api/structs/providers';
 import { User, Account } from '../../api/structs/user';
+import { MediaOutputSpec } from '../../api/structs/media-spec';
+import { ImageProvider, VideoProvider, AudioProvider, ChatProvider } from '../../api/structs/providers';
 
 interface HeaderProps {
   // Image provider
   imageProvider: ImageProvider;
   imageModel: string;
-  onImageProviderChange: (provider: ImageProvider) => void;
-  onImageModelChange: (model: string) => void;
+  onImageProviderChange: (p: ImageProvider) => void;
+  onImageModelChange: (m: string) => void;
+  imageSettings: Partial<MediaOutputSpec>;
+  onImageSettingsChange: (s: Partial<MediaOutputSpec>) => void;
   
   // Video provider
   videoProvider: VideoProvider;
   videoModel: string;
-  onVideoProviderChange: (provider: VideoProvider) => void;
-  onVideoModelChange: (model: string) => void;
+  onVideoProviderChange: (p: VideoProvider) => void;
+  onVideoModelChange: (m: string) => void;
+  videoSettings: Partial<MediaOutputSpec>;
+  onVideoSettingsChange: (s: Partial<MediaOutputSpec>) => void;
 
   // Audio provider
   audioProvider: AudioProvider;
   audioModel: string;
-  onAudioProviderChange: (provider: AudioProvider) => void;
-  onAudioModelChange: (model: string) => void;
+  onAudioProviderChange: (p: AudioProvider) => void;
+  onAudioModelChange: (m: string) => void;
+  audioSettings: Partial<MediaOutputSpec>;
+  onAudioSettingsChange: (s: Partial<MediaOutputSpec>) => void;
 
   // Chat provider (for ideas)
   chatProvider: ChatProvider;
   chatModel: string;
-  onChatProviderChange: (provider: ChatProvider) => void;
-  onChatModelChange: (model: string) => void;
+  onChatProviderChange: (p: ChatProvider) => void;
+  onChatModelChange: (m: string) => void;
   
   // User management
   users: User[];
   activeUser: User | null;
   activeAccount: Account | null;
   onAddUser: () => void;
-  onSelectUser: (userId: number) => void;
-  onRemoveUser: (userId: number) => void;
-  onSelectAccount: (accountId: string) => void;
+  onSelectUser: (id: number) => void;
+  onRemoveUser: (id: number) => void;
+  onSelectAccount: (id: string) => void;
   
   // Modals
   onOpenProxyModal: () => void;
@@ -59,14 +61,20 @@ const Header: React.FC<HeaderProps> = ({
   imageModel,
   onImageProviderChange,
   onImageModelChange,
+  imageSettings,
+  onImageSettingsChange,
   videoProvider,
   videoModel,
   onVideoProviderChange,
   onVideoModelChange,
+  videoSettings,
+  onVideoSettingsChange,
   audioProvider,
   audioModel,
   onAudioProviderChange,
   onAudioModelChange,
+  audioSettings,
+  onAudioSettingsChange,
   chatProvider,
   chatModel,
   onChatProviderChange,
@@ -113,10 +121,10 @@ const Header: React.FC<HeaderProps> = ({
             />
           </div>
 
-          {/* Bottom row - All selectors */}
+          {/* Bottom row - All selectors (each renders its own settings modal) */}
           <div className="flex items-center gap-3 flex-wrap">
             <div className="flex items-center gap-2">
-              <span className="text-xs text-slate-400">💬 Chat:</span>
+              <span className="text-xs text-slate-400">💬</span>
               <ChatProviderSelector
                 provider={chatProvider}
                 model={chatModel}
@@ -128,36 +136,39 @@ const Header: React.FC<HeaderProps> = ({
             <div className="w-px h-6 bg-slate-600" />
 
             <div className="flex items-center gap-2">
-              <span className="text-xs text-slate-400">🖼️ Image:</span>
               <ImageProviderSelector
                 provider={imageProvider}
                 model={imageModel}
                 onProviderChange={onImageProviderChange}
                 onModelChange={onImageModelChange}
+                settings={imageSettings}
+                onSettingsChange={onImageSettingsChange}
               />
             </div>
 
             <div className="w-px h-6 bg-slate-600" />
 
             <div className="flex items-center gap-2">
-              <span className="text-xs text-slate-400">🎬 Video:</span>
               <VideoProviderSelector
                 provider={videoProvider}
                 model={videoModel}
                 onProviderChange={onVideoProviderChange}
                 onModelChange={onVideoModelChange}
+                settings={videoSettings}
+                onSettingsChange={onVideoSettingsChange}
               />
             </div>
 
             <div className="w-px h-6 bg-slate-600" />
 
             <div className="flex items-center gap-2">
-              <span className="text-xs text-slate-400">🎵 Audio:</span>
               <AudioProviderSelector
                 provider={audioProvider}
                 model={audioModel}
                 onProviderChange={onAudioProviderChange}
                 onModelChange={onAudioModelChange}
+                settings={audioSettings}
+                onSettingsChange={onAudioSettingsChange}
               />
             </div>
           </div>

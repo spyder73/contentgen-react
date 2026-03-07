@@ -1,5 +1,114 @@
 # Results Log
 
+## Wave 4C3 Delivery (2026-03-07)
+
+## Scheduling UX Parity Matrix
+| Flow | Target Behavior | Status | Evidence |
+|---|---|---|---|
+| Platform selection per run | Show account platforms as selectable controls, default all selected, allow deselection per schedule action | `FIXED` | `ScheduleSection` now renders per-platform checkboxes and keeps all selected by default (`src/components/clips/sections/ScheduleSection.tsx`). |
+| Schedule payload by selected platforms | Submit only user-selected platforms to scheduler route | `FIXED` | `handleSchedule` now calls `API.scheduleClip(clipId, selectedPlatforms)` (`src/components/clips/sections/ScheduleSection.tsx`); covered by `ScheduleSection.test.tsx`. |
+| Caption visibility in schedule flow | Show current clip caption in Schedule & Publish panel | `FIXED` | Clip caption is extracted from metadata in `ClipPromptItem` and passed to schedule panel (`src/components/clips/ClipPromptItem.tsx`, `src/components/clips/sections/ScheduleSection.tsx`). |
+| Caption edit persistence before scheduling | Persist edited caption to clip metadata before scheduler submit | `FIXED` | Scheduling flow now saves caption via `API.editClipMetadata(..., 'caption', ...)` before calling `API.scheduleClip(...)` (`src/components/clips/sections/ScheduleSection.tsx`); order validated in `ScheduleSection.test.tsx`. |
+| Scheduler contract/error behavior | Keep `/v1/schedule` canonical compatibility and actionable error strings | `VALID` | No API route-order changes in Wave 4C3; scheduling still uses existing External API compatibility chain from prior wave (`src/api/external.ts`, `src/api/externalHelpers.ts`). |
+
+## Payload/Contract Deltas
+| Area | Previous Behavior | Wave 4C3 Behavior |
+|---|---|---|
+| Scheduling payload platforms | Always sent `activeAccount.platforms` from panel | Sends only currently selected platform subset from Schedule & Publish UI (`src/components/clips/sections/ScheduleSection.tsx`). |
+| Caption update path during schedule | No caption field shown/updated in schedule flow | If edited, caption is persisted to clip metadata via clip edit API before schedule submit (`src/components/clips/sections/ScheduleSection.tsx`). |
+| Scheduler API contract | Canonical `/v1/schedule` + compatibility fallback chain | `NO CHANGE` in this wave; behavior preserved (`src/api/external.ts`). |
+
+## Attachment Pool Interaction Matrix
+| Interaction | Desktop | Mobile | Status | Evidence |
+|---|---|---|---|---|
+| Collapse/expand attachment pool | Supported | Supported | `FIXED` | Added attachment pool toggle with explicit expanded/collapsed state + attached count (`src/components/ideas/IdeaInputForm.tsx`, `src/components/ideas/IdeaInputForm.test.tsx`). |
+| Drag-and-drop file attach | Supported (drop zone) | Not primary interaction | `FIXED` | Drop zone handles drag enter/over/leave/drop and adds dropped files to attachments (`src/components/ideas/IdeaInputForm.tsx`, `src/components/ideas/IdeaInputForm.test.tsx`). |
+| Click-to-upload fallback | Supported | Supported | `VALID` | Existing file input remains active in attachment panel (`src/components/ideas/IdeaInputForm.tsx`). |
+
+## Revalidation Verdicts (Orchestrator-Touched Docs)
+| File | Verdict | Notes |
+|---|---|---|
+| `docs/AGENT_TASK.md` | `VALID` | Wave 4C3 requirements are coherent and implemented in this delivery. |
+| `docs/CODING_GUIDELINES.md` | `VALID` | No conflicts with implementation approach; API-layer access and focused UI updates were preserved. |
+| `docs/API.md` | `VALID` | API abstraction and contract guidance still matches current frontend architecture. |
+| `docs/UI.md` | `VALID` | Current wave changes align with iterative UX improvement direction (no full redesign). |
+
+## Validation Commands
+| Command | Result | Notes |
+|---|---|---|
+| `npm test -- --watchAll=false` | `pass` | 13 suites, 41 tests passing, including new schedule/caption and attachment pool tests. Existing React `act` deprecation warning remains from test tooling. |
+| `npm run build` | `pass` | Production build compiled successfully after Wave 4C3 changes. |
+
+## Manual QA Notes (Desktop + Mobile)
+| Area | Desktop | Mobile | Notes |
+|---|---|---|---|
+| Schedule platform toggles + caption edit | Not run | Not run | Implemented and unit-tested; live end-to-end scheduler validation pending. |
+| Attachment pool collapse/expand | Not run | Not run | Implemented and unit-tested for visible state transitions. |
+| Attachment drag/drop + picker fallback | Not run | Not run | Drag/drop and file picker both wired; manual touch/mobile interaction pass still pending. |
+
+## Wave 4C1 Delivery (2026-03-07)
+
+## Scheduling/Account Parity Matrix
+| Flow | Backend Contract | Frontend Status | Evidence |
+|---|---|---|---|
+| Schedule creation | `POST /v1/schedule` canonical; compatibility aliases still possible | `FIXED` | API now calls `/v1/schedule` first, then `/schedule`, then legacy `/scheduler/runs` only on 404/405 (`src/api/external.ts`, `src/api/externalHelpers.ts`, `src/api/external.test.ts`). |
+| Scheduling error UX | scheduler/backend contract returns actionable `error/message` strings | `FIXED` | API errors now extract backend error payloads and throw user-actionable messages consumed by scheduling UI (`src/api/externalHelpers.ts`, `src/components/clips/ScheduleButton.tsx`, `src/components/clips/sections/ScheduleSection.tsx`). |
+| List/select active user | `GET /v1/users`, `POST /v1/users/active` | `FIXED` | User responses normalized across `{users|items}` + envelope variants; active-user switch now uses server response and updates local list state via focused hook logic (`src/api/external.ts`, `src/api/externalHelpers.ts`, `src/hooks/useUserAccountState.ts`, `src/api/external.test.ts`). |
+| Add user UX + backend validation visibility | `POST /v1/users` with scheduler validation errors (`422 missing_fields...`) | `FIXED` | Add-user modal now stays open on failure and renders inline backend error message; success still closes modal (`src/components/modals/AddUserModal.tsx`, `src/hooks/useUserAccountState.ts`). |
+| List/select active account | `GET/POST /v1/accounts/active` | `FIXED` | Active-account payloads normalized for direct and wrapped variants; user action now surfaces backend errors in toast (`src/api/external.ts`, `src/api/externalHelpers.ts`, `src/hooks/useUserAccountState.ts`, `src/api/external.test.ts`). |
+| Scheduler event visibility | canonical websocket type `run_update` | `FIXED` | `run_update` parser now recognizes canonical payloads via explicit `type: run_update` and `event_type: run.*` semantics (`src/hooks/useWebSocketEvents.ts`, `src/hooks/useWebSocketEvents.test.ts`). |
+
+## Payload/Contract Deltas
+| Area | Previous Behavior | Wave 4C1 Behavior |
+|---|---|---|
+| External route targeting (`users/accounts/schedule`) | Called unversioned routes directly; scheduling preferred `/scheduler/runs`. | Route order now prefers canonical `/v1/*` endpoints with controlled 404/405 fallback to compatibility aliases (`src/api/external.ts`). |
+| Users/accounts response handling | Relied on direct backend payload shape with minimal normalization. | Normalizes envelope variants (`data` wrapper), `users|items` list variants, account `id|_id`, and default account fields required by UI (`src/api/externalHelpers.ts`). |
+| Error handling in user/account/schedule actions | Most failures surfaced as generic axios errors or console-only logs. | API extracts backend contract messages (`error/message/detail/reason/code`) and UI displays actionable toast/modal error text (`src/api/externalHelpers.ts`, `src/App.tsx`, `src/components/modals/AddUserModal.tsx`). |
+| App user/account orchestration size | User/account side effects and handlers lived in `App.tsx` and pushed file length beyond target range. | User/account flows moved into `useUserAccountState` hook so `App.tsx` remains compact and focused on composition (`src/hooks/useUserAccountState.ts`, `src/App.tsx`). |
+| `run_update` compatibility | Required scheduler-like keywords in payload context; canonical event payloads could be ignored. | Explicit canonical detection for `type=run_update` and `event_type=run.*` added before heuristic matching (`src/hooks/useWebSocketEvents.ts`). |
+
+## Validation Commands
+| Command | Result | Notes |
+|---|---|---|
+| `npm test -- --watchAll=false` | `pass` | 11 suites, 37 tests passing; includes new scheduling/user-account/websocket compatibility tests. Existing React `act` deprecation warning remains from current test tooling. |
+| `npm run build` | `pass` | Production build compiled successfully after Wave 4C1 updates. |
+
+## Manual QA Notes (Stabilized Flows)
+| Area | Desktop | Mobile | Notes |
+|---|---|---|---|
+| Add user / select user / select account | Not run | Not run | Covered by API normalization + UI error surfacing updates and expanded unit tests; live auth/account environment pass still pending. |
+| Schedule action success/failure messaging | Not run | Not run | Contract-level error extraction implemented; schedule response compatibility is unit-tested for `/v1/schedule` and fallback aliases. |
+| Canonical `run_update` toasts | Not run | Not run | Parser and unit coverage now include canonical payload shape; live websocket feed validation remains pending. |
+
+## Wave 4A Delivery (2026-03-07)
+
+## API Assumptions and Payload Diffs
+| Area | Previous Behavior | Wave 4A Behavior |
+|---|---|---|
+| Pipeline start payload (`POST /pipelines/start`) | Sent `template_id`, `initial_input`, `auto_mode`, provider/model/media profile only. | Now also sends `initial_attachments` (normalized list) and `music_media_id` when selected (`src/api/pipeline.ts`, `src/components/ideas/IdeaInputForm.tsx`, `src/hooks/usePipelineRuns.ts`). |
+| Clip edit payload (`PUT /clips/:id`) | Sent `name`, `clipStyle`, `metadata`. | Now also sends `music_media_id`; metadata normalization persists `music_media_id` and `music.media_id` for backend compatibility (`src/components/modals/EditClipPromptModal.tsx`, `src/api/clip.ts`). |
+| Available media list (`GET /clips/available-media`) | Returned raw `media_files` payload shape to UI. | Now normalized in API layer to stable `{ id, type, name, url?, mime_type? }` items for music selectors and attachment UI (`src/api/clip.ts`). |
+| Schedule route contract | Only posted to `/schedule`. | Scheduler cutover compatible: tries `/scheduler/runs`, falls back to `/schedule`, and normalizes response to `ScheduleResponse` with `run_id/status/message` support (`src/api/external.ts`, `src/api/structs/user.ts`). |
+| Scheduling websocket contract | Toasts depended on legacy `schedule_update` event. | Canonical `run_update` parsing added; scheduler run updates now map to severity-aware toasts (`src/hooks/useWebSocketEvents.ts`). |
+
+## Validation Commands
+| Command | Result | Notes |
+|---|---|---|
+| `npm test -- --watchAll=false` | `pass` | 11 suites, 31 tests passing; existing React `act` deprecation warning remains from current test stack. |
+| `npm run build` | `pass` | Compiled successfully after Wave 4A changes. |
+
+## Manual QA Notes (Desktop + Mobile)
+| Area | Desktop | Mobile | Notes |
+|---|---|---|---|
+| Idea flow attachment block (URL/file/music) | Not run | Not run | Implemented below idea generation controls with typed/stateful rows and remove actions. |
+| Clip edit music replace/remove flow | Not run | Not run | Modal now supports selecting music media, attaching by URL, and removing selection before save. |
+| Scheduling notification contract (`run_update`) | Not run | Not run | Added parser/unit coverage; live websocket contract verification still pending. |
+
+## Unresolved UX/API Gaps
+- File attachments in idea flow are represented as attachment metadata only; there is no dedicated file-upload endpoint in current API layer for binary ingestion.
+- URL-based music attachment in edit clip currently creates an `audio` media item with URL metadata/prompt because no specialized “ingest URL as media” route is documented.
+- `run_update` toast classification uses context/status heuristics (`kind/type/run_type/scope/message`); final backend field names should be locked for fully deterministic mapping.
+
 ## Wave 3A Follow-Up Fixes (2026-03-07)
 
 ## User Feedback Addressed

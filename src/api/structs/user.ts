@@ -29,6 +29,8 @@ export interface UsersResponse {
 
 export interface ScheduleResponse {
   success: boolean;
+  run_id?: string;
+  status?: string;
   message?: string;
   scheduled_date?: string;
   warnings?: string[];

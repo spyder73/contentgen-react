@@ -11,6 +11,7 @@ jest.mock('axios', () => {
     put: jest.fn(),
     delete: jest.fn(),
     patch: jest.fn(),
+    isAxiosError: jest.fn((error) => Boolean((error as { isAxiosError?: boolean } | undefined)?.isAxiosError)),
     create: jest.fn(),
     defaults: { headers: { common: {} } },
     interceptors: {

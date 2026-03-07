@@ -19,6 +19,22 @@ interface ClipPromptItemProps {
   activeAccount: Account | null;
 }
 
+const toCaptionString = (value: unknown): string => {
+  if (typeof value === 'string') return value;
+  if (typeof value === 'number') return String(value);
+  return '';
+};
+
+const extractCaption = (clip: ClipPrompt): string => {
+  const metadata = clip.metadata || {};
+  const caption = metadata.caption
+    ?? metadata.post_caption
+    ?? metadata.postCaption
+    ?? metadata.social_caption
+    ?? metadata.socialCaption;
+  return toCaptionString(caption);
+};
+
 const ClipPromptItem: React.FC<ClipPromptItemProps> = ({
   clip,
   isExpanded,
@@ -36,6 +52,7 @@ const ClipPromptItem: React.FC<ClipPromptItemProps> = ({
   const totalMedia = images.length + aiVideos.length + audios.length;
 
   const fileUrls = clip.file_urls || [];
+  const clipCaption = extractCaption(clip);
   const hasOutput =
     fileUrls.length > 0 &&
     fileUrls.some((url) => getFileType(url) !== 'unknown') &&
@@ -164,6 +181,7 @@ const ClipPromptItem: React.FC<ClipPromptItemProps> = ({
                 {activeAccount && (
                   <ScheduleSection
                     clipId={clip.id}
+                    initialCaption={clipCaption}
                     activeAccount={activeAccount}
                     fileUrls={fileUrls}
                   />

@@ -106,4 +106,52 @@ describe('pipeline attachment normalization', () => {
     expect(runs[0].initial_attachments).toEqual([]);
     expect(runs[0].results[0].attachments).toEqual([]);
   });
+
+  it('sends normalized music media id and initial attachments on pipeline start', async () => {
+    mockedAxios.post.mockResolvedValueOnce({
+      data: {
+        run_id: 'run-3',
+        status: 'running',
+      },
+    } as any);
+
+    await PipelineAPI.startPipeline('template-2', 'Prompt', {
+      autoMode: true,
+      musicMediaId: '  music-77 ',
+      initialAttachments: [
+        {
+          type: ' music ',
+          source: ' media ',
+          state: ' selected ',
+          media_id: ' music-77 ',
+          name: ' Intro track ',
+          metadata: { role: 'music' },
+        },
+        {
+          type: ' ',
+          source: 'url',
+          url: 'https://cdn.example.com/invalid',
+        },
+      ],
+    });
+
+    expect(mockedAxios.post).toHaveBeenCalledWith(
+      expect.stringContaining('/pipelines/start'),
+      expect.objectContaining({
+        template_id: 'template-2',
+        initial_input: 'Prompt',
+        music_media_id: 'music-77',
+        initial_attachments: [
+          {
+            type: 'music',
+            source: 'media',
+            state: 'selected',
+            media_id: 'music-77',
+            name: 'Intro track',
+            metadata: { role: 'music' },
+          },
+        ],
+      })
+    );
+  });
 });

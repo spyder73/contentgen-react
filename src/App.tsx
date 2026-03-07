@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import API from './api/api';
 import { 
   ImageProvider, 
   VideoProvider,
@@ -16,13 +15,13 @@ import {
 } from './api/structs/providers';
 import { MediaOutputSpec, MediaProfile } from './api/structs/media-spec';
 import { settingsToOutputSpec } from './components/selectors/modelSettingsHelpers';
-import { User, Account } from './api/structs/user';
 import { Header, Toast } from './components/layout';
 import { AddUserModal, ProxyModal } from './components/modals';
 import { IdeasList } from './components/ideas';
 import { ClipPromptsList } from './components/clips';
 import { useWebSocketEvents } from './hooks';
 import { useLocalStorage } from './hooks/useLocalStorage';
+import { useUserAccountState } from './hooks/useUserAccountState';
 import { applyTheme, getDocumentTheme, isThemeMode, THEME_STORAGE_KEY } from './theme';
 import { ToastMessage } from './toast';
 
@@ -54,14 +53,19 @@ function App() {
   const [videoSettings, setVideoSettings] = useLocalStorage<Partial<MediaOutputSpec>>('videoSettings', {});
   const [audioSettings, setAudioSettings] = useLocalStorage<Partial<MediaOutputSpec>>('audioSettings', {});
 
-  // User state
-  const [users, setUsers] = useState<User[]>([]);
-  const [activeUser, setActiveUser] = useState<User | null>(null);
-  const [activeAccount, setActiveAccount] = useState<Account | null>(null);
-
   // Modal state
   const [showProxyModal, setShowProxyModal] = useState(false);
   const [showAddUserModal, setShowAddUserModal] = useState(false);
+  const pushToast = useCallback((message: ToastMessage) => setToast(message), []);
+  const {
+    users,
+    activeUser,
+    activeAccount,
+    handleSelectUser,
+    handleRemoveUser,
+    handleSelectAccount,
+    handleAddUser,
+  } = useUserAccountState(pushToast);
 
   const mediaProfile = useMemo<MediaProfile>(() => {
     const profile: MediaProfile = {};
@@ -93,82 +97,6 @@ function App() {
   useEffect(() => {
     applyTheme(themeMode);
   }, [themeMode]);
-
-  // Fetch users on mount
-  useEffect(() => {
-    const fetchUsers = async () => {
-      try {
-        const response = await API.getUsers();
-        setUsers(response.users || []);
-        setActiveUser(response.active_user);
-      } catch (error) {
-        console.error('Failed to fetch users:', error);
-      }
-    };
-    fetchUsers();
-  }, []);
-
-  // Fetch active account when active user changes
-  useEffect(() => {
-    const fetchActiveAccount = async () => {
-      if (!activeUser) {
-        setActiveAccount(null);
-        return;
-      }
-      try {
-        const account = await API.getActiveAccount();
-        setActiveAccount(account);
-      } catch (error) {
-        console.error('Failed to fetch active account:', error);
-      }
-    };
-    fetchActiveAccount();
-  }, [activeUser]);
-
-  const handleSelectUser = async (userId: number) => {
-    try {
-      await API.setActiveUser(userId);
-      const user = users.find((u) => u.id === userId);
-      setActiveUser(user || null);
-      setToast({ text: `Switched to ${user?.username}`, level: 'success' });
-    } catch (error) {
-      console.error('Failed to select user:', error);
-    }
-  };
-
-  const handleRemoveUser = async (userId: number) => {
-    try {
-      await API.removeUser(userId);
-      setUsers(users.filter((u) => u.id !== userId));
-      if (activeUser?.id === userId) {
-        setActiveUser(null);
-      }
-      setToast({ text: 'User removed', level: 'warning' });
-    } catch (error) {
-      console.error('Failed to remove user:', error);
-    }
-  };
-
-  const handleSelectAccount = async (accountId: string) => {
-    try {
-      const account = await API.setActiveAccount(accountId);
-      setActiveAccount(account);
-      setToast({ text: `Switched to @${account.username}`, level: 'success' });
-    } catch (error) {
-      console.error('Failed to select account:', error);
-    }
-  };
-
-  const handleAddUser = async (username: string, userId: number) => {
-    try {
-      const user = await API.addUser(username, userId);
-      setUsers([...users, user]);
-      setShowAddUserModal(false);
-      setToast({ text: `Added ${username}`, level: 'success' });
-    } catch (error) {
-      console.error('Failed to add user:', error);
-    }
-  };
 
   return (
     <div className="app-shell h-screen flex flex-col">

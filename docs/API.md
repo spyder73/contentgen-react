@@ -25,6 +25,24 @@ Base URL is currently `http://localhost:81` from `src/api/helpers.ts`.
   "template_id": "...",
   "initial_input": "...",
   "auto_mode": true,
+  "initial_attachments": [
+    {
+      "type": "image",
+      "source": "media|generated|url|file",
+      "media_id": "uuid-or-stable-id",
+      "url": "https://...",
+      "name": "asset-name",
+      "filename": "asset-name",
+      "checkpoint_id": "optional-checkpoint-id",
+      "checkpoint_index": 1,
+      "source_checkpoint_id": "optional-origin-checkpoint-id",
+      "source_run_id": "optional-origin-run-id",
+      "metadata": {
+        "asset_pool_id": "..."
+      }
+    }
+  ],
+  "music_media_id": "optional-media-id",
   "provider": "openrouter",
   "model": "...",
   "media_profile": {
@@ -33,6 +51,14 @@ Base URL is currently `http://localhost:81` from `src/api/helpers.ts`.
   }
 }
 ```
+
+### Attachment Pool and Checkpoint Binding Mapping
+- asset pool entries are normalized into stable attachment payload rows in `PipelineAPI.startPipeline(...)`.
+- checkpoint-bound selections are emitted as additive attachment rows with `checkpoint_id`/`checkpoint_index`.
+- generated-output reuse bindings preserve origin tracing through additive fields:
+  - `source_checkpoint_id`
+  - `source_run_id`
+- frontend keeps compatibility aliases in payload normalization (`name` + `filename`, `size_bytes` + `size`) to support mixed backend contract versions.
 
 ### Clip Create From Pipeline Output
 `ClipAPI.createClipPromptFromJson(json, mediaProfile?)`:
@@ -43,6 +69,14 @@ Base URL is currently `http://localhost:81` from `src/api/helpers.ts`.
 ### Media Settings Conversion
 UI settings allow `dimensions` enum values.
 Before send, `settingsToOutputSpec` converts dimensions -> `width` + `height`.
+
+### Replace-Media Metadata
+- media edit flow (`EditMediaModal`) now supports additive stable media-item replacement references.
+- on save, metadata replacement payload can include:
+  - `replacement_media_id`
+  - `replacementMediaId`
+  - `media_item_ref: { media_id }`
+- clearing replacement removes those additive keys without mutating unrelated metadata fields (including music metadata keys).
 
 ## WebSocket
 - endpoint: `/webhook`.

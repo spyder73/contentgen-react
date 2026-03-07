@@ -111,17 +111,29 @@ const normalizeAttachment = (value: unknown, index: number): MediaAttachment | n
     ? (value.metadata as Record<string, unknown>)
     : undefined;
   const source = toStringValue(value.source);
+  const mediaId = toStringValue(value.media_id ?? value.mediaId);
+  const filename = toStringValue(value.filename ?? value.file_name ?? value.fileName, name);
+  const checkpointId = toStringValue(value.checkpoint_id ?? value.checkpointId);
+  const sourceCheckpointId = toStringValue(value.source_checkpoint_id ?? value.sourceCheckpointId);
+  const sourceRunId = toStringValue(value.source_run_id ?? value.sourceRunId);
+  const checkpointIndex = toNumberValue(value.checkpoint_index ?? value.checkpointIndex);
 
   return {
     id,
+    media_id: mediaId || undefined,
     type,
     url,
     mime_type: toStringValue(value.mime_type ?? value.mimeType ?? value.content_type, 'application/octet-stream'),
     name,
+    filename: filename || undefined,
     created_at: toStringValue(value.created_at ?? value.createdAt, new Date(0).toISOString()),
     source: source || undefined,
     size_bytes: toNumberValue(value.size_bytes ?? value.sizeBytes),
     metadata,
+    checkpoint_id: checkpointId || undefined,
+    checkpoint_index: checkpointIndex ?? undefined,
+    source_checkpoint_id: sourceCheckpointId || undefined,
+    source_run_id: sourceRunId || undefined,
   };
 };
 
@@ -142,7 +154,17 @@ const normalizeInputAttachment = (value: PipelineInputAttachment): PipelineInput
   const normalized: PipelineInputAttachment = { type };
 
   const assignString = (
-    key: 'source' | 'state' | 'url' | 'name' | 'mime_type' | 'media_id',
+    key:
+      | 'source'
+      | 'state'
+      | 'url'
+      | 'name'
+      | 'filename'
+      | 'mime_type'
+      | 'media_id'
+      | 'checkpoint_id'
+      | 'source_checkpoint_id'
+      | 'source_run_id',
     raw: unknown
   ) => {
     const next = toStringValue(raw).trim();
@@ -155,12 +177,22 @@ const normalizeInputAttachment = (value: PipelineInputAttachment): PipelineInput
   assignString('state', value.state);
   assignString('url', value.url);
   assignString('name', value.name);
+  assignString('filename', value.filename ?? value.name);
   assignString('mime_type', value.mime_type);
   assignString('media_id', value.media_id);
+  assignString('checkpoint_id', value.checkpoint_id);
+  assignString('source_checkpoint_id', value.source_checkpoint_id);
+  assignString('source_run_id', value.source_run_id);
 
-  const sizeBytes = toNumberValue(value.size_bytes);
+  const sizeBytes = toNumberValue(value.size_bytes ?? value.size);
   if (sizeBytes !== undefined) {
     normalized.size_bytes = sizeBytes;
+    normalized.size = sizeBytes;
+  }
+
+  const checkpointIndex = toNumberValue(value.checkpoint_index);
+  if (checkpointIndex !== undefined) {
+    normalized.checkpoint_index = Math.max(0, Math.floor(checkpointIndex));
   }
 
   if (isRecord(value.metadata)) {

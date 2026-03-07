@@ -1,5 +1,47 @@
 # Results Log
 
+## Wave 4B1 Delivery (2026-03-07)
+
+## UI Behavior Matrix (Asset Pool / Checkpoint / Reuse / Replace)
+| Flow | Target Behavior | Status | Evidence |
+|---|---|---|---|
+| Asset pool as stable source of truth | Pool uses stable media-item IDs and explicit pool entries (media catalog, URL/file, generated outputs) instead of filename-only heuristics | `FIXED` | `IdeaInputForm` now stores/selects `AssetPoolItem` entries and uses `media_id`/pool IDs (`src/components/ideas/IdeaInputForm.tsx`, `src/components/ideas/assetPool.ts`). |
+| Attachment pool collapse + drag/drop regression parity | Keep Wave 4C3 collapse/expand and drag-drop behavior intact | `VALID` | Existing controls retained and covered by updated `IdeaInputForm.test.tsx`. |
+| Checkpoint-bound attachments + required-asset gating | Bind pool assets per checkpoint, show required-asset status, and block run submit on unmet requirements | `FIXED` | Checkpoint binding matrix + requirement evaluation added in `IdeaInputForm`; generate blocked when required assets are missing (`src/components/ideas/IdeaInputForm.tsx`, `src/components/ideas/assetPool.ts`, `src/components/ideas/IdeaInputForm.test.tsx`). |
+| Generated-output reuse for later checkpoints | Expose generated outputs as selectable references and allow attaching to later checkpoints with editable selected state | `FIXED` | Generated assets collected in `IdeaGeneratorPanel` and attach-from-pool controls added in `PipelineRunItem` (`src/components/ideas/IdeaGeneratorPanel.tsx`, `src/components/ideas/PipelineRunItem.tsx`, `src/components/ideas/PipelineRunItem.test.tsx`). |
+| Replace-media via stable media-item references | Replace generated media with selected media-item refs while keeping music replacement compatibility | `FIXED` | `EditMediaModal` replacement selector saves additive media-item reference keys; music flow in `EditClipPromptModal` remains unchanged (`src/components/modals/EditMediaModal.tsx`, `src/components/modals/EditMediaModal.test.tsx`). |
+| Schedule platform/caption regression guard | Ensure scheduling platform selection + caption persistence behavior remains covered | `VALID` | Added regression test for no-platform block; existing platform/caption tests remain passing (`src/components/clips/sections/ScheduleSection.test.tsx`). |
+
+## Payload/Contract Deltas
+| Area | Previous Behavior | Wave 4B1 Behavior |
+|---|---|---|
+| Pipeline start attachment payload | Sent basic attachment shape with loose fields | Normalization now emits stable media/binding fields (`media_id`, `filename`, `size`, `checkpoint_id/index`, `source_checkpoint_id`, `source_run_id`) with compatibility aliases (`src/api/pipeline.ts`, `src/api/pipeline.test.ts`). |
+| Idea flow checkpoint binding | Attachments were global-only | Idea submit now emits checkpoint-bound attachment rows derived from explicit binding selections (`src/components/ideas/IdeaInputForm.tsx`, `src/components/ideas/assetPool.ts`). |
+| Generated-output reuse mapping | No explicit reuse mapping to start payload/run attach controls | Generated items are carried as explicit selectable references and mapped with origin checkpoint/run metadata fields (`src/components/ideas/IdeaGeneratorPanel.tsx`, `src/components/ideas/PipelineRunItem.tsx`). |
+| Replace-media metadata | No dedicated stable replacement media selector in media edit modal | Media edit now writes additive replacement keys (`replacement_media_id`, `replacementMediaId`, `media_item_ref`) and supports clear/remove (`src/components/modals/EditMediaModal.tsx`). |
+
+## Revalidation Verdicts (Orchestrator-Touched Docs)
+| File | Verdict | Notes |
+|---|---|---|
+| `docs/AGENT_TASK.md` | `VALID` | Wave 4B1 scope matches implemented frontend changes in this delivery. |
+| `docs/CODING_GUIDELINES.md` | `VALID` | API-layer usage and focused component/helper split remain aligned with repo guidelines. |
+| `docs/API.md` | `NEEDS FIX` -> `VALID` | Pipeline attachment/replacement details were stale; updated in this wave to match current frontend payload behavior. |
+| `docs/UI.md` | `VALID` | Changes are incremental UX additions within existing IA/component boundaries. |
+
+## Validation Commands
+| Command | Result | Notes |
+|---|---|---|
+| `npm test -- --watchAll=false` | `pass` | 14 suites, 48 tests passing; includes new required-asset gating, generated-output reuse mapping, replace-media, and schedule regression tests. Existing React `act` deprecation warning remains from tooling versions. |
+| `npm run build` | `pass` | Production build compiled successfully after Wave 4B1 changes. |
+
+## Manual QA Notes (Desktop + Mobile)
+| Area | Desktop | Mobile | Notes |
+|---|---|---|---|
+| Asset pool selection + checkpoint binding | Not run | Not run | Implemented and test-backed; live interaction pass pending. |
+| Generated-output reuse attach controls | Not run | Not run | Implemented in run cards with test coverage for payload mapping and attach action. |
+| Replace-media selector + save/clear behavior | Not run | Not run | Implemented and unit-tested in `EditMediaModal.test.tsx`. |
+| Schedule platform/caption regression | Not run | Not run | Existing and new schedule regression tests pass; live scheduler integration QA pending. |
+
 ## Wave 4C3 Delivery (2026-03-07)
 
 ## Scheduling UX Parity Matrix

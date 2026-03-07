@@ -1,15 +1,29 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { PipelineRun, PipelineTemplate } from '../../api/structs';
+import { MediaAttachment } from '../../api/structs/pipeline';
 import { Button, Badge } from '../ui';
+import {
+  AssetPoolItem,
+  evaluateCheckpointRequirements,
+  extractCheckpointRequirements,
+  normalizeAssetSource,
+  pipelineAttachmentToPoolItem,
+} from './assetPool';
 
 interface Props {
   run: PipelineRun;
   template: PipelineTemplate;
   onContinue: () => void;
   onRegenerate: (checkpoint: number) => void;
+  onAddAttachment: (
+    checkpoint: number,
+    attachment: Omit<MediaAttachment, 'id' | 'created_at'>
+  ) => Promise<void>;
   onCancel: () => void;
   onRemove: () => void;
 }
+
+const DEFAULT_MIME_TYPE = 'application/octet-stream';
 
 const formatMetadataValue = (value: unknown): string => {
   if (typeof value === 'string') return value;
@@ -24,19 +38,96 @@ const formatMetadataValue = (value: unknown): string => {
   }
 };
 
+const toActionableErrorMessage = (error: unknown): string => {
+  const record = error as
+    | {
+        response?: { data?: { error?: string; message?: string } };
+        message?: string;
+      }
+    | undefined;
+  return (
+    record?.response?.data?.error ||
+    record?.response?.data?.message ||
+    record?.message ||
+    'Failed to attach selected asset to this checkpoint.'
+  );
+};
+
+const toAttachmentRequest = (asset: AssetPoolItem): Omit<MediaAttachment, 'id' | 'created_at'> => ({
+  media_id: asset.media_id,
+  type: asset.type || asset.kind || 'file',
+  url: asset.url || '',
+  mime_type: asset.mime_type || DEFAULT_MIME_TYPE,
+  name: asset.name || asset.media_id || asset.id,
+  filename: asset.name || asset.media_id || asset.id,
+  size_bytes: asset.size_bytes,
+  metadata: {
+    ...(asset.metadata || {}),
+    source: asset.source,
+    source_run_id: asset.run_id,
+    source_checkpoint_id: asset.checkpoint_id,
+    source_checkpoint_index: asset.checkpoint_index,
+    reused_from_asset_pool: true,
+  },
+});
+
 const PipelineRunItem: React.FC<Props> = ({
   run,
   template,
   onContinue,
   onRegenerate,
+  onAddAttachment,
   onCancel,
   onRemove,
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [selectedCheckpoint, setSelectedCheckpoint] = useState<number | null>(null);
+  const [selectedAssetByCheckpoint, setSelectedAssetByCheckpoint] = useState<Record<number, string>>({});
+  const [attachLoadingByCheckpoint, setAttachLoadingByCheckpoint] = useState<Record<number, boolean>>({});
+  const [attachErrorByCheckpoint, setAttachErrorByCheckpoint] = useState<Record<number, string>>({});
 
   const isTerminal = ['completed', 'failed', 'cancelled'].includes(run.status);
   const isPaused = run.status === 'paused';
+
+  const checkpointRequirements = useMemo(
+    () => template.checkpoints.map((checkpoint) => extractCheckpointRequirements(checkpoint)),
+    [template.checkpoints]
+  );
+
+  const reusablePoolAssets = useMemo(() => {
+    const items: AssetPoolItem[] = [];
+
+    (run.initial_attachments || []).forEach((attachment) => {
+      const normalizedSource = normalizeAssetSource(attachment.source);
+      items.push(
+        pipelineAttachmentToPoolItem(attachment, {
+          source: normalizedSource === 'unknown' ? 'media' : normalizedSource,
+          runId: run.id,
+        })
+      );
+    });
+
+    (run.results || []).forEach((result, checkpointIndex) => {
+      const checkpointName =
+        template.checkpoints[checkpointIndex]?.name || result.checkpoint_id || `Checkpoint ${checkpointIndex + 1}`;
+      (result.attachments || []).forEach((attachment) => {
+        const normalizedSource = normalizeAssetSource(attachment.source);
+        items.push(
+          pipelineAttachmentToPoolItem(attachment, {
+            source: normalizedSource === 'unknown' ? 'generated' : normalizedSource,
+            runId: run.id,
+            checkpointId: result.checkpoint_id,
+            checkpointName,
+            checkpointIndex,
+          })
+        );
+      });
+    });
+
+    const deduped = new Map<string, AssetPoolItem>();
+    items.forEach((item) => deduped.set(item.id, item));
+    return Array.from(deduped.values());
+  }, [run.id, run.initial_attachments, run.results, template.checkpoints]);
 
   const getStatusBadge = () => {
     switch (run.status) {
@@ -99,6 +190,57 @@ const PipelineRunItem: React.FC<Props> = ({
     return [];
   };
 
+  const getReusableAssetsForCheckpoint = (checkpointIndex: number): AssetPoolItem[] =>
+    reusablePoolAssets.filter((asset) => {
+      if (asset.checkpoint_index === undefined || asset.checkpoint_index === null) return true;
+      return asset.checkpoint_index < checkpointIndex;
+    });
+
+  const handleAttachFromPool = async (checkpointIndex: number) => {
+    const selectedAssetId = selectedAssetByCheckpoint[checkpointIndex];
+    if (!selectedAssetId) {
+      setAttachErrorByCheckpoint((prev) => ({
+        ...prev,
+        [checkpointIndex]: 'Select an asset from the pool first.',
+      }));
+      return;
+    }
+
+    const selectedAsset = getReusableAssetsForCheckpoint(checkpointIndex).find(
+      (asset) => asset.id === selectedAssetId
+    );
+    if (!selectedAsset) {
+      setAttachErrorByCheckpoint((prev) => ({
+        ...prev,
+        [checkpointIndex]: 'Selected asset is no longer available for this checkpoint.',
+      }));
+      return;
+    }
+
+    if (!selectedAsset.media_id && !selectedAsset.url) {
+      setAttachErrorByCheckpoint((prev) => ({
+        ...prev,
+        [checkpointIndex]: 'Selected asset has no media ID or URL to bind.',
+      }));
+      return;
+    }
+
+    setAttachLoadingByCheckpoint((prev) => ({ ...prev, [checkpointIndex]: true }));
+    setAttachErrorByCheckpoint((prev) => ({ ...prev, [checkpointIndex]: '' }));
+
+    try {
+      await onAddAttachment(checkpointIndex, toAttachmentRequest(selectedAsset));
+      setSelectedAssetByCheckpoint((prev) => ({ ...prev, [checkpointIndex]: '' }));
+    } catch (error) {
+      setAttachErrorByCheckpoint((prev) => ({
+        ...prev,
+        [checkpointIndex]: toActionableErrorMessage(error),
+      }));
+    } finally {
+      setAttachLoadingByCheckpoint((prev) => ({ ...prev, [checkpointIndex]: false }));
+    }
+  };
+
   const renderAttachmentSurface = (
     heading: string,
     options: {
@@ -134,7 +276,8 @@ const PipelineRunItem: React.FC<Props> = ({
                     <span className="text-[10px] uppercase tracking-wide text-zinc-400">{attachment.type}</span>
                   </div>
                   <p className="attachment-meta mt-1">
-                    MIME: {attachment.mime_type || 'unknown'}{attachment.size_bytes ? ` | ${attachment.size_bytes} bytes` : ''}
+                    MIME: {attachment.mime_type || 'unknown'}
+                    {attachment.size_bytes ? ` | ${attachment.size_bytes} bytes` : ''}
                   </p>
                   {attachment.url ? (
                     <a
@@ -219,8 +362,7 @@ const PipelineRunItem: React.FC<Props> = ({
             {renderAttachmentSurface('Initial Attachments', {
               attachments: run.initial_attachments,
               loadingText:
-                run.initial_attachments === undefined &&
-                ['pending', 'running'].includes(run.status)
+                run.initial_attachments === undefined && ['pending', 'running'].includes(run.status)
                   ? 'Loading initial attachments...'
                   : undefined,
               emptyText: 'No initial attachments.',
@@ -236,13 +378,32 @@ const PipelineRunItem: React.FC<Props> = ({
               const isFailed = result?.status === 'failed';
               const isPending = !result;
 
+              const requirementSummary = evaluateCheckpointRequirements(
+                checkpointRequirements[index],
+                (result?.attachments || []).map((attachment) =>
+                  pipelineAttachmentToPoolItem(attachment, {
+                    source: (() => {
+                      const normalizedSource = normalizeAssetSource(attachment.source);
+                      return normalizedSource === 'unknown' ? 'generated' : normalizedSource;
+                    })(),
+                    runId: run.id,
+                    checkpointId: checkpoint.id,
+                    checkpointName: checkpoint.name,
+                    checkpointIndex: index,
+                  })
+                )
+              );
+              const hasRequiredAssets = checkpointRequirements[index].length > 0;
+              const canContinueCurrentCheckpoint = !hasRequiredAssets || requirementSummary.satisfied;
+              const reusableOptions = getReusableAssetsForCheckpoint(index);
+              const selectedAssetId = selectedAssetByCheckpoint[index] || '';
+              const selectedAsset = reusableOptions.find((item) => item.id === selectedAssetId) || null;
+
               return (
                 <div
                   key={checkpoint.id}
                   className={`rounded border ${
-                    isCurrent && !isTerminal
-                      ? 'bg-white/10 border-white/40'
-                      : 'bg-black/40 border-white/10'
+                    isCurrent && !isTerminal ? 'bg-white/10 border-white/40' : 'bg-black/40 border-white/10'
                   }`}
                 >
                   <div
@@ -279,6 +440,17 @@ const PipelineRunItem: React.FC<Props> = ({
                           Connector
                         </span>
                       )}
+                      {hasRequiredAssets && (
+                        <span
+                          className={`text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded border ${
+                            requirementSummary.satisfied
+                              ? 'border-emerald-500/40 text-emerald-300'
+                              : 'border-amber-500/40 text-amber-300'
+                          }`}
+                        >
+                          {requirementSummary.satisfied ? 'Assets Ready' : 'Assets Missing'}
+                        </span>
+                      )}
                     </div>
 
                     {(result || checkpoint.allow_attachments) && (
@@ -305,6 +477,18 @@ const PipelineRunItem: React.FC<Props> = ({
                         </div>
                       )}
 
+                      {hasRequiredAssets && (
+                        <div className="attachment-surface space-y-1">
+                          <p className="attachment-state">Required Asset Status</p>
+                          {requirementSummary.details.map((detail) => (
+                            <p key={`${checkpoint.id}-${detail.requirement.id}`} className="attachment-meta">
+                              {detail.requirement.label}: {detail.matched_count}/{detail.requirement.min_count}
+                              {detail.satisfied ? ' (ok)' : ` (missing ${detail.missing_count})`}
+                            </p>
+                          ))}
+                        </div>
+                      )}
+
                       {result && (
                         <pre className="text-[11px] text-slate-300 bg-black/70 p-2 rounded overflow-auto max-h-56 border border-white/10">
                           {formatOutput(result.output)}
@@ -323,9 +507,69 @@ const PipelineRunItem: React.FC<Props> = ({
                               : undefined,
                         })}
 
+                      {checkpoint.allow_attachments && !isTerminal && (
+                        <div className="attachment-surface space-y-2">
+                          <p className="attachment-state">Attach From Asset Pool</p>
+                          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                            <select
+                              value={selectedAssetId}
+                              onChange={(event) =>
+                                setSelectedAssetByCheckpoint((prev) => ({
+                                  ...prev,
+                                  [index]: event.target.value,
+                                }))
+                              }
+                              className="w-full select sm:flex-1"
+                            >
+                              <option value="">
+                                {reusableOptions.length > 0
+                                  ? 'Select asset reference...'
+                                  : 'No reusable assets yet'}
+                              </option>
+                              {reusableOptions.map((asset) => (
+                                <option key={asset.id} value={asset.id}>
+                                  {asset.name} ({asset.kind} · {asset.source}
+                                  {asset.checkpoint_name ? ` · ${asset.checkpoint_name}` : ''})
+                                </option>
+                              ))}
+                            </select>
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              onClick={() => handleAttachFromPool(index)}
+                              disabled={!selectedAssetId || attachLoadingByCheckpoint[index]}
+                            >
+                              {attachLoadingByCheckpoint[index] ? 'Attaching...' : 'Attach'}
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() =>
+                                setSelectedAssetByCheckpoint((prev) => ({ ...prev, [index]: '' }))
+                              }
+                              disabled={!selectedAssetId}
+                            >
+                              Clear
+                            </Button>
+                          </div>
+                          {selectedAsset && (
+                            <p className="attachment-meta">
+                              Selected reference: {selectedAsset.name} ({selectedAsset.kind} · {selectedAsset.source})
+                            </p>
+                          )}
+                          {attachErrorByCheckpoint[index] && (
+                            <p className="attachment-meta text-red-300">{attachErrorByCheckpoint[index]}</p>
+                          )}
+                        </div>
+                      )}
+
                       {result && isCurrent && isPaused && (
                         <div className="flex items-center gap-2 p-2 border border-white/20 bg-white/5 rounded">
-                          <p className="text-xs text-zinc-300 flex-1">Review output before continuing.</p>
+                          <p className="text-xs text-zinc-300 flex-1">
+                            {canContinueCurrentCheckpoint
+                              ? 'Review output before continuing.'
+                              : 'Attach required assets before continuing.'}
+                          </p>
                           <div className="flex gap-2 flex-shrink-0">
                             {checkpoint.allow_regenerate && (
                               <Button
@@ -346,6 +590,7 @@ const PipelineRunItem: React.FC<Props> = ({
                                 e.stopPropagation();
                                 onContinue();
                               }}
+                              disabled={!canContinueCurrentCheckpoint}
                             >
                               Continue
                             </Button>

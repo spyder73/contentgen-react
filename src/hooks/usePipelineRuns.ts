@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { PipelineRun } from '../api/structs';
 import PipelineAPI from '../api/pipeline';
 import { MediaProfile } from '../api/structs/media-spec';
-import { PipelineInputAttachment } from '../api/structs/pipeline';
+import { MediaAttachment, PipelineInputAttachment } from '../api/structs/pipeline';
 
 const STORAGE_KEY = 'active_pipeline_runs';
 const TERMINAL_STATES = ['completed', 'failed', 'cancelled'];
@@ -158,11 +158,26 @@ export function usePipelineRuns() {
     });
   }, []);
 
+  const addCheckpointAttachment = useCallback(
+    async (
+      runId: string,
+      checkpointIndex: number,
+      attachment: Omit<MediaAttachment, 'id' | 'created_at'>
+    ) => {
+      await PipelineAPI.addAttachment(runId, checkpointIndex, attachment);
+      const updated = await PipelineAPI.getPipeline(runId);
+      setRuns((prev) => new Map(prev).set(updated.id, updated));
+      return updated;
+    },
+    []
+  );
+
   return {
     runs: Array.from(runs.values()),
     startRun,
     continueRun,
     regenerateCheckpoint,
+    addCheckpointAttachment,
     cancelRun,
     removeRun,
   };

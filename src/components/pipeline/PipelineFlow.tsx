@@ -18,6 +18,19 @@ const PipelineFlow: React.FC<PipelineFlowProps> = ({
   onCheckpointRemove,
   onReorder,
 }) => {
+  const getRequiredAssetCount = (checkpoint: CheckpointConfig): number => {
+    const arrays = [
+      checkpoint.required_assets,
+      checkpoint.required_attachments,
+      checkpoint.attachment_requirements,
+      (checkpoint as any).requiredAssets,
+      (checkpoint as any).requiredAttachments,
+      (checkpoint as any).attachmentRequirements,
+    ];
+
+    return arrays.find((item) => Array.isArray(item))?.length || 0;
+  };
+
   const getPromptName = (promptId: string): string => {
     const template = promptTemplates.find((t) => t.id === promptId);
     return template?.name || promptId || 'No prompt';
@@ -195,6 +208,11 @@ const PipelineFlow: React.FC<PipelineFlowProps> = ({
                 {checkpoint.allow_attachments && (
                   <span className="text-[10px] bg-white/5 border border-white/10 text-zinc-300 px-2 py-0.5 rounded uppercase tracking-wide">
                     Files
+                  </span>
+                )}
+                {getRequiredAssetCount(checkpoint) > 0 && (
+                  <span className="text-[10px] bg-amber-500/10 border border-amber-400/30 text-amber-200 px-2 py-0.5 rounded uppercase tracking-wide">
+                    Req {getRequiredAssetCount(checkpoint)}
                   </span>
                 )}
               </div>

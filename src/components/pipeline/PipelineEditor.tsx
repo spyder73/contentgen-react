@@ -97,6 +97,7 @@ const PipelineEditor: React.FC<PipelineEditorProps> = ({
       allow_attachments: false,
       provider: '',
       model: '',
+      required_assets: [],
       distributor:
         newCheckpointType === 'distributor'
           ? {

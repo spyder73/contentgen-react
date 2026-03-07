@@ -7,7 +7,8 @@ import PipelineRunItem from './PipelineRunItem';
 import { usePipelineRuns } from '../../hooks/usePipelineRuns';
 import { MediaProfile } from '../../api/structs/media-spec';
 import { extractClipPromptJsonList } from './ideaOutput';
-import { PipelineInputAttachment } from '../../api/structs/pipeline';
+import { PipelineInputAttachment, PipelineRun } from '../../api/structs/pipeline';
+import { AssetPoolItem, pipelineAttachmentToPoolItem } from './assetPool';
 
 interface IdeaGeneratorPanelProps {
   chatProvider: string;
@@ -23,12 +24,14 @@ const IdeaGeneratorPanel: React.FC<IdeaGeneratorPanelProps> = ({
   onIdeasCreated,
 }) => {
   const [templates, setTemplates] = useState<PipelineTemplate[]>([]);
+  const [generatedAssets, setGeneratedAssets] = useState<AssetPoolItem[]>([]);
   const processingRef = useRef<Set<string>>(new Set());
   const {
     runs,
     startRun,
     continueRun,
     regenerateCheckpoint,
+    addCheckpointAttachment,
     cancelRun,
     removeRun,
   } = usePipelineRuns();
@@ -37,6 +40,43 @@ const IdeaGeneratorPanel: React.FC<IdeaGeneratorPanelProps> = ({
   useEffect(() => {
     PipelineAPI.listPipelineTemplates().then(setTemplates);
   }, []);
+
+  const upsertGeneratedAssets = useCallback((assets: AssetPoolItem[]) => {
+    if (assets.length === 0) return;
+    setGeneratedAssets((prev) => {
+      const deduped = new Map(prev.map((item) => [item.id, item]));
+      assets.forEach((asset) => {
+        deduped.set(asset.id, asset);
+      });
+      return Array.from(deduped.values());
+    });
+  }, []);
+
+  const collectGeneratedFromRun = useCallback(
+    (run: PipelineRun): AssetPoolItem[] => {
+      const template = templates.find((item) => item.id === run.pipeline_template_id);
+      const items: AssetPoolItem[] = [];
+
+      (run.results || []).forEach((result, checkpointIndex) => {
+        const checkpointName =
+          template?.checkpoints?.[checkpointIndex]?.name || result.checkpoint_id || `Checkpoint ${checkpointIndex + 1}`;
+        (result.attachments || []).forEach((attachment) => {
+          items.push(
+            pipelineAttachmentToPoolItem(attachment, {
+              source: 'generated',
+              runId: run.id,
+              checkpointId: result.checkpoint_id,
+              checkpointName,
+              checkpointIndex,
+            })
+          );
+        });
+      });
+
+      return items;
+    },
+    [templates]
+  );
 
   const handleCompleted = useCallback(
     async (runId: string) => {
@@ -49,6 +89,7 @@ const IdeaGeneratorPanel: React.FC<IdeaGeneratorPanelProps> = ({
 
         const run = runs.find((r) => r.id === runId);
         if (!run) return;
+        upsertGeneratedAssets(collectGeneratedFromRun(run));
 
         const clipPromptList = extractClipPromptJsonList(output);
         if (clipPromptList.length <= 1) {
@@ -66,7 +107,7 @@ const IdeaGeneratorPanel: React.FC<IdeaGeneratorPanelProps> = ({
         processingRef.current.delete(runId);
       }
     },
-    [runs, onIdeasCreated, removeRun]
+    [collectGeneratedFromRun, onIdeasCreated, removeRun, runs, upsertGeneratedAssets]
   );
 
   // Handle completed runs
@@ -79,6 +120,11 @@ const IdeaGeneratorPanel: React.FC<IdeaGeneratorPanelProps> = ({
       }
     }
   }, [runs, handleCompleted]);
+
+  useEffect(() => {
+    const observedAssets = runs.flatMap((run) => collectGeneratedFromRun(run));
+    upsertGeneratedAssets(observedAssets);
+  }, [collectGeneratedFromRun, runs, upsertGeneratedAssets]);
 
   const handleStart = async (
     input: string,
@@ -106,7 +152,7 @@ const IdeaGeneratorPanel: React.FC<IdeaGeneratorPanelProps> = ({
   return (
     <div className="space-y-2">
       {/* Input Form */}
-      <IdeaInputForm templates={templates} onStart={handleStart} />
+      <IdeaInputForm templates={templates} onStart={handleStart} generatedAssets={generatedAssets} />
 
       {/* Pipeline Runs */}
       {visibleRuns.length > 0 && (
@@ -122,6 +168,9 @@ const IdeaGeneratorPanel: React.FC<IdeaGeneratorPanelProps> = ({
                 template={template}
                 onContinue={() => continueRun(run.id)}
                 onRegenerate={(checkpoint) => regenerateCheckpoint(run.id, checkpoint)}
+                onAddAttachment={async (checkpoint, attachment) => {
+                  await addCheckpointAttachment(run.id, checkpoint, attachment);
+                }}
                 onCancel={() => cancelRun(run.id)}
                 onRemove={() => removeRun(run.id)}
               />

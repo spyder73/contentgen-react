@@ -1,5 +1,5 @@
 import React from 'react';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import PipelineRunItem from './PipelineRunItem';
 import { PipelineRun, PipelineTemplate } from '../../api/structs';
 
@@ -95,6 +95,7 @@ describe('PipelineRunItem connector cues', () => {
         template={template}
         onContinue={() => undefined}
         onRegenerate={(_checkpoint) => undefined}
+        onAddAttachment={async () => undefined}
         onCancel={() => undefined}
         onRemove={() => undefined}
       />
@@ -134,6 +135,7 @@ describe('PipelineRunItem connector cues', () => {
         template={templateWithAttachments}
         onContinue={() => undefined}
         onRegenerate={(_checkpoint) => undefined}
+        onAddAttachment={async () => undefined}
         onCancel={() => undefined}
         onRemove={() => undefined}
       />
@@ -196,6 +198,7 @@ describe('PipelineRunItem connector cues', () => {
         template={templateWithAttachments}
         onContinue={() => undefined}
         onRegenerate={(_checkpoint) => undefined}
+        onAddAttachment={async () => undefined}
         onCancel={() => undefined}
         onRemove={() => undefined}
       />
@@ -207,5 +210,122 @@ describe('PipelineRunItem connector cues', () => {
     fireEvent.click(screen.getByText('Draft'));
     expect(screen.getByText('draft-preview')).toBeInTheDocument();
     expect(screen.getByText('source: asset_pool')).toBeInTheDocument();
+  });
+
+  it('attaches selected reusable assets to a later checkpoint', async () => {
+    const templateWithAttachments: PipelineTemplate = {
+      ...template,
+      checkpoints: template.checkpoints.map((checkpoint, index) =>
+        index === 1 ? { ...checkpoint, allow_attachments: true } : checkpoint
+      ),
+    };
+
+    const runWithReusableAssets: PipelineRun = {
+      ...run,
+      initial_attachments: [],
+      results: run.results.map((result, index) =>
+        index === 0
+          ? {
+              ...result,
+              attachments: [
+                {
+                  id: 'asset-split',
+                  type: 'image',
+                  url: 'https://cdn.example.com/split-frame.png',
+                  mime_type: 'image/png',
+                  name: 'split-frame',
+                  created_at: '2026-01-01T00:00:00Z',
+                },
+              ],
+            }
+          : index === 1
+          ? {
+              ...result,
+              attachments: [],
+            }
+          : result
+      ),
+    };
+
+    const onAddAttachment = jest.fn<Promise<void>, [number, any]>(async () => undefined);
+
+    render(
+      <PipelineRunItem
+        run={runWithReusableAssets}
+        template={templateWithAttachments}
+        onContinue={() => undefined}
+        onRegenerate={(_checkpoint) => undefined}
+        onAddAttachment={onAddAttachment}
+        onCancel={() => undefined}
+        onRemove={() => undefined}
+      />
+    );
+
+    fireEvent.click(screen.getByText('Expand'));
+    fireEvent.click(screen.getByText('Draft'));
+
+    const selector = screen.getByRole('combobox');
+    fireEvent.change(selector, { target: { value: 'generated:asset-split' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Attach' }));
+
+    await waitFor(() => {
+      expect(onAddAttachment).toHaveBeenCalledWith(
+        1,
+        expect.objectContaining({
+          type: 'image',
+          url: 'https://cdn.example.com/split-frame.png',
+          filename: 'split-frame',
+        })
+      );
+    });
+  });
+
+  it('blocks continue when required checkpoint assets are missing', () => {
+    const templateWithRequiredAssets: PipelineTemplate = {
+      ...template,
+      checkpoints: template.checkpoints.map((checkpoint, index) =>
+        index === 1
+          ? {
+              ...checkpoint,
+              allow_attachments: true,
+              required_assets: [{ id: 'req-image', label: 'Input Image', kind: 'image', min_count: 1 }],
+            }
+          : checkpoint
+      ),
+    };
+
+    const pausedRun: PipelineRun = {
+      ...run,
+      status: 'paused',
+      current_checkpoint: 1,
+      results: run.results.map((result, index) =>
+        index === 1
+          ? {
+              ...result,
+              status: 'completed',
+              attachments: [],
+            }
+          : result
+      ),
+    };
+
+    render(
+      <PipelineRunItem
+        run={pausedRun}
+        template={templateWithRequiredAssets}
+        onContinue={() => undefined}
+        onRegenerate={(_checkpoint) => undefined}
+        onAddAttachment={async () => undefined}
+        onCancel={() => undefined}
+        onRemove={() => undefined}
+      />
+    );
+
+    fireEvent.click(screen.getByText('Expand'));
+    fireEvent.click(screen.getByText('Draft'));
+
+    expect(screen.getByText('Assets Missing')).toBeInTheDocument();
+    expect(screen.getByText('Attach required assets before continuing.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Continue' })).toBeDisabled();
   });
 });

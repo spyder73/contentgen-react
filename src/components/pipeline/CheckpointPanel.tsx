@@ -1,5 +1,11 @@
 import React, { useState } from 'react';
-import { CheckpointConfig, CheckpointType, ConnectorStrategy, PromptTemplate } from '../../api/structs';
+import {
+  CheckpointConfig,
+  CheckpointRequiredAsset,
+  CheckpointType,
+  ConnectorStrategy,
+  PromptTemplate,
+} from '../../api/structs';
 
 interface CheckpointPanelProps {
   checkpoint: CheckpointConfig;
@@ -25,6 +31,11 @@ const CheckpointPanel: React.FC<CheckpointPanelProps> = ({
     (item) => (item.type || 'prompt') === 'distributor'
   );
   const normalizedType: CheckpointType = checkpoint.type || 'prompt';
+  const requiredAssets =
+    checkpoint.required_assets ||
+    checkpoint.required_attachments ||
+    checkpoint.attachment_requirements ||
+    [];
 
   const handleChange = <K extends keyof CheckpointConfig>(
     field: K,
@@ -138,6 +149,57 @@ const CheckpointPanel: React.FC<CheckpointPanelProps> = ({
             : (value as ConnectorStrategy),
       },
     });
+  };
+
+  const setRequiredAssets = (next: CheckpointRequiredAsset[]) => {
+    onUpdate({
+      ...checkpoint,
+      required_assets: next,
+      required_attachments: next,
+      attachment_requirements: next,
+    });
+  };
+
+  const handleRequiredAssetChange = (
+    index: number,
+    field: keyof CheckpointRequiredAsset,
+    value: string
+  ) => {
+    const next = requiredAssets.map((item, itemIndex) => {
+      if (itemIndex !== index) return item;
+      if (field === 'min_count' || field === 'max_count') {
+        const parsed = Number(value);
+        const normalized = Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : undefined;
+        return {
+          ...item,
+          [field]: normalized,
+        };
+      }
+      return {
+        ...item,
+        [field]: value || undefined,
+      };
+    });
+    setRequiredAssets(next);
+  };
+
+  const handleAddRequiredAsset = () => {
+    const next: CheckpointRequiredAsset[] = [
+      ...requiredAssets,
+      {
+        id: `required-${requiredAssets.length + 1}`,
+        label: `Required Asset ${requiredAssets.length + 1}`,
+        kind: 'image',
+        source: 'any',
+        min_count: 1,
+      },
+    ];
+    setRequiredAssets(next);
+  };
+
+  const handleRemoveRequiredAsset = (index: number) => {
+    const next = requiredAssets.filter((_, itemIndex) => itemIndex !== index);
+    setRequiredAssets(next);
   };
 
   return (
@@ -368,6 +430,103 @@ const CheckpointPanel: React.FC<CheckpointPanelProps> = ({
             />
             <span className="text-zinc-200">Allow Attachments</span>
           </label>
+
+          {(checkpoint.allow_attachments || requiredAssets.length > 0) && (
+            <div className="space-y-2 rounded border border-white/10 bg-white/5 p-2.5">
+              <div className="flex items-center justify-between">
+                <p className="text-[10px] uppercase tracking-[0.15em] text-zinc-300">Required Assets</p>
+                <button onClick={handleAddRequiredAsset} className="btn btn-sm btn-ghost">
+                  + Add Requirement
+                </button>
+              </div>
+
+              {requiredAssets.length === 0 ? (
+                <p className="text-[10px] text-zinc-500">
+                  Optional. Add requirements to block execution until bindings are satisfied.
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {requiredAssets.map((item, index) => (
+                    <div key={`${item.id || 'required'}-${index}`} className="space-y-2 rounded border border-white/10 p-2">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <div>
+                          <label className="block font-medium text-gray-400 mb-1 uppercase tracking-wide">Label</label>
+                          <input
+                            type="text"
+                            value={item.label || ''}
+                            onChange={(e) => handleRequiredAssetChange(index, 'label', e.target.value)}
+                            placeholder={`Requirement ${index + 1}`}
+                            className="input"
+                          />
+                        </div>
+                        <div>
+                          <label className="block font-medium text-gray-400 mb-1 uppercase tracking-wide">ID</label>
+                          <input
+                            type="text"
+                            value={item.id || ''}
+                            onChange={(e) => handleRequiredAssetChange(index, 'id', e.target.value)}
+                            placeholder={`required-${index + 1}`}
+                            className="input"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                        <div>
+                          <label className="block font-medium text-gray-400 mb-1 uppercase tracking-wide">Kind</label>
+                          <select
+                            value={item.kind || 'any'}
+                            onChange={(e) => handleRequiredAssetChange(index, 'kind', e.target.value)}
+                            className="w-full select"
+                          >
+                            <option value="any">Any</option>
+                            <option value="image">Image</option>
+                            <option value="video">Video</option>
+                            <option value="audio">Audio</option>
+                            <option value="music">Music</option>
+                            <option value="file">File</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block font-medium text-gray-400 mb-1 uppercase tracking-wide">Source</label>
+                          <select
+                            value={item.source || 'any'}
+                            onChange={(e) => handleRequiredAssetChange(index, 'source', e.target.value)}
+                            className="w-full select"
+                          >
+                            <option value="any">Any</option>
+                            <option value="media">Media Item</option>
+                            <option value="generated">Generated Output</option>
+                            <option value="url">URL</option>
+                            <option value="file">Local File</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block font-medium text-gray-400 mb-1 uppercase tracking-wide">Min Count</label>
+                          <input
+                            type="number"
+                            min={1}
+                            value={item.min_count || 1}
+                            onChange={(e) => handleRequiredAssetChange(index, 'min_count', e.target.value)}
+                            className="input"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="flex justify-end">
+                        <button
+                          onClick={() => handleRemoveRequiredAsset(index)}
+                          className="btn btn-sm btn-ghost"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </div>

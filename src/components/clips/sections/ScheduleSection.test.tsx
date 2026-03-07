@@ -80,4 +80,29 @@ describe('ScheduleSection', () => {
       mockedApi.scheduleClip.mock.invocationCallOrder[0]
     );
   });
+
+  it('keeps scheduling blocked when no platform is selected', async () => {
+    render(
+      <ScheduleSection
+        clipId="clip-3"
+        initialCaption="Caption"
+        activeAccount={activeAccount}
+        fileUrls={['https://cdn.example.com/clip.mp4']}
+      />
+    );
+
+    fireEvent.click(screen.getByLabelText('instagram'));
+    fireEvent.click(screen.getByLabelText('tiktok'));
+    fireEvent.click(screen.getByLabelText('youtube'));
+
+    const scheduleButton = screen.getByRole('button', { name: /schedule to/i });
+    expect(scheduleButton).toBeDisabled();
+
+    fireEvent.click(scheduleButton);
+
+    await waitFor(() => {
+      expect(mockedApi.scheduleClip).not.toHaveBeenCalled();
+      expect(mockedApi.editClipMetadata).not.toHaveBeenCalled();
+    });
+  });
 });

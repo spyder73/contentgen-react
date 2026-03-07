@@ -141,17 +141,19 @@ describe('pipeline attachment normalization', () => {
         template_id: 'template-2',
         initial_input: 'Prompt',
         music_media_id: 'music-77',
-        initial_attachments: [
-          {
+        initial_attachments: expect.arrayContaining([
+          expect.objectContaining({
             type: 'music',
             source: 'media',
             state: 'selected',
             media_id: 'music-77',
             name: 'Intro track',
+            filename: 'Intro track',
             metadata: { role: 'music' },
-          },
-        ],
+          }),
+        ]),
       })
     );
+    expect((mockedAxios.post.mock.calls[0]?.[1] as any).initial_attachments).toHaveLength(1);
   });
 });

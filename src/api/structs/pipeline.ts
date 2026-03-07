@@ -22,14 +22,20 @@ export type CheckpointType = 'prompt' | 'distributor' | 'connector';
 
 export interface MediaAttachment {
   id: string;
+  media_id?: string;
   type: string;
   url: string;
   mime_type: string;
   name: string;
+  filename?: string;
   created_at: string;
   source?: string;
   size_bytes?: number;
   metadata?: Record<string, unknown>;
+  checkpoint_id?: string;
+  checkpoint_index?: number;
+  source_checkpoint_id?: string;
+  source_run_id?: string;
 }
 
 export interface PipelineInputAttachment {
@@ -38,10 +44,16 @@ export interface PipelineInputAttachment {
   state?: string;
   url?: string;
   name?: string;
+  filename?: string;
   mime_type?: string;
   size_bytes?: number;
+  size?: number;
   media_id?: string;
   metadata?: Record<string, unknown>;
+  checkpoint_id?: string;
+  checkpoint_index?: number;
+  source_checkpoint_id?: string;
+  source_run_id?: string;
 }
 
 export interface CheckpointResult {
@@ -93,6 +105,16 @@ export interface ConnectorConfig {
   source_checkpoint_id?: string;
 }
 
+export interface CheckpointRequiredAsset {
+  id?: string;
+  label?: string;
+  kind?: string;
+  source?: string;
+  min_count?: number;
+  max_count?: number;
+  required?: boolean;
+}
+
 export interface CheckpointConfig {
   id: string;
   name: string;
@@ -106,6 +128,9 @@ export interface CheckpointConfig {
   model?: string;
   distributor?: DistributorConfig;
   connector?: ConnectorConfig;
+  required_assets?: CheckpointRequiredAsset[];
+  required_attachments?: CheckpointRequiredAsset[];
+  attachment_requirements?: CheckpointRequiredAsset[];
 }
 
 export interface PipelineOutputFormat {

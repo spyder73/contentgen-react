@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 
 interface ExpandableSectionProps {
   title: string;
-  icon: string;
+  icon?: string;
   badge?: React.ReactNode;
   defaultExpanded?: boolean;
   children: React.ReactNode;
@@ -28,12 +28,12 @@ const ExpandableSection: React.FC<ExpandableSectionProps> = ({
         className="w-full flex items-center justify-between p-3 bg-slate-800/50 hover:bg-slate-800 transition-colors"
       >
         <div className="flex items-center gap-2">
-          <span>{icon}</span>
+          {icon && <span>{icon}</span>}
           <span className="text-white font-medium">{title}</span>
           {badge}
         </div>
         <span className="text-slate-400 text-sm">
-          {isExpanded ? '▲' : '▼'}
+          {isExpanded ? 'Collapse' : 'Expand'}
         </span>
       </button>
       

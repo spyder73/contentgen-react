@@ -31,22 +31,22 @@ export interface ProviderDefinition {
 }
 
 export const IMAGE_PROVIDERS: ProviderDefinition[] = [
-  { value: 'pollinations', label: 'Pollinations', icon: '🌸' },
-  { value: 'openrouter', label: 'OpenRouter', icon: '🔀' },
-  { value: 'runware', label: 'Runware', icon: '⚡' },
+  { value: 'pollinations', label: 'Pollinations' },
+  { value: 'openrouter', label: 'OpenRouter' },
+  { value: 'runware', label: 'Runware' },
 ];
 
 export const VIDEO_PROVIDERS: ProviderDefinition[] = [
-  { value: 'runware', label: 'Runware', icon: '⚡' },
+  { value: 'runware', label: 'Runware' },
 ];
 
 export const AUDIO_PROVIDERS: ProviderDefinition[] = [
-  { value: 'suno', label: 'Suno', icon: '🎵' },
-  { value: 'udio', label: 'Udio', icon: '🎶' },
+  { value: 'suno', label: 'Suno' },
+  { value: 'udio', label: 'Udio' },
 ];
 
 export const CHAT_PROVIDERS: ProviderDefinition[] = [
-  { value: 'openrouter', label: 'OpenRouter', icon: '🔀' },
+  { value: 'openrouter', label: 'OpenRouter' },
 ];
 
 // ===========================================

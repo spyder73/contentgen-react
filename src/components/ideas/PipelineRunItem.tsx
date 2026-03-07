@@ -19,7 +19,7 @@ const PipelineRunItem: React.FC<Props> = ({
   onCancel,
   onRemove,
 }) => {
-  const [isExpanded, setIsExpanded] = useState(true);
+  const [isExpanded, setIsExpanded] = useState(false);
   const [selectedCheckpoint, setSelectedCheckpoint] = useState<number | null>(null);
 
   const isTerminal = ['completed', 'failed', 'cancelled'].includes(run.status);
@@ -28,13 +28,13 @@ const PipelineRunItem: React.FC<Props> = ({
   const getStatusBadge = () => {
     switch (run.status) {
       case 'running':
-        return <Badge variant="blue">⏳ Running</Badge>;
+        return <Badge variant="blue">Running</Badge>;
       case 'paused':
-        return <Badge variant="yellow">⏸ Awaiting Review</Badge>;
+        return <Badge variant="yellow">Awaiting Review</Badge>;
       case 'completed':
-        return <Badge variant="green">✓ Completed</Badge>;
+        return <Badge variant="green">Completed</Badge>;
       case 'failed':
-        return <Badge variant="red">✗ Failed</Badge>;
+        return <Badge variant="red">Failed</Badge>;
       case 'cancelled':
         return <Badge variant="gray">Cancelled</Badge>;
       default:
@@ -43,7 +43,7 @@ const PipelineRunItem: React.FC<Props> = ({
   };
 
   const getProgressPercent = () => {
-    const total = template.checkpoints.length;
+    const total = template.checkpoints.length || 1;
     if (isTerminal) return 100;
     return Math.round((run.current_checkpoint / total) * 100);
   };
@@ -58,21 +58,19 @@ const PipelineRunItem: React.FC<Props> = ({
   };
 
   return (
-    <div className="bg-slate-800 rounded-lg border border-slate-700 overflow-hidden">
-      {/* Header */}
+    <div className="bg-black/50 border border-white/15 overflow-hidden">
       <div
-        className="flex items-center justify-between p-3 cursor-pointer hover:bg-slate-750"
+        className="flex items-center justify-between p-2.5 cursor-pointer hover:bg-white/5"
         onClick={() => setIsExpanded(!isExpanded)}
       >
         <div className="flex items-center gap-3 flex-1 min-w-0">
-          <span className="text-lg">🔄</span>
           <div className="flex-1 min-w-0">
-            <p className="text-white font-medium truncate">
-              {run.initial_input.slice(0, 50)}
-              {run.initial_input.length > 50 ? '...' : ''}
+            <p className="text-white text-sm font-medium truncate">
+              {run.initial_input.slice(0, 56)}
+              {run.initial_input.length > 56 ? '...' : ''}
             </p>
-            <p className="text-xs text-slate-500">
-              {template.name} • Step {run.current_checkpoint + 1}/{template.checkpoints.length}
+            <p className="text-[10px] text-slate-500 uppercase tracking-wide">
+              {template.name} | Step {run.current_checkpoint + 1}/{template.checkpoints.length}
             </p>
           </div>
           {getStatusBadge()}
@@ -80,33 +78,35 @@ const PipelineRunItem: React.FC<Props> = ({
 
         <div className="flex items-center gap-2 ml-3">
           {!isTerminal && (
-            <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); onCancel(); }}>
-              ✕
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation();
+                onCancel();
+              }}
+            >
+              Cancel
             </Button>
           )}
-          <span className="text-slate-400 text-sm">
-            {isExpanded ? '▲' : '▼'}
+          <span className="text-slate-400 text-xs uppercase tracking-wide">
+            {isExpanded ? 'Collapse' : 'Expand'}
           </span>
         </div>
       </div>
 
-      {/* Progress Bar */}
-      <div className="h-1 bg-slate-700">
+      <div className="h-1 bg-white/10">
         <div
-          className={`h-full transition-all duration-300 ${
-            run.status === 'failed' ? 'bg-red-500' :
-            run.status === 'completed' ? 'bg-green-500' :
-            'bg-blue-500'
+          className={`h-full transition-all duration-300 pipeline-progress ${
+            run.status === 'completed' ? 'bg-white' : 'bg-zinc-400'
           }`}
           style={{ width: `${getProgressPercent()}%` }}
         />
       </div>
 
-      {/* Expanded Content - Scrollable */}
       {isExpanded && (
-        <div className="max-h-96 overflow-y-auto">
-          <div className="p-4 space-y-2">
-            {/* Checkpoint Steps */}
+        <div>
+          <div className="p-3 space-y-2">
             {template.checkpoints.map((checkpoint, index) => {
               const result = run.results?.[index];
               const isCurrent = index === run.current_checkpoint;
@@ -117,21 +117,14 @@ const PipelineRunItem: React.FC<Props> = ({
               return (
                 <div
                   key={checkpoint.id}
-                  className={`
-                    rounded border transition-colors
-                    ${isCurrent && !isTerminal
-                      ? 'bg-blue-900/30 border-blue-600'
-                      : isComplete
-                        ? 'bg-green-900/20 border-green-800/50'
-                        : isFailed
-                          ? 'bg-red-900/20 border-red-800/50'
-                          : 'bg-slate-800/50 border-slate-700'
-                    }
-                  `}
+                  className={`rounded border ${
+                    isCurrent && !isTerminal
+                      ? 'bg-white/10 border-white/40'
+                      : 'bg-black/40 border-white/10'
+                  }`}
                 >
-                  {/* Checkpoint Header */}
                   <div
-                    className="flex items-center justify-between p-3 cursor-pointer"
+                    className="flex items-center justify-between p-2.5 cursor-pointer"
                     onClick={(e) => {
                       e.stopPropagation();
                       if (result) {
@@ -140,71 +133,65 @@ const PipelineRunItem: React.FC<Props> = ({
                     }}
                   >
                     <div className="flex items-center gap-2">
-                      <span className={`
-                        w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0
-                        ${isComplete ? 'bg-green-600 text-white' :
-                          isFailed ? 'bg-red-600 text-white' :
-                          isCurrent && !isTerminal ? 'bg-blue-600 text-white animate-pulse' :
-                          'bg-slate-600 text-slate-400'
-                        }
-                      `}>
-                        {isComplete ? '✓' : isFailed ? '✗' : isPending ? '○' : index + 1}
+                      <span
+                        className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0 ${
+                          isComplete
+                            ? 'bg-white text-black'
+                            : isFailed
+                            ? 'bg-zinc-500 text-black'
+                            : isCurrent && !isTerminal
+                            ? 'bg-zinc-200 text-black animate-pulse'
+                            : 'bg-zinc-700 text-zinc-300'
+                        }`}
+                      >
+                        {isComplete ? 'OK' : isFailed ? 'X' : isPending ? '-' : index + 1}
                       </span>
-                      <span className="text-white font-medium text-sm">{checkpoint.name}</span>
+                      <span className="text-white font-medium text-xs">{checkpoint.name}</span>
                     </div>
 
                     {result && (
-                      <span className="text-xs text-slate-500 flex-shrink-0">
-                        {selectedCheckpoint === index ? '▲' : '▼'}
+                      <span className="text-[10px] text-slate-500 uppercase tracking-wide">
+                        {selectedCheckpoint === index ? 'Hide' : 'Show'}
                       </span>
                     )}
                   </div>
 
-                  {/* Expanded Result with Actions */}
                   {selectedCheckpoint === index && result && (
-                    <div className="px-3 pb-3 space-y-3" onClick={(e) => e.stopPropagation()}>
-                      {/* Output */}
-                      <div className="relative">
-                        <pre className="text-xs text-slate-300 bg-slate-900 p-3 rounded overflow-auto max-h-64 border border-slate-700">
-                          {formatOutput(result.output)}
-                        </pre>
-                      </div>
+                    <div className="px-2.5 pb-2.5 space-y-2" onClick={(e) => e.stopPropagation()}>
+                      <pre className="text-[11px] text-slate-300 bg-black/70 p-2 rounded overflow-auto max-h-56 border border-white/10">
+                        {formatOutput(result.output)}
+                      </pre>
 
-                      {/* Actions directly below output */}
                       {isCurrent && isPaused && (
-                        <div className="flex items-center gap-2 p-3 bg-yellow-900/20 border border-yellow-700/50 rounded">
-                          <span className="text-yellow-400 text-lg flex-shrink-0">⏸</span>
-                          <p className="text-sm text-yellow-300 flex-1">
-                            Review the output above
-                          </p>
+                        <div className="flex items-center gap-2 p-2 border border-white/20 bg-white/5 rounded">
+                          <p className="text-xs text-zinc-300 flex-1">Review output before continuing.</p>
                           <div className="flex gap-2 flex-shrink-0">
                             {checkpoint.allow_regenerate && (
-                              <Button 
-                                variant="secondary" 
-                                size="sm" 
+                              <Button
+                                variant="secondary"
+                                size="sm"
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   onRegenerate(index);
                                 }}
                               >
-                                🔄 Regenerate
+                                Regenerate
                               </Button>
                             )}
-                            <Button 
-                              variant="primary" 
-                              size="sm" 
+                            <Button
+                              variant="primary"
+                              size="sm"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 onContinue();
                               }}
                             >
-                              ✓ Continue
+                              Continue
                             </Button>
                           </div>
                         </div>
                       )}
 
-                      {/* Regenerate button for completed steps (not current) */}
                       {!isCurrent && checkpoint.allow_regenerate && !isTerminal && isComplete && (
                         <Button
                           variant="secondary"
@@ -214,7 +201,7 @@ const PipelineRunItem: React.FC<Props> = ({
                             onRegenerate(index);
                           }}
                         >
-                          🔄 Regenerate this step
+                          Regenerate Step
                         </Button>
                       )}
                     </div>
@@ -224,21 +211,20 @@ const PipelineRunItem: React.FC<Props> = ({
             })}
           </div>
 
-          {/* Terminal State Actions */}
           {isTerminal && (
-            <div className="px-4 pb-4">
-              <div className="flex justify-between items-center p-3 bg-slate-800/50 border border-slate-700 rounded">
+            <div className="px-3 pb-3">
+              <div className="flex justify-between items-center p-2.5 bg-black/40 border border-white/15 rounded">
                 {run.status === 'completed' && (
-                  <p className="text-sm text-green-400">✓ Pipeline completed successfully</p>
+                  <p className="text-xs text-zinc-200 uppercase tracking-wide">Pipeline completed</p>
                 )}
                 {run.status === 'failed' && (
-                  <p className="text-sm text-red-400">✗ Pipeline failed</p>
+                  <p className="text-xs text-zinc-200 uppercase tracking-wide">Pipeline failed</p>
                 )}
                 {run.status === 'cancelled' && (
-                  <p className="text-sm text-slate-400">Pipeline was cancelled</p>
+                  <p className="text-xs text-slate-400 uppercase tracking-wide">Pipeline cancelled</p>
                 )}
                 <Button variant="ghost" size="sm" onClick={onRemove}>
-                  🗑️ Remove
+                  Remove
                 </Button>
               </div>
             </div>

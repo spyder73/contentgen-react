@@ -61,7 +61,7 @@ const IdeasList: React.FC<IdeasListProps> = ({
     <div className="flex flex-col h-full">
       {/* Header - Fixed */}
       <div className="flex-shrink-0 pb-3 border-b border-slate-700">
-        <h2 className="section-title">💡 Ideas ({ideas.length})</h2>
+        <h2 className="section-title">Ideas ({ideas.length})</h2>
       </div>
 
       {/* Scrollable Content */}
@@ -80,11 +80,10 @@ const IdeasList: React.FC<IdeasListProps> = ({
           {/* Ideas List */}
           {ideas.length === 0 ? (
             <div className="text-center py-12 text-slate-500">
-              <div className="text-4xl mb-3">💡</div>
-              <p>No ideas yet. Create one above!</p>
+              <p>No ideas yet. Create one above.</p>
             </div>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-3 motion-stagger">
               {ideas.map((idea) => (
                 <IdeaItem
                   key={idea.id}

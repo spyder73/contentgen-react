@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { CheckpointConfig, PromptTemplate } from '../../api/structs';
 
 interface CheckpointPanelProps {
@@ -18,6 +18,7 @@ const CheckpointPanel: React.FC<CheckpointPanelProps> = ({
   onEditPrompt,
   onClose,
 }) => {
+  const [newMappingKey, setNewMappingKey] = useState('');
   const currentIndex = allCheckpoints.findIndex((c) => c.id === checkpoint.id);
   const previousCheckpoints = allCheckpoints.slice(0, currentIndex);
 
@@ -36,9 +37,10 @@ const CheckpointPanel: React.FC<CheckpointPanelProps> = ({
   };
 
   const handleAddInputMapping = () => {
-    const key = prompt('Enter input variable name (e.g., user_idea):');
-    if (!key) return;
-    handleInputMappingChange(key, 'initial_input');
+    if (!newMappingKey.trim()) return;
+    if (checkpoint.input_mapping[newMappingKey.trim()]) return;
+    handleInputMappingChange(newMappingKey.trim(), 'initial_input');
+    setNewMappingKey('');
   };
 
   const handleRemoveInputMapping = (key: string) => {
@@ -49,100 +51,73 @@ const CheckpointPanel: React.FC<CheckpointPanelProps> = ({
 
   return (
     <div className="flex flex-col h-full">
-      {/* Panel Header */}
-      <div className="flex items-center justify-between p-4 border-b border-gray-700">
-        <h3 className="font-semibold text-white">Edit Checkpoint</h3>
-        <button
-          onClick={onClose}
-          className="text-gray-400 hover:text-white text-xl px-2 rounded hover:bg-gray-700"
-        >
-          ×
-        </button>
+      <div className="flex items-center justify-between p-3 border-b border-white/10 bg-black/50">
+        <h3 className="font-semibold text-white text-xs uppercase tracking-[0.15em]">Checkpoint</h3>
+        <button onClick={onClose} className="btn btn-sm btn-ghost">Close</button>
       </div>
 
-      {/* Panel Content - Scrollable */}
-      <div className="flex-1 overflow-auto p-4 space-y-5">
-        {/* Basic Info */}
+      <div className="flex-1 overflow-auto p-3 space-y-4 text-xs min-w-0">
         <div>
-          <label className="block text-xs font-medium text-gray-400 mb-1">
-            Checkpoint ID
-          </label>
+          <label className="block font-medium text-gray-400 mb-1 uppercase tracking-wide">Checkpoint ID</label>
           <input
             type="text"
             value={checkpoint.id}
             disabled
-            className="w-full bg-gray-800 text-gray-500 px-3 py-2 rounded border border-gray-700 text-sm"
+            className="input"
           />
         </div>
 
         <div>
-          <label className="block text-xs font-medium text-gray-400 mb-1">
-            Display Name
-          </label>
+          <label className="block font-medium text-gray-400 mb-1 uppercase tracking-wide">Display Name</label>
           <input
             type="text"
             value={checkpoint.name}
             onChange={(e) => handleChange('name', e.target.value)}
-            className="w-full bg-gray-800 text-white px-3 py-2 rounded border border-gray-700 focus:border-blue-500 focus:outline-none text-sm"
+            className="input"
           />
         </div>
 
-        {/* Prompt Template */}
         <div>
-          <label className="block text-xs font-medium text-gray-400 mb-1">
-            Prompt Template
-          </label>
-          <div className="flex gap-2">
+          <label className="block font-medium text-gray-400 mb-1 uppercase tracking-wide">Prompt Template</label>
+          <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-2 items-start min-w-0">
             <select
               value={checkpoint.prompt_template_id}
               onChange={(e) => handleChange('prompt_template_id', e.target.value)}
-              className="flex-1 bg-gray-800 text-white px-3 py-2 rounded border border-gray-700 focus:border-blue-500 focus:outline-none text-sm"
+              className="w-full select min-w-0"
             >
-              <option value="">-- Select Prompt --</option>
+              <option value="">Select Prompt</option>
               {promptTemplates.map((t) => (
                 <option key={t.id} value={t.id}>
                   {t.name}
                 </option>
               ))}
             </select>
-            <button
-              onClick={() => onEditPrompt(checkpoint.prompt_template_id)}
-              className="px-3 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded text-sm"
-              title="Edit prompt"
-            >
-              ✏️
+            <button onClick={() => onEditPrompt(checkpoint.prompt_template_id)} className="btn btn-sm btn-ghost">
+              Edit
             </button>
           </div>
         </div>
 
-        {/* Input Mappings */}
         <div>
-          <div className="flex items-center justify-between mb-2">
-            <label className="text-xs font-medium text-gray-400">
-              Input Mappings
-            </label>
-            <button
-              onClick={handleAddInputMapping}
-              className="text-xs text-blue-400 hover:text-blue-300"
-            >
-              + Add
-            </button>
+          <label className="text-gray-400 uppercase tracking-wide block mb-2">Input Mappings</label>
+          <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-2 mb-2">
+            <input
+              value={newMappingKey}
+              onChange={(e) => setNewMappingKey(e.target.value)}
+              className="input"
+              placeholder="variable name"
+            />
+            <button onClick={handleAddInputMapping} className="btn btn-sm btn-ghost">Add</button>
           </div>
 
           <div className="space-y-2">
             {Object.entries(checkpoint.input_mapping || {}).map(([key, value]) => (
-              <div key={key} className="flex gap-2 items-center">
-                <input
-                  type="text"
-                  value={key}
-                  disabled
-                  className="w-24 bg-gray-800 text-gray-400 px-2 py-1.5 rounded border border-gray-700 text-xs"
-                />
-                <span className="text-gray-500">→</span>
+              <div key={key} className="grid grid-cols-1 sm:grid-cols-[90px_1fr_auto] gap-2 items-center min-w-0">
+                <input type="text" value={key} disabled className="input" />
                 <select
                   value={value}
                   onChange={(e) => handleInputMappingChange(key, e.target.value)}
-                  className="flex-1 bg-gray-800 text-white px-2 py-1.5 rounded border border-gray-700 text-xs"
+                  className="w-full select min-w-0"
                 >
                   <option value="initial_input">User Input</option>
                   {previousCheckpoints.map((c) => (
@@ -151,94 +126,68 @@ const CheckpointPanel: React.FC<CheckpointPanelProps> = ({
                     </option>
                   ))}
                 </select>
-                <button
-                  onClick={() => handleRemoveInputMapping(key)}
-                  className="text-gray-500 hover:text-red-400 text-sm"
-                >
-                  ×
-                </button>
+                <button onClick={() => handleRemoveInputMapping(key)} className="btn btn-sm btn-ghost">Remove</button>
               </div>
             ))}
 
             {Object.keys(checkpoint.input_mapping || {}).length === 0 && (
-              <p className="text-xs text-gray-500 italic">No input mappings</p>
+              <p className="text-xs text-gray-500 italic">No input mappings.</p>
             )}
           </div>
         </div>
 
-        {/* Provider/Model Override */}
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 gap-2">
           <div>
-            <label className="block text-xs font-medium text-gray-400 mb-1">
-              Provider Override
-            </label>
+            <label className="block font-medium text-gray-400 mb-1 uppercase tracking-wide">Provider Override</label>
             <input
               type="text"
               value={checkpoint.provider || ''}
               onChange={(e) => handleChange('provider', e.target.value)}
               placeholder="Use default"
-              className="w-full bg-gray-800 text-white px-3 py-2 rounded border border-gray-700 focus:border-blue-500 focus:outline-none text-sm"
+              className="input"
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-400 mb-1">
-              Model Override
-            </label>
+            <label className="block font-medium text-gray-400 mb-1 uppercase tracking-wide">Model Override</label>
             <input
               type="text"
               value={checkpoint.model || ''}
               onChange={(e) => handleChange('model', e.target.value)}
               placeholder="Use default"
-              className="w-full bg-gray-800 text-white px-3 py-2 rounded border border-gray-700 focus:border-blue-500 focus:outline-none text-sm"
+              className="input"
             />
           </div>
         </div>
 
-        {/* Toggles */}
-        <div className="space-y-3">
-          <label className="flex items-center gap-3 cursor-pointer">
+        <div className="space-y-2 pt-1">
+          <label className="flex items-center gap-2 cursor-pointer">
             <input
               type="checkbox"
               checked={checkpoint.requires_confirm}
               onChange={(e) => handleChange('requires_confirm', e.target.checked)}
-              className="w-4 h-4 rounded bg-gray-700 border-gray-600 text-blue-600 focus:ring-blue-500"
+              className="w-4 h-4"
             />
-            <div>
-              <span className="text-sm text-white">Requires Confirmation</span>
-              <p className="text-xs text-gray-500">
-                Pause and wait for user approval
-              </p>
-            </div>
+            <span className="text-zinc-200">Requires Confirmation</span>
           </label>
 
-          <label className="flex items-center gap-3 cursor-pointer">
+          <label className="flex items-center gap-2 cursor-pointer">
             <input
               type="checkbox"
               checked={checkpoint.allow_regenerate}
               onChange={(e) => handleChange('allow_regenerate', e.target.checked)}
-              className="w-4 h-4 rounded bg-gray-700 border-gray-600 text-blue-600 focus:ring-blue-500"
+              className="w-4 h-4"
             />
-            <div>
-              <span className="text-sm text-white">Allow Regenerate</span>
-              <p className="text-xs text-gray-500">
-                User can request a new generation
-              </p>
-            </div>
+            <span className="text-zinc-200">Allow Regenerate</span>
           </label>
 
-          <label className="flex items-center gap-3 cursor-pointer">
+          <label className="flex items-center gap-2 cursor-pointer">
             <input
               type="checkbox"
               checked={checkpoint.allow_attachments}
               onChange={(e) => handleChange('allow_attachments', e.target.checked)}
-              className="w-4 h-4 rounded bg-gray-700 border-gray-600 text-blue-600 focus:ring-blue-500"
+              className="w-4 h-4"
             />
-            <div>
-              <span className="text-sm text-white">Allow Attachments</span>
-              <p className="text-xs text-gray-500">
-                User can attach files at this step
-              </p>
-            </div>
+            <span className="text-zinc-200">Allow Attachments</span>
           </label>
         </div>
       </div>

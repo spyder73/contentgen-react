@@ -51,111 +51,92 @@ const PromptTemplateEditor: React.FC<PromptTemplateEditorProps> = ({
     }
   };
 
-  const detectedPlaceholders = (form.content.match(/\{\{(\w+)\}\}/g) || [])
-    .filter((v, i, a) => a.indexOf(v) === i);
+  const detectedPlaceholders = (form.content.match(/\{\{(\w+)\}\}/g) || []).filter(
+    (value, index, all) => all.indexOf(value) === index
+  );
 
   return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
-      <div className="bg-gray-800 rounded-lg w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col border border-gray-600 shadow-xl">
-        {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-gray-700 bg-gray-750">
-          <h3 className="text-lg font-semibold text-white">
-            {isNew ? '✨ Create Prompt Template' : '✏️ Edit Prompt Template'}
+    <div className="fixed inset-0 bg-black/85 flex items-center justify-center z-[220] p-4">
+      <div className="bg-zinc-950 border border-white/20 w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col shadow-xl animate-slide-up">
+        <div className="flex items-center justify-between p-4 border-b border-white/10 bg-black/60">
+          <h3 className="text-sm font-semibold uppercase tracking-[0.2em] text-white">
+            {isNew ? 'Create Prompt Template' : 'Edit Prompt Template'}
           </h3>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-white text-xl px-2 hover:bg-gray-700 rounded"
-          >
-            ×
-          </button>
+          <button onClick={onClose} className="btn btn-sm btn-ghost">Close</button>
         </div>
 
-        {/* Content */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+        <div className="flex-1 overflow-y-auto p-4 space-y-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm text-gray-400 mb-1">ID *</label>
+              <label className="block text-xs text-gray-400 mb-1 uppercase tracking-wide">ID *</label>
               <input
                 type="text"
                 value={form.id}
                 onChange={(e) => setForm({ ...form, id: e.target.value })}
                 disabled={!isNew}
-                className="w-full bg-gray-700 text-white rounded px-3 py-2 text-sm disabled:opacity-50 disabled:cursor-not-allowed border border-gray-600 focus:border-blue-500 focus:outline-none"
+                className="input disabled:opacity-50 disabled:cursor-not-allowed"
                 placeholder="my-prompt-template"
               />
             </div>
             <div>
-              <label className="block text-sm text-gray-400 mb-1">Name *</label>
+              <label className="block text-xs text-gray-400 mb-1 uppercase tracking-wide">Name *</label>
               <input
                 type="text"
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
-                className="w-full bg-gray-700 text-white rounded px-3 py-2 text-sm border border-gray-600 focus:border-blue-500 focus:outline-none"
+                className="input"
                 placeholder="My Prompt Template"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-sm text-gray-400 mb-1">Description</label>
+            <label className="block text-xs text-gray-400 mb-1 uppercase tracking-wide">Description</label>
             <input
               type="text"
               value={form.description}
               onChange={(e) => setForm({ ...form, description: e.target.value })}
-              className="w-full bg-gray-700 text-white rounded px-3 py-2 text-sm border border-gray-600 focus:border-blue-500 focus:outline-none"
+              className="input"
               placeholder="Optional description..."
             />
           </div>
 
           <div>
-            <label className="block text-sm text-gray-400 mb-1">
-              Content *{' '}
-              <span className="text-xs text-gray-500">
-                (Use {`{{placeholder}}`} for variables)
-              </span>
+            <label className="block text-xs text-gray-400 mb-1 uppercase tracking-wide">
+              Content * <span className="text-[10px] text-gray-500">Use {'{{placeholder}}'}</span>
             </label>
             <textarea
               value={form.content}
               onChange={(e) => setForm({ ...form, content: e.target.value })}
-              className="w-full bg-gray-700 text-white rounded px-3 py-2 text-sm font-mono h-64 resize-none border border-gray-600 focus:border-blue-500 focus:outline-none"
+              className="w-full input font-mono h-56 resize-none"
               placeholder={`Enter your prompt template here...\n\nExample:\nYou are a creative assistant.\nGenerate content about: {{user_idea}}\n\nContext: {{context}}`}
             />
           </div>
 
-          {/* Placeholder Preview */}
-          <div className="bg-gray-900 rounded-lg p-3 border border-gray-700">
-            <span className="text-xs text-gray-500">Detected placeholders:</span>
+          <div className="bg-black/50 border border-white/10 rounded p-3">
+            <span className="text-xs text-gray-500 uppercase tracking-wide">Detected placeholders</span>
             <div className="flex flex-wrap gap-2 mt-2">
               {detectedPlaceholders.length > 0 ? (
                 detectedPlaceholders.map((placeholder) => (
-                  <code
-                    key={placeholder}
-                    className="bg-yellow-900/50 text-yellow-400 px-2 py-1 rounded text-xs"
-                  >
+                  <code key={placeholder} className="bg-white/10 text-zinc-200 px-2 py-1 rounded text-xs">
                     {placeholder}
                   </code>
                 ))
               ) : (
                 <span className="text-xs text-gray-500 italic">
-                  None detected. Add placeholders like {`{{user_input}}`} to make your prompt dynamic.
+                  None detected. Add placeholders like {'{{user_input}}'}.
                 </span>
               )}
             </div>
           </div>
         </div>
 
-        {/* Footer */}
-        <div className="flex justify-end gap-3 p-4 border-t border-gray-700 bg-gray-750">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 text-gray-400 hover:text-white hover:bg-gray-700 rounded transition-colors"
-          >
-            Cancel
-          </button>
+        <div className="flex justify-end gap-2 p-4 border-t border-white/10 bg-black/60">
+          <button onClick={onClose} className="btn btn-secondary">Cancel</button>
           <button
             onClick={handleSave}
             disabled={isSaving || !form.id || !form.name || !form.content}
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="btn btn-primary"
           >
             {isSaving ? 'Saving...' : 'Save'}
           </button>

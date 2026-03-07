@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { ClipPrompt } from '../../api/structs/clip';
+import { getFileType } from '../../api/structs/clip';
 import { MediaProfile } from '../../api/structs/media-spec';
 import { Account } from '../../api/structs/user';
 import { Card, Button, Badge, Thumbnail, ExpandableSection } from '../ui';
@@ -35,7 +36,10 @@ const ClipPromptItem: React.FC<ClipPromptItemProps> = ({
   const totalMedia = images.length + aiVideos.length + audios.length;
 
   const fileUrls = clip.file_urls || [];
-  const hasOutput = fileUrls.length > 0 && !fileUrls.some(url => url.includes('waiting'));
+  const hasOutput =
+    fileUrls.length > 0 &&
+    fileUrls.some((url) => getFileType(url) !== 'unknown') &&
+    !fileUrls.some((url) => url.includes('waiting'));
   const clipStyle = clip.style?.style || 'standard';
 
   const handleDelete = async () => {
@@ -49,10 +53,10 @@ const ClipPromptItem: React.FC<ClipPromptItemProps> = ({
 
   const getStatusBadge = () => {
     if (hasOutput && fileUrls.length > 1) {
-      return <Badge variant="green">✓ {fileUrls.length} outputs</Badge>;
+      return <Badge variant="green">{fileUrls.length} outputs</Badge>;
     }
     if (hasOutput) {
-      return <Badge variant="green">✓ Rendered</Badge>;
+      return <Badge variant="green">Rendered</Badge>;
     }
     return <Badge variant="blue">Draft</Badge>;
   };
@@ -60,11 +64,11 @@ const ClipPromptItem: React.FC<ClipPromptItemProps> = ({
   return (
     <>
       <Card hover className="animate-fade-in">
-        <Card.Body>
+        <Card.Body className="overflow-hidden">
           {/* Header */}
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-3">
-              <h3 className="text-white font-medium truncate max-w-xs">
+          <div className="flex flex-col gap-2 mb-3 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex flex-wrap items-center gap-2 min-w-0">
+              <h3 className="text-white font-medium truncate max-w-full lg:max-w-xs">
                 {clip.name || 'Untitled Clip'}
               </h3>
               {getStatusBadge()}
@@ -72,22 +76,22 @@ const ClipPromptItem: React.FC<ClipPromptItemProps> = ({
               <Badge variant="gray">{clipStyle}</Badge>
             </div>
 
-            <div className="flex items-center gap-1">
+            <div className="flex flex-wrap items-center gap-1 justify-start lg:justify-end">
               <Button variant="ghost" size="sm" onClick={onToggleExpand}>
-                {isExpanded ? '▲' : '▼'}
+                {isExpanded ? 'Collapse' : 'Expand'}
               </Button>
               <Button variant="ghost" size="sm" onClick={() => setShowEditModal(true)}>
-                ✏️
+                Edit
               </Button>
               <Button variant="ghost" size="sm" onClick={() => setShowDeleteConfirm(true)}>
-                🗑️
+                Delete
               </Button>
             </div>
           </div>
 
           {/* Collapsed: Thumbnails */}
           {!isExpanded && images.length > 0 && (
-            <div className="flex gap-2 overflow-x-auto pb-2">
+            <div className="max-w-full flex gap-2 overflow-x-auto pb-2">
               {images.slice(0, 5).map((img) => (
                 <Thumbnail
                   key={img.id}
@@ -110,7 +114,6 @@ const ClipPromptItem: React.FC<ClipPromptItemProps> = ({
               {/* Section 1: Media Editor */}
               <ExpandableSection
                 title="Media & Prompts"
-                icon="🎨"
                 badge={<Badge variant="gray">{totalMedia}</Badge>}
                 defaultExpanded={true}
               >
@@ -128,7 +131,6 @@ const ClipPromptItem: React.FC<ClipPromptItemProps> = ({
               {/* Section 2: Output Gallery */}
               <ExpandableSection
                 title="Output Gallery"
-                icon="📦"
                 badge={
                   hasOutput ? (
                     <Badge variant="green">{fileUrls.length} files</Badge>
@@ -149,7 +151,6 @@ const ClipPromptItem: React.FC<ClipPromptItemProps> = ({
               {/* Section 3: Schedule */}
               <ExpandableSection
                 title="Schedule & Publish"
-                icon="📅"
                 badge={
                   activeAccount ? (
                     <Badge variant="blue">{activeAccount.username}</Badge>

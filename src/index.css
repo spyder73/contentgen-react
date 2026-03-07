@@ -1,82 +1,98 @@
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* ===========================================
-   BUTTONS
-   =========================================== */
+@layer base {
+  :root {
+    color-scheme: dark;
+  }
+
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    margin: 0;
+    font-family: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+    background:
+      radial-gradient(circle at 20% 10%, rgba(255, 255, 255, 0.08), transparent 34%),
+      radial-gradient(circle at 80% 90%, rgba(255, 255, 255, 0.04), transparent 28%),
+      #050505;
+    color: #f2f2f2;
+    letter-spacing: 0.01em;
+  }
+
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: #4a4a4a transparent;
+  }
+
+  *::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  *::-webkit-scrollbar-thumb {
+    background: #4a4a4a;
+    border-radius: 999px;
+  }
+}
+
 @layer components {
-  /* Primary button (blue) */
   .btn {
-    @apply px-4 py-2 rounded-lg font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-900 disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply px-4 py-2 rounded-none border border-white/25 bg-white/5 text-white tracking-wide transition duration-200 ease-out focus:outline-none focus:ring-1 focus:ring-white/50 disabled:opacity-45 disabled:cursor-not-allowed;
   }
 
   .btn-primary {
-    @apply btn bg-blue-600 hover:bg-blue-700 text-white focus:ring-blue-500;
+    @apply btn bg-white text-black border-white hover:bg-zinc-200;
   }
 
-  .btn-secondary {
-    @apply btn bg-slate-700 hover:bg-slate-600 text-white focus:ring-slate-500;
-  }
-
-  .btn-success {
-    @apply btn bg-green-600 hover:bg-green-700 text-white focus:ring-green-500;
-  }
-
-  .btn-danger {
-    @apply btn bg-red-600 hover:bg-red-700 text-white focus:ring-red-500;
-  }
-
-  .btn-purple {
-    @apply btn bg-purple-600 hover:bg-purple-700 text-white focus:ring-purple-500;
-  }
-
+  .btn-secondary,
+  .btn-success,
+  .btn-danger,
+  .btn-purple,
   .btn-ghost {
-    @apply btn bg-transparent hover:bg-slate-700 text-slate-300 hover:text-white;
+    @apply btn hover:bg-white/10;
   }
 
-  /* Small button variant */
   .btn-sm {
-    @apply px-3 py-1.5 text-sm;
+    @apply px-3 py-1.5 text-xs;
   }
 
-  /* Icon-only button */
   .btn-icon {
-    @apply p-2 rounded-lg transition-colors hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-500;
+    @apply p-2 border border-white/20 bg-transparent text-white hover:bg-white/10 transition;
   }
 
-  /* ===========================================
-     INPUTS & SELECTS
-     =========================================== */
   .input {
-    @apply w-full px-4 py-2 bg-slate-800 text-white rounded-lg border border-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder-slate-500;
+    @apply w-full px-3 py-2 border border-white/20 rounded-none bg-black/60 text-white placeholder:text-zinc-500 focus:outline-none focus:border-white/60;
   }
 
   .input-sm {
-    @apply px-3 py-1.5 text-sm;
+    @apply px-2.5 py-1.5 text-xs;
   }
 
   .select {
-    @apply px-3 py-1.5 bg-slate-700 text-white rounded-lg border border-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer;
+    @apply px-2.5 py-1.5 border border-white/20 rounded-none bg-black text-zinc-100 focus:outline-none focus:border-white/60 cursor-pointer;
   }
 
   .select-sm {
-    @apply px-2 py-1 text-sm;
+    @apply text-xs;
   }
 
   .textarea {
     @apply input resize-none;
   }
 
-  /* ===========================================
-     CARDS & CONTAINERS
-     =========================================== */
   .card {
-    @apply bg-slate-800 rounded-lg border border-slate-700 shadow-lg;
+    @apply relative border border-white/15 bg-black/55 backdrop-blur-sm rounded-none shadow-[0_0_0_1px_rgba(255,255,255,0.04)];
   }
 
   .card-hover {
-    @apply card hover:border-slate-600 transition-colors;
+    @apply card transition duration-200 hover:border-white/35 hover:bg-black/65;
   }
 
   .card-body {
@@ -84,68 +100,49 @@
   }
 
   .card-header {
-    @apply px-4 py-3 border-b border-slate-700;
+    @apply px-4 py-3 border-b border-white/10;
   }
 
-  /* ===========================================
-     DROPDOWNS
-     =========================================== */
   .dropdown {
-    @apply absolute z-50 mt-1 bg-slate-700 rounded-lg shadow-xl border border-slate-600 overflow-hidden;
+    @apply absolute z-[140] mt-1 bg-black border border-white/20 shadow-2xl;
   }
 
   .dropdown-item {
-    @apply px-3 py-2 cursor-pointer hover:bg-slate-600 transition-colors text-white;
+    @apply px-3 py-2 cursor-pointer text-zinc-100 hover:bg-white/10;
   }
 
   .dropdown-item-active {
-    @apply dropdown-item bg-purple-600/30;
+    @apply dropdown-item bg-white/15;
   }
 
-  /* ===========================================
-     BADGES & TAGS
-     =========================================== */
   .badge {
-    @apply inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium;
+    @apply inline-flex items-center px-2 py-0.5 border border-white/20 text-[10px] uppercase tracking-wide;
   }
 
-  .badge-blue {
-    @apply badge bg-blue-500/20 text-blue-400;
-  }
-
-  .badge-green {
-    @apply badge bg-green-500/20 text-green-400;
-  }
-
-  .badge-yellow {
-    @apply badge bg-yellow-500/20 text-yellow-400;
-  }
-
-  .badge-red {
-    @apply badge bg-red-500/20 text-red-400;
-  }
-
+  .badge-blue,
+  .badge-green,
+  .badge-yellow,
+  .badge-red,
   .badge-purple {
-    @apply badge bg-purple-500/20 text-purple-400;
+    @apply badge bg-white/5 text-zinc-200;
   }
 
-  /* ===========================================
-     MODALS
-     =========================================== */
   .modal-overlay {
-    @apply fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4;
+    @apply fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80;
+    animation: fade-in 0.22s ease-out;
   }
 
   .modal-content {
-    @apply bg-slate-800 rounded-xl shadow-2xl border border-slate-700 w-full max-w-md max-h-[90vh] overflow-hidden;
+    @apply w-full max-w-md max-h-[90vh] overflow-hidden border border-white/20 bg-zinc-950 shadow-2xl;
+    animation: modal-rise 0.24s ease-out;
   }
 
   .modal-header {
-    @apply px-6 py-4 border-b border-slate-700 flex items-center justify-between;
+    @apply px-6 py-4 border-b border-white/10 flex items-center justify-between;
   }
 
   .modal-title {
-    @apply text-xl font-semibold text-white;
+    @apply text-lg font-semibold uppercase tracking-wider text-zinc-100;
   }
 
   .modal-body {
@@ -153,14 +150,11 @@
   }
 
   .modal-footer {
-    @apply px-6 py-4 border-t border-slate-700 flex justify-end gap-3;
+    @apply px-6 py-4 border-t border-white/10 flex justify-end gap-3;
   }
 
-  /* ===========================================
-     LAYOUT
-     =========================================== */
   .page-header {
-    @apply bg-slate-800 border-b border-slate-700 shadow-lg;
+    @apply relative z-[120] border-b border-white/10 bg-black/85 backdrop-blur-sm;
   }
 
   .page-container {
@@ -168,16 +162,13 @@
   }
 
   .section-title {
-    @apply text-2xl font-bold text-white;
+    @apply text-base font-semibold uppercase tracking-[0.2em] text-zinc-100;
   }
 
   .section-subtitle {
-    @apply text-sm text-slate-400;
+    @apply text-xs uppercase tracking-widest text-zinc-500;
   }
 
-  /* ===========================================
-     LISTS
-     =========================================== */
   .list-container {
     @apply space-y-2 overflow-y-auto;
   }
@@ -187,26 +178,17 @@
   }
 
   .list-empty {
-    @apply text-center p-8 card text-slate-400;
+    @apply text-center p-8 card text-zinc-500;
   }
 
-  /* ===========================================
-     UTILITIES
-     =========================================== */
   .text-muted {
-    @apply text-slate-400;
+    @apply text-zinc-500;
   }
 
-  .text-success {
-    @apply text-green-400;
-  }
-
-  .text-danger {
-    @apply text-red-400;
-  }
-
+  .text-success,
+  .text-danger,
   .text-warning {
-    @apply text-yellow-400;
+    @apply text-zinc-200;
   }
 
   .truncate-2 {
@@ -223,30 +205,72 @@
     -webkit-box-orient: vertical;
   }
 
-  /* ===========================================
-     ANIMATIONS
-     =========================================== */
   .animate-fade-in {
-    animation: fadeIn 0.2s ease-out;
+    animation: fade-in 0.2s ease-out both;
   }
 
   .animate-slide-up {
-    animation: slideUp 0.2s ease-out;
+    animation: modal-rise 0.24s ease-out both;
   }
 
-  @keyframes fadeIn {
+  .motion-stagger > * {
+    animation: fade-in-up 0.25s ease-out both;
+  }
+
+  .motion-stagger > *:nth-child(1) { animation-delay: 0.03s; }
+  .motion-stagger > *:nth-child(2) { animation-delay: 0.06s; }
+  .motion-stagger > *:nth-child(3) { animation-delay: 0.09s; }
+  .motion-stagger > *:nth-child(4) { animation-delay: 0.12s; }
+  .motion-stagger > *:nth-child(5) { animation-delay: 0.15s; }
+
+  .pipeline-progress {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .pipeline-progress::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(110deg, transparent 0%, rgba(255, 255, 255, 0.55) 45%, transparent 100%);
+    transform: translateX(-120%);
+    animation: progress-shimmer 1.5s linear infinite;
+    opacity: 0.85;
+  }
+
+  @keyframes fade-in {
     from { opacity: 0; }
     to { opacity: 1; }
   }
 
-  @keyframes slideUp {
-    from { 
+  @keyframes fade-in-up {
+    from {
       opacity: 0;
-      transform: translateY(10px);
+      transform: translateY(8px);
     }
-    to { 
+    to {
       opacity: 1;
       transform: translateY(0);
+    }
+  }
+
+  @keyframes modal-rise {
+    from {
+      opacity: 0;
+      transform: translateY(12px) scale(0.99);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+
+  @keyframes progress-shimmer {
+    from {
+      transform: translateX(-120%);
+    }
+    to {
+      transform: translateX(120%);
     }
   }
 }

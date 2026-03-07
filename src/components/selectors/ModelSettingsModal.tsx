@@ -27,9 +27,9 @@ interface ModelSettingsModalProps {
 }
 
 const MODALITY_LABELS: Record<string, string> = {
-  image: '🖼️ Image',
-  video: '🎬 Video',
-  audio: '🎵 Audio',
+  image: 'Image',
+  video: 'Video',
+  audio: 'Audio',
 };
 
 const ModelSettingsModal: React.FC<ModelSettingsModalProps> = ({
@@ -117,7 +117,7 @@ const ModelSettingsModal: React.FC<ModelSettingsModalProps> = ({
     <Modal isOpen={isOpen} onClose={onClose} title={title}>
       <div className="space-y-4">
         {/* Model info */}
-        <div className="text-xs text-slate-500 bg-slate-800/50 rounded p-2">
+        <div className="text-xs text-slate-500 bg-black/50 border border-white/10 rounded p-2 uppercase tracking-wide">
           <span className="font-medium">Model:</span> {modelId}
         </div>
 
@@ -130,14 +130,14 @@ const ModelSettingsModal: React.FC<ModelSettingsModalProps> = ({
 
         {/* Error state */}
         {error && (
-          <div className="text-sm text-red-400 bg-red-900/20 rounded p-3">
+          <div className="text-sm text-zinc-200 bg-black/50 border border-white/10 rounded p-3">
             {error}
           </div>
         )}
 
         {/* Fields */}
         {!isLoading && !error && visibleFields.length > 0 && (
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {visibleFields.map(({ key, field }) => (
               <ConstraintFieldInput
                 key={key}
@@ -158,7 +158,7 @@ const ModelSettingsModal: React.FC<ModelSettingsModalProps> = ({
         )}
 
         {/* Actions */}
-        <div className="flex justify-between pt-2 border-t border-slate-700">
+        <div className="flex justify-between pt-2 border-t border-white/10">
           <Button variant="ghost" size="sm" onClick={handleReset} disabled={!constraints}>
             Reset Defaults
           </Button>

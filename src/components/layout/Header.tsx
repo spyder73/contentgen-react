@@ -89,6 +89,7 @@ const Header: React.FC<HeaderProps> = ({
   onOpenProxyModal,
 }) => {
   const [showPipelineManager, setShowPipelineManager] = useState(false);
+  const [showModelControls, setShowModelControls] = useState(false);
 
   return (
     <>
@@ -97,16 +98,23 @@ const Header: React.FC<HeaderProps> = ({
           {/* Top row - Title & User */}
           <div className="flex justify-between items-center mb-3">
             <div className="flex items-center gap-4">
-              <h1 className="text-2xl font-bold text-white">🎬 ContentGen</h1>
+              <h1 className="text-xl font-semibold uppercase tracking-[0.25em] text-white">ContentGen</h1>
               <Button variant="ghost" size="sm" onClick={onOpenProxyModal}>
-                🔌 Proxies
+                Proxies
               </Button>
               <Button 
                 variant="ghost" 
                 size="sm" 
                 onClick={() => setShowPipelineManager(true)}
               >
-                🔧 Pipelines
+                Pipelines
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowModelControls((value) => !value)}
+              >
+                {showModelControls ? 'Hide Models' : 'Model Controls'}
               </Button>
             </div>
 
@@ -122,56 +130,61 @@ const Header: React.FC<HeaderProps> = ({
           </div>
 
           {/* Bottom row - All selectors (each renders its own settings modal) */}
-          <div className="flex items-center gap-3 flex-wrap">
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-slate-400">💬</span>
-              <ChatProviderSelector
-                provider={chatProvider}
-                model={chatModel}
-                onProviderChange={onChatProviderChange}
-                onModelChange={onChatModelChange}
-              />
+          {showModelControls && (
+            <div className="flex items-center gap-3 flex-wrap border-t border-white/10 pt-3 mt-3 animate-fade-in">
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-slate-400 uppercase tracking-wider">Chat</span>
+                <ChatProviderSelector
+                  provider={chatProvider}
+                  model={chatModel}
+                  onProviderChange={onChatProviderChange}
+                  onModelChange={onChatModelChange}
+                />
+              </div>
+
+              <div className="w-px h-6 bg-slate-600" />
+
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-slate-400 uppercase tracking-wider">Image</span>
+                <ImageProviderSelector
+                  provider={imageProvider}
+                  model={imageModel}
+                  onProviderChange={onImageProviderChange}
+                  onModelChange={onImageModelChange}
+                  settings={imageSettings}
+                  onSettingsChange={onImageSettingsChange}
+                />
+              </div>
+
+              <div className="w-px h-6 bg-slate-600" />
+
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-slate-400 uppercase tracking-wider">Video</span>
+                <VideoProviderSelector
+                  provider={videoProvider}
+                  model={videoModel}
+                  onProviderChange={onVideoProviderChange}
+                  onModelChange={onVideoModelChange}
+                  settings={videoSettings}
+                  onSettingsChange={onVideoSettingsChange}
+                />
+              </div>
+
+              <div className="w-px h-6 bg-slate-600" />
+
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-slate-400 uppercase tracking-wider">Audio</span>
+                <AudioProviderSelector
+                  provider={audioProvider}
+                  model={audioModel}
+                  onProviderChange={onAudioProviderChange}
+                  onModelChange={onAudioModelChange}
+                  settings={audioSettings}
+                  onSettingsChange={onAudioSettingsChange}
+                />
+              </div>
             </div>
-
-            <div className="w-px h-6 bg-slate-600" />
-
-            <div className="flex items-center gap-2">
-              <ImageProviderSelector
-                provider={imageProvider}
-                model={imageModel}
-                onProviderChange={onImageProviderChange}
-                onModelChange={onImageModelChange}
-                settings={imageSettings}
-                onSettingsChange={onImageSettingsChange}
-              />
-            </div>
-
-            <div className="w-px h-6 bg-slate-600" />
-
-            <div className="flex items-center gap-2">
-              <VideoProviderSelector
-                provider={videoProvider}
-                model={videoModel}
-                onProviderChange={onVideoProviderChange}
-                onModelChange={onVideoModelChange}
-                settings={videoSettings}
-                onSettingsChange={onVideoSettingsChange}
-              />
-            </div>
-
-            <div className="w-px h-6 bg-slate-600" />
-
-            <div className="flex items-center gap-2">
-              <AudioProviderSelector
-                provider={audioProvider}
-                model={audioModel}
-                onProviderChange={onAudioProviderChange}
-                onModelChange={onAudioModelChange}
-                settings={audioSettings}
-                onSettingsChange={onAudioSettingsChange}
-              />
-            </div>
-          </div>
+          )}
         </div>
       </header>
 

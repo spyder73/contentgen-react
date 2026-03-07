@@ -115,7 +115,7 @@ const VideoProviderSelector: React.FC<VideoProviderSelectorProps> = ({
           className="btn-ghost btn-sm"
           title="Video model settings"
         >
-          ⚙️
+          Settings
         </button>
       </div>
 

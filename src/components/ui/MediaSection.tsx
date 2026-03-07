@@ -1,6 +1,7 @@
 import React from 'react';
 import { MediaItem } from '../../api/structs/media';
 import { MediaOutputSpec } from '../../api/structs/media-spec';
+import { ClipStyleField } from '../../api/clipstyleSchema';
 import { MediaItemComponent } from '../clips';
 import { Button } from '../ui';
 
@@ -9,6 +10,7 @@ interface MediaSectionProps {
   icon: string;
   items: MediaItem[];
   clipStyle: string;
+  mediaMetadataFields?: Record<'image' | 'ai_video' | 'audio', ClipStyleField[]>;
   onRefresh: () => void;
   outputSpec?: MediaOutputSpec;
   onPreview?: (url: string) => void;
@@ -20,6 +22,7 @@ const MediaSection: React.FC<MediaSectionProps> = ({
   icon,
   items,
   clipStyle,
+  mediaMetadataFields,
   onRefresh,
   outputSpec,
   onPreview,
@@ -29,7 +32,7 @@ const MediaSection: React.FC<MediaSectionProps> = ({
     <div>
       <div className="flex items-center justify-between mb-2">
         <h4 className="text-sm font-medium text-slate-300">
-          {icon} {title} ({items.length})
+          {icon ? `${icon} ` : ''}{title} ({items.length})
         </h4>
         {onAdd && (
           <Button size="sm" variant="ghost" onClick={onAdd}>
@@ -47,6 +50,7 @@ const MediaSection: React.FC<MediaSectionProps> = ({
               key={item.id}
               item={item}
               clipStyle={clipStyle}
+              metadataFields={mediaMetadataFields?.[item.type] || []}
               onRefresh={onRefresh}
               outputSpec={item.output_spec ?? outputSpec}
               onPreview={onPreview}

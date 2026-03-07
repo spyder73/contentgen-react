@@ -23,10 +23,9 @@ Key component domains:
 - real-time refresh via websocket.
 
 ## UX Debt
-1. Clipstyle forms are hardcoded (`src/clipStyles/*`).
-2. Pipeline checkpoint editor still uses raw prompt dialogs for some actions.
-3. Event feedback is generic; action-level progress context is thin.
-4. Large cards can feel cluttered during multi-clip runs.
+1. Event feedback is generic; action-level progress context is thin.
+2. Large cards can feel cluttered during multi-clip runs.
+3. Clipstyle schema payloads are not yet fully standardized across backend versions.
 
 ## Redesign Direction (Current Phase)
 - keep existing IA and component boundaries.
@@ -46,11 +45,11 @@ Model settings path is already schema-driven and should remain the pattern.
 
 ## Component Priorities
 1. `EditClipPromptModal`
-   - replace static `getStyleConfig` usage with schema-based field rendering.
+   - consume normalized schema from `/clipstyles/:style/schema`.
 2. `ClipStyleSelector`
-   - fetch options from API instead of `clipStyles/index.ts`.
+   - consume options from `/clipstyles`.
 3. pipeline editor
-   - improve checkpoint add/edit interactions (remove prompt() calls).
+   - replace prompt-based add flow with explicit modal form.
 4. websocket notifications
    - map event names to precise, user-readable progress messages.
 

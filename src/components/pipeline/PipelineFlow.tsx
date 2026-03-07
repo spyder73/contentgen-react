@@ -37,10 +37,10 @@ const PipelineFlow: React.FC<PipelineFlowProps> = ({
     <div className="space-y-2">
       {/* Start Node */}
       <div className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-full bg-green-600 flex items-center justify-center text-white text-sm font-bold shadow-lg">
-          ▶
+        <div className="w-8 h-8 border border-white/25 bg-black/60 flex items-center justify-center text-zinc-300 text-xs font-semibold">
+          IN
         </div>
-        <span className="text-sm text-gray-400">User Input</span>
+        <span className="text-xs uppercase tracking-wide text-gray-400">User Input</span>
       </div>
 
       {/* Connector */}
@@ -55,20 +55,20 @@ const PipelineFlow: React.FC<PipelineFlowProps> = ({
           <div
             onClick={() => onCheckpointClick(checkpoint.id)}
             className={`
-              flex items-start gap-3 p-3 rounded-lg cursor-pointer transition-all
+              flex items-start gap-2 p-2.5 rounded cursor-pointer transition-all
               ${selectedCheckpointId === checkpoint.id
-                ? 'bg-blue-900/50 border-2 border-blue-500 shadow-lg shadow-blue-500/20'
-                : 'bg-gray-800 border border-gray-700 hover:border-gray-500 hover:bg-gray-750'
+                ? 'bg-white/10 border border-white/35'
+                : 'bg-black/50 border border-white/15 hover:border-white/25 hover:bg-white/5'
               }
             `}
           >
             {/* Step Number */}
             <div
               className={`
-                w-10 h-10 rounded-lg flex items-center justify-center text-sm font-bold flex-shrink-0
+                w-8 h-8 border flex items-center justify-center text-xs font-semibold flex-shrink-0
                 ${selectedCheckpointId === checkpoint.id
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-700 text-gray-300'
+                  ? 'bg-white text-black border-white'
+                  : 'bg-black border-white/20 text-gray-300'
                 }
               `}
             >
@@ -78,7 +78,7 @@ const PipelineFlow: React.FC<PipelineFlowProps> = ({
             {/* Content */}
             <div className="flex-1 min-w-0">
               <div className="flex items-center justify-between">
-                <h4 className="font-medium text-white truncate">
+                <h4 className="font-medium text-white truncate text-xs uppercase tracking-wide">
                   {checkpoint.name}
                 </h4>
                 <button
@@ -86,14 +86,14 @@ const PipelineFlow: React.FC<PipelineFlowProps> = ({
                     e.stopPropagation();
                     onCheckpointRemove(checkpoint.id);
                   }}
-                  className="text-gray-500 hover:text-red-400 p-1 rounded hover:bg-red-900/30 transition-colors"
+                  className="text-gray-500 hover:text-white p-1 rounded border border-transparent hover:border-white/20 transition-colors text-[10px]"
                   title="Remove checkpoint"
                 >
-                  ×
+                  Remove
                 </button>
               </div>
 
-              <p className="text-xs text-gray-500 truncate mt-0.5">
+              <p className="text-[10px] text-gray-500 truncate mt-0.5 uppercase tracking-wide">
                 {getPromptName(checkpoint.prompt_template_id)}
               </p>
 
@@ -103,7 +103,7 @@ const PipelineFlow: React.FC<PipelineFlowProps> = ({
                   {getInputSources(checkpoint).map((source, i) => (
                     <span
                       key={i}
-                      className="text-xs bg-gray-700 text-gray-400 px-2 py-0.5 rounded"
+                      className="text-[10px] bg-white/5 border border-white/10 text-gray-400 px-2 py-0.5 rounded"
                     >
                       {source}
                     </span>
@@ -114,18 +114,18 @@ const PipelineFlow: React.FC<PipelineFlowProps> = ({
               {/* Badges */}
               <div className="flex gap-1 mt-2">
                 {checkpoint.requires_confirm && (
-                  <span className="text-xs bg-yellow-900/50 text-yellow-400 px-2 py-0.5 rounded">
-                    ⏸ Confirm
+                  <span className="text-[10px] bg-white/5 border border-white/10 text-zinc-300 px-2 py-0.5 rounded uppercase tracking-wide">
+                    Confirm
                   </span>
                 )}
                 {checkpoint.allow_regenerate && (
-                  <span className="text-xs bg-green-900/50 text-green-400 px-2 py-0.5 rounded">
-                    🔄 Regen
+                  <span className="text-[10px] bg-white/5 border border-white/10 text-zinc-300 px-2 py-0.5 rounded uppercase tracking-wide">
+                    Regen
                   </span>
                 )}
                 {checkpoint.allow_attachments && (
-                  <span className="text-xs bg-purple-900/50 text-purple-400 px-2 py-0.5 rounded">
-                    📎 Files
+                  <span className="text-[10px] bg-white/5 border border-white/10 text-zinc-300 px-2 py-0.5 rounded uppercase tracking-wide">
+                    Files
                   </span>
                 )}
               </div>
@@ -142,10 +142,10 @@ const PipelineFlow: React.FC<PipelineFlowProps> = ({
                 className={`text-xs px-1.5 py-0.5 rounded ${
                   index === 0
                     ? 'text-gray-600 cursor-not-allowed'
-                    : 'text-gray-400 hover:text-white hover:bg-gray-700'
+                    : 'text-gray-400 hover:text-white hover:bg-white/10'
                 }`}
               >
-                ▲
+                Up
               </button>
               <button
                 onClick={(e) => {
@@ -156,10 +156,10 @@ const PipelineFlow: React.FC<PipelineFlowProps> = ({
                 className={`text-xs px-1.5 py-0.5 rounded ${
                   index === checkpoints.length - 1
                     ? 'text-gray-600 cursor-not-allowed'
-                    : 'text-gray-400 hover:text-white hover:bg-gray-700'
+                    : 'text-gray-400 hover:text-white hover:bg-white/10'
                 }`}
               >
-                ▼
+                Down
               </button>
             </div>
           </div>
@@ -176,10 +176,10 @@ const PipelineFlow: React.FC<PipelineFlowProps> = ({
         <>
           <div className="ml-5 w-0.5 h-4 bg-gray-600" />
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-red-600 flex items-center justify-center text-white text-sm font-bold shadow-lg">
-              ■
+            <div className="w-8 h-8 border border-white/25 bg-black/60 flex items-center justify-center text-zinc-300 text-xs font-semibold">
+              OUT
             </div>
-            <span className="text-sm text-gray-400">Output</span>
+            <span className="text-xs uppercase tracking-wide text-gray-400">Output</span>
           </div>
         </>
       )}

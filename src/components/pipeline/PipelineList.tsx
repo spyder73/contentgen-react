@@ -11,7 +11,7 @@ const PipelineList: React.FC<PipelineListProps> = ({
 }) => {
   if (isLoading) {
     return (
-      <div className="p-4 text-gray-400 text-center">
+      <div className="p-4 text-gray-400 text-center text-xs uppercase tracking-wide">
         Loading pipelines...
       </div>
     );
@@ -19,13 +19,13 @@ const PipelineList: React.FC<PipelineListProps> = ({
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex items-center justify-between p-3 border-b border-gray-700">
-        <span className="text-sm font-medium text-gray-300">Pipelines</span>
+      <div className="flex items-center justify-between p-3 border-b border-white/10">
+        <span className="text-xs font-medium uppercase tracking-[0.15em] text-gray-300">Pipelines</span>
         <button
           onClick={onCreate}
-          className="text-xs bg-green-600 hover:bg-green-500 text-white px-2 py-1 rounded"
+          className="btn btn-sm btn-ghost"
         >
-          + New
+          New
         </button>
       </div>
 
@@ -35,16 +35,16 @@ const PipelineList: React.FC<PipelineListProps> = ({
             No pipelines yet
           </div>
         ) : (
-          <ul className="divide-y divide-gray-700">
+          <ul className="divide-y divide-white/10">
             {pipelines.map((pipeline) => (
-              <li key={pipeline.id}>
+              <li key={pipeline.id} className="group">
                 <button
                   onClick={() => onSelect(pipeline.id)}
                   className={`
                     w-full text-left p-3 transition-colors
                     ${selectedId === pipeline.id
-                      ? 'bg-blue-600/20 border-l-2 border-blue-500'
-                      : 'hover:bg-gray-700/50'
+                      ? 'bg-white/10 border-l-2 border-white'
+                      : 'hover:bg-white/5'
                     }
                   `}
                 >
@@ -59,13 +59,13 @@ const PipelineList: React.FC<PipelineListProps> = ({
                           onDelete(pipeline.id);
                         }
                       }}
-                      className="text-red-400 hover:text-red-300 text-xs px-1 opacity-0 group-hover:opacity-100"
+                      className="text-zinc-300 hover:text-white text-[10px] px-2 py-0.5 border border-white/20 opacity-0 group-hover:opacity-100"
                     >
-                      🗑
+                      Remove
                     </button>
                   </div>
                   <div className="text-xs text-gray-400 mt-1">
-                    {pipeline.checkpoints.length} checkpoint(s) • v{pipeline.version}
+                    {pipeline.checkpoints.length} checkpoint(s) | v{pipeline.version}
                   </div>
                   {pipeline.description && (
                     <div className="text-xs text-gray-500 mt-1 truncate">

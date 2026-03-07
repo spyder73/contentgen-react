@@ -20,12 +20,12 @@ const ClipStyleSelector: React.FC<ClipStyleSelectorProps> = ({
 
   return (
     <div className={`flex flex-col gap-1 ${className}`}>
-      <label className="text-sm text-slate-400">Clip Style</label>
+      <label className="text-sm text-muted">Clip Style</label>
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
         disabled={isLoading || styles.length === 0}
-        className="bg-slate-800 border border-slate-600 rounded px-3 py-2 text-white"
+        className="w-full select"
       >
         {isLoading && <option value={value}>Loading styles...</option>}
         {!isLoading && styles.length === 0 && <option value={value}>{value || 'No styles available'}</option>}
@@ -36,7 +36,7 @@ const ClipStyleSelector: React.FC<ClipStyleSelectorProps> = ({
             </option>
           ))}
       </select>
-      <span className="text-xs text-slate-500">{selectedStyle?.description || ''}</span>
+      <span className="text-xs text-muted">{selectedStyle?.description || ''}</span>
     </div>
   );
 };

@@ -110,4 +110,102 @@ describe('PipelineRunItem connector cues', () => {
     fireEvent.click(screen.getByText('Join'));
     expect(screen.getByText('Fan-in from split')).toBeInTheDocument();
   });
+
+  it('renders attachment loading and empty states without layout breakage', () => {
+    const templateWithAttachments: PipelineTemplate = {
+      ...template,
+      checkpoints: template.checkpoints.map((checkpoint, index) =>
+        index === 1 ? { ...checkpoint, allow_attachments: true } : checkpoint
+      ),
+    };
+
+    const runWithAttachmentStates: PipelineRun = {
+      ...run,
+      status: 'running',
+      initial_attachments: undefined,
+      results: run.results.map((result, index) =>
+        index === 1 ? { ...result, attachments: [] } : result
+      ),
+    };
+
+    render(
+      <PipelineRunItem
+        run={runWithAttachmentStates}
+        template={templateWithAttachments}
+        onContinue={() => undefined}
+        onRegenerate={(_checkpoint) => undefined}
+        onCancel={() => undefined}
+        onRemove={() => undefined}
+      />
+    );
+
+    fireEvent.click(screen.getByText('Expand'));
+
+    expect(screen.getByText('Initial Attachments')).toBeInTheDocument();
+    expect(screen.getByText('Loading initial attachments...')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText('Draft'));
+    expect(screen.getByText('Checkpoint 2 Attachments')).toBeInTheDocument();
+    expect(screen.getByText('No attachments produced for this checkpoint.')).toBeInTheDocument();
+  });
+
+  it('renders attachment metadata from API payload', () => {
+    const templateWithAttachments: PipelineTemplate = {
+      ...template,
+      checkpoints: template.checkpoints.map((checkpoint, index) =>
+        index === 1 ? { ...checkpoint, allow_attachments: true } : checkpoint
+      ),
+    };
+
+    const runWithAttachments: PipelineRun = {
+      ...run,
+      initial_attachments: [
+        {
+          id: 'asset-1',
+          type: 'image',
+          url: 'https://cdn.example.com/asset-1.png',
+          mime_type: 'image/png',
+          name: 'cover-frame',
+          created_at: '2026-01-01T00:00:00Z',
+          metadata: { width: 1024, height: 1024 },
+        },
+      ],
+      results: run.results.map((result, index) =>
+        index === 1
+          ? {
+              ...result,
+              attachments: [
+                {
+                  id: 'asset-2',
+                  type: 'image',
+                  url: 'https://cdn.example.com/asset-2.png',
+                  mime_type: 'image/png',
+                  name: 'draft-preview',
+                  created_at: '2026-01-01T00:00:00Z',
+                  metadata: { source: 'asset_pool' },
+                },
+              ],
+            }
+          : result
+      ),
+    };
+
+    render(
+      <PipelineRunItem
+        run={runWithAttachments}
+        template={templateWithAttachments}
+        onContinue={() => undefined}
+        onRegenerate={(_checkpoint) => undefined}
+        onCancel={() => undefined}
+        onRemove={() => undefined}
+      />
+    );
+
+    fireEvent.click(screen.getByText('Expand'));
+    expect(screen.getByText('cover-frame')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText('Draft'));
+    expect(screen.getByText('draft-preview')).toBeInTheDocument();
+    expect(screen.getByText('source: asset_pool')).toBeInTheDocument();
+  });
 });

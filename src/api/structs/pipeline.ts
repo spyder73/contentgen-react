@@ -27,6 +27,9 @@ export interface MediaAttachment {
   mime_type: string;
   name: string;
   created_at: string;
+  source?: string;
+  size_bytes?: number;
+  metadata?: Record<string, unknown>;
 }
 
 export interface CheckpointResult {

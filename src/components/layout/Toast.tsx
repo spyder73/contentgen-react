@@ -1,7 +1,9 @@
 import React, { useEffect } from 'react';
+import { createPortal } from 'react-dom';
+import { ToastMessage } from '../../toast';
 
 interface ToastProps {
-  message: string | null;
+  message: ToastMessage | null;
   onClose: () => void;
   duration?: number;
 }
@@ -15,20 +17,25 @@ const Toast: React.FC<ToastProps> = ({ message, onClose, duration = 3000 }) => {
   }, [message, onClose, duration]);
 
   if (!message) return null;
+  const level = message.level || 'success';
+  const iconByLevel = {
+    success: '✓',
+    info: 'i',
+    warning: '!',
+    error: 'x',
+  } as const;
 
-  return (
-    <div className="fixed top-4 right-4 z-50 animate-slide-up">
-      <div className="bg-green-600 text-white px-6 py-3 rounded-lg shadow-lg flex items-center gap-3">
-        <span>✓</span>
-        <span>{message}</span>
-        <button
-          onClick={onClose}
-          className="ml-2 hover:opacity-70 transition-opacity"
-        >
+  return createPortal(
+    <div className="toast-shell animate-slide-up" role="status" aria-live="polite">
+      <div className="toast-card" data-level={level}>
+        <span aria-hidden>{iconByLevel[level]}</span>
+        <span className="min-w-0 break-words">{message.text}</span>
+        <button onClick={onClose} className="toast-close" type="button" aria-label="Dismiss notification">
           ✕
         </button>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 

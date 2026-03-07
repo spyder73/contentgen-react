@@ -1,5 +1,6 @@
 import { useCallback } from 'react';
 import { useWebSocket } from './useWebSocket';
+import { ToastMessage } from '../toast';
 
 // All known backend webhook events
 export type WebSocketEventType =
@@ -16,7 +17,7 @@ export type WebSocketEventType =
 interface UseWebSocketEventsOptions {
   onRefreshIdeas: () => void;
   onRefreshClips: () => void;
-  onToast?: (message: string) => void;
+  onToast?: (message: string | ToastMessage) => void;
 }
 
 export function useWebSocketEvents({ onRefreshIdeas, onRefreshClips, onToast }: UseWebSocketEventsOptions) {
@@ -39,27 +40,29 @@ export function useWebSocketEvents({ onRefreshIdeas, onRefreshClips, onToast }: 
       case 'UpdateClipPromptFileURL':
         console.log('Clip rendered');
         onRefreshClips();
-        onToast?.('Clip rendered!');
+        onToast?.({ text: 'Clip rendered!', level: 'success' });
         break;
 
       // Image events - only refresh clips
       case 'UpdateImagePromptFileURL':
         console.log('Image generated');
         onRefreshClips();
+        onToast?.({ text: 'Image generated', level: 'success' });
         break;
 
       // Video events - only refresh clips
       case 'UpdateAIVideoPromptFileURL':
         console.log('AI Video generated');
         onRefreshClips();
+        onToast?.({ text: 'Video generated', level: 'success' });
         break;
 
       // Schedule events
       case 'schedule_update':
         if (data.success) {
-          onToast?.(`Scheduled: ${data.message}`);
+          onToast?.({ text: `Scheduled: ${data.message}`, level: 'success' });
         } else {
-          onToast?.(`Schedule failed: ${data.message}`);
+          onToast?.({ text: `Schedule failed: ${data.message}`, level: 'error' });
         }
         break;
 

@@ -11,6 +11,7 @@ import { PipelineManager } from '../pipeline';
 import { User, Account } from '../../api/structs/user';
 import { MediaOutputSpec } from '../../api/structs/media-spec';
 import { ImageProvider, VideoProvider, AudioProvider, ChatProvider } from '../../api/structs/providers';
+import { ThemeMode } from '../../theme';
 
 interface HeaderProps {
   // Image provider
@@ -51,6 +52,8 @@ interface HeaderProps {
   onSelectUser: (id: number) => void;
   onRemoveUser: (id: number) => void;
   onSelectAccount: (id: string) => void;
+  themeMode: ThemeMode;
+  onThemeToggle: () => void;
   
   // Modals
   onOpenProxyModal: () => void;
@@ -86,6 +89,8 @@ const Header: React.FC<HeaderProps> = ({
   onSelectUser,
   onRemoveUser,
   onSelectAccount,
+  themeMode,
+  onThemeToggle,
   onOpenProxyModal,
 }) => {
   const [showPipelineManager, setShowPipelineManager] = useState(false);
@@ -118,15 +123,33 @@ const Header: React.FC<HeaderProps> = ({
               </Button>
             </div>
 
-            <UserMenu
-              users={users}
-              activeUser={activeUser}
-              activeAccount={activeAccount}
-              onAddUser={onAddUser}
-              onSelectUser={onSelectUser}
-              onRemoveUser={onRemoveUser}
-              onSelectAccount={onSelectAccount}
-            />
+            <div className="flex items-center gap-4">
+              <button
+                type="button"
+                role="switch"
+                aria-checked={themeMode === 'dark'}
+                aria-label="Toggle dark and light mode"
+                className="theme-switch"
+                onClick={onThemeToggle}
+              >
+                <span className="theme-switch-track">
+                  <span
+                    className={`theme-switch-thumb ${themeMode === 'dark' ? 'translate-x-5' : 'translate-x-0'}`}
+                  />
+                </span>
+                <span className="theme-switch-label">{themeMode === 'dark' ? 'Dark' : 'Light'}</span>
+              </button>
+
+              <UserMenu
+                users={users}
+                activeUser={activeUser}
+                activeAccount={activeAccount}
+                onAddUser={onAddUser}
+                onSelectUser={onSelectUser}
+                onRemoveUser={onRemoveUser}
+                onSelectAccount={onSelectAccount}
+              />
+            </div>
           </div>
 
           {/* Bottom row - All selectors (each renders its own settings modal) */}

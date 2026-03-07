@@ -11,6 +11,19 @@ interface Props {
   onRemove: () => void;
 }
 
+const formatMetadataValue = (value: unknown): string => {
+  if (typeof value === 'string') return value;
+  if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+  if (value === null) return 'null';
+  if (value === undefined) return '';
+
+  try {
+    return JSON.stringify(value);
+  } catch {
+    return '[unserializable]';
+  }
+};
+
 const PipelineRunItem: React.FC<Props> = ({
   run,
   template,
@@ -86,8 +99,75 @@ const PipelineRunItem: React.FC<Props> = ({
     return [];
   };
 
+  const renderAttachmentSurface = (
+    heading: string,
+    options: {
+      attachments?: PipelineRun['initial_attachments'];
+      loadingText?: string;
+      emptyText: string;
+      unavailableText: string;
+      errorText?: string;
+    }
+  ) => {
+    const { attachments, loadingText, emptyText, unavailableText, errorText } = options;
+    const hasAttachments = Array.isArray(attachments) && attachments.length > 0;
+
+    return (
+      <div className="attachment-surface space-y-2">
+        <p className="attachment-state">{heading}</p>
+        {loadingText && <p className="attachment-state">{loadingText}</p>}
+        {errorText && <p className="attachment-state">{errorText}</p>}
+        {!loadingText && !errorText && attachments === undefined && (
+          <p className="attachment-state">{unavailableText}</p>
+        )}
+        {!loadingText && !errorText && Array.isArray(attachments) && attachments.length === 0 && (
+          <p className="attachment-state">{emptyText}</p>
+        )}
+        {hasAttachments && (
+          <div className="space-y-2">
+            {attachments.map((attachment) => {
+              const metadataEntries = attachment.metadata ? Object.entries(attachment.metadata) : [];
+              return (
+                <div key={attachment.id} className="attachment-item">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-[11px] text-zinc-200 truncate">{attachment.name || attachment.id}</p>
+                    <span className="text-[10px] uppercase tracking-wide text-zinc-400">{attachment.type}</span>
+                  </div>
+                  <p className="attachment-meta mt-1">
+                    MIME: {attachment.mime_type || 'unknown'}{attachment.size_bytes ? ` | ${attachment.size_bytes} bytes` : ''}
+                  </p>
+                  {attachment.url ? (
+                    <a
+                      href={attachment.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="attachment-meta underline mt-1 inline-block"
+                    >
+                      {attachment.url}
+                    </a>
+                  ) : (
+                    <p className="attachment-meta mt-1">No URL provided.</p>
+                  )}
+                  {metadataEntries.length > 0 && (
+                    <div className="mt-2 space-y-1">
+                      {metadataEntries.map(([key, value]) => (
+                        <p key={`${attachment.id}-${key}`} className="attachment-meta">
+                          {key}: {formatMetadataValue(value)}
+                        </p>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   return (
-    <div className="bg-black/50 border border-white/15 overflow-hidden">
+    <div className="pipeline-run-item bg-black/50 border border-white/15 overflow-hidden">
       <div
         className="flex items-center justify-between p-2.5 cursor-pointer hover:bg-white/5"
         onClick={() => setIsExpanded(!isExpanded)}
@@ -136,6 +216,17 @@ const PipelineRunItem: React.FC<Props> = ({
       {isExpanded && (
         <div>
           <div className="p-3 space-y-2">
+            {renderAttachmentSurface('Initial Attachments', {
+              attachments: run.initial_attachments,
+              loadingText:
+                run.initial_attachments === undefined &&
+                ['pending', 'running'].includes(run.status)
+                  ? 'Loading initial attachments...'
+                  : undefined,
+              emptyText: 'No initial attachments.',
+              unavailableText: 'Attachment payload unavailable in this run response.',
+            })}
+
             {template.checkpoints.map((checkpoint, index) => {
               const result = run.results?.[index];
               const checkpointType = getCheckpointType(index);
@@ -158,7 +249,7 @@ const PipelineRunItem: React.FC<Props> = ({
                     className="flex items-center justify-between p-2.5 cursor-pointer"
                     onClick={(e) => {
                       e.stopPropagation();
-                      if (result) {
+                      if (result || checkpoint.allow_attachments) {
                         setSelectedCheckpoint(selectedCheckpoint === index ? null : index);
                       }
                     }}
@@ -190,16 +281,16 @@ const PipelineRunItem: React.FC<Props> = ({
                       )}
                     </div>
 
-                    {result && (
+                    {(result || checkpoint.allow_attachments) && (
                       <span className="text-[10px] text-slate-500 uppercase tracking-wide">
                         {selectedCheckpoint === index ? 'Hide' : 'Show'}
                       </span>
                     )}
                   </div>
 
-                  {selectedCheckpoint === index && result && (
+                  {selectedCheckpoint === index && (result || checkpoint.allow_attachments) && (
                     <div className="px-2.5 pb-2.5 space-y-2" onClick={(e) => e.stopPropagation()}>
-                      {checkpointType === 'distributor' && (
+                      {result && checkpointType === 'distributor' && (
                         <div className="text-[10px] text-zinc-400 uppercase tracking-wide">
                           Fan-out: {(result.child_pipeline_ids || []).length} child pipeline
                           {(result.child_pipeline_ids || []).length === 1 ? '' : 's'}
@@ -208,16 +299,31 @@ const PipelineRunItem: React.FC<Props> = ({
                             : ''}
                         </div>
                       )}
-                      {fanInSources.length > 0 && (
+                      {result && fanInSources.length > 0 && (
                         <div className="text-[10px] text-zinc-400 uppercase tracking-wide">
                           Fan-in from {fanInSources.join(', ')}
                         </div>
                       )}
-                      <pre className="text-[11px] text-slate-300 bg-black/70 p-2 rounded overflow-auto max-h-56 border border-white/10">
-                        {formatOutput(result.output)}
-                      </pre>
 
-                      {isCurrent && isPaused && (
+                      {result && (
+                        <pre className="text-[11px] text-slate-300 bg-black/70 p-2 rounded overflow-auto max-h-56 border border-white/10">
+                          {formatOutput(result.output)}
+                        </pre>
+                      )}
+
+                      {checkpoint.allow_attachments &&
+                        renderAttachmentSurface(`Checkpoint ${index + 1} Attachments`, {
+                          attachments: result?.attachments,
+                          loadingText: !result ? 'Waiting for checkpoint result...' : undefined,
+                          emptyText: 'No attachments produced for this checkpoint.',
+                          unavailableText: 'Attachment payload unavailable for this checkpoint.',
+                          errorText:
+                            result?.status === 'failed'
+                              ? 'Checkpoint failed; attachment output may be incomplete.'
+                              : undefined,
+                        })}
+
+                      {result && isCurrent && isPaused && (
                         <div className="flex items-center gap-2 p-2 border border-white/20 bg-white/5 rounded">
                           <p className="text-xs text-zinc-300 flex-1">Review output before continuing.</p>
                           <div className="flex gap-2 flex-shrink-0">
@@ -247,7 +353,7 @@ const PipelineRunItem: React.FC<Props> = ({
                         </div>
                       )}
 
-                      {!isCurrent && checkpoint.allow_regenerate && !isTerminal && isComplete && (
+                      {result && !isCurrent && checkpoint.allow_regenerate && !isTerminal && isComplete && (
                         <Button
                           variant="secondary"
                           size="sm"

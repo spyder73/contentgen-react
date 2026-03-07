@@ -109,8 +109,8 @@ const PipelineManager: React.FC<PipelineManagerProps> = ({ isOpen, onClose }) =>
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/85 flex items-center justify-center z-[180] p-4">
-      <div className="bg-zinc-950 border border-white/20 w-full max-w-6xl h-[88vh] flex flex-col overflow-hidden shadow-2xl">
+    <div className="modal-overlay z-[220]">
+      <div className="modal-content w-full max-w-6xl h-[88vh] flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-3 border-b border-white/10 bg-black/70">
           <div>

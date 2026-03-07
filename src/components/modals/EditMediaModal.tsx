@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import API from '../../api/api';
 import { MediaItem } from '../../api/structs/media';
 import { MediaOutputSpec } from '../../api/structs/media-spec';
@@ -15,6 +15,78 @@ interface EditMediaModalProps {
   onSuccess: () => void;
 }
 
+const POSITION_OPTIONS = [
+  { value: 'top', label: 'Top' },
+  { value: 'bottom', label: 'Bottom' },
+  { value: 'center', label: 'Center' },
+];
+
+const humanizeField = (key: string): string =>
+  key
+    .replace(/([a-z])([A-Z])/g, '$1 $2')
+    .replace(/[-_]+/g, ' ')
+    .trim()
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+
+const toRecord = (value: unknown): Record<string, unknown> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : {};
+
+const buildInitialMetadata = (item: MediaItem): Record<string, unknown> => {
+  const metadata = { ...toRecord(item.metadata) };
+  const rawItem = item as unknown as Record<string, unknown>;
+
+  ['text', 'position', 'topText', 'bottomText'].forEach((key) => {
+    if (!(key in metadata) && rawItem[key] !== undefined && rawItem[key] !== null) {
+      metadata[key] = rawItem[key];
+    }
+  });
+
+  return metadata;
+};
+
+const inferField = (key: string, value: unknown): ClipStyleField => {
+  if (key.toLowerCase().includes('position')) {
+    return {
+      key,
+      label: humanizeField(key),
+      type: 'select',
+      options: POSITION_OPTIONS,
+    };
+  }
+
+  if (typeof value === 'boolean') {
+    return {
+      key,
+      label: humanizeField(key),
+      type: 'checkbox',
+    };
+  }
+
+  if (typeof value === 'number') {
+    return {
+      key,
+      label: humanizeField(key),
+      type: 'number',
+    };
+  }
+
+  if (key.toLowerCase().includes('text')) {
+    return {
+      key,
+      label: humanizeField(key),
+      type: 'textarea',
+    };
+  }
+
+  return {
+    key,
+    label: humanizeField(key),
+    type: 'text',
+  };
+};
+
 const EditMediaModal: React.FC<EditMediaModalProps> = ({
   isOpen,
   onClose,
@@ -24,13 +96,24 @@ const EditMediaModal: React.FC<EditMediaModalProps> = ({
   onSuccess,
 }) => {
   const [prompt, setPrompt] = useState(item.prompt);
-  const [metadata, setMetadata] = useState<Record<string, unknown>>(item.metadata || {});
+  const [metadata, setMetadata] = useState<Record<string, unknown>>(() => buildInitialMetadata(item));
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     setPrompt(item.prompt);
-    setMetadata(item.metadata || {});
-  }, [item.prompt, item.metadata]);
+    setMetadata(buildInitialMetadata(item));
+  }, [item]);
+
+  const resolvedMetadataFields = useMemo(() => {
+    if (!metadata || Object.keys(metadata).length === 0) return metadataFields;
+
+    const existingKeys = new Set(metadataFields.map((field) => field.key));
+    const inferredFields = Object.entries(metadata)
+      .filter(([key]) => !existingKeys.has(key))
+      .map(([key, value]) => inferField(key, value));
+
+    return [...metadataFields, ...inferredFields];
+  }, [metadata, metadataFields]);
 
   const handleMetadataChange = (key: string, value: unknown) => {
     setMetadata((prev) => ({ ...prev, [key]: value }));
@@ -90,6 +173,23 @@ const EditMediaModal: React.FC<EditMediaModalProps> = ({
       );
     }
 
+    if (field.type === 'checkbox') {
+      return (
+        <div key={field.key} className="flex items-center gap-2">
+          <input
+            id={`media-field-${field.key}`}
+            type="checkbox"
+            checked={Boolean(value)}
+            onChange={(e) => handleMetadataChange(field.key, e.target.checked)}
+            className="h-4 w-4"
+          />
+          <label htmlFor={`media-field-${field.key}`} className="text-sm text-zinc-300">
+            {field.label}
+          </label>
+        </div>
+      );
+    }
+
     return (
       <div key={field.key}>
         <label className="block text-xs uppercase tracking-wide text-zinc-400 mb-1">{field.label}</label>
@@ -115,10 +215,10 @@ const EditMediaModal: React.FC<EditMediaModalProps> = ({
           rows={4}
         />
 
-        {metadataFields.length > 0 && (
+        {resolvedMetadataFields.length > 0 && (
           <div className="space-y-3 pt-2 border-t border-white/10">
             <p className="text-xs uppercase tracking-[0.15em] text-zinc-300 font-medium">Style Metadata</p>
-            {metadataFields.map(renderMetadataField)}
+            {resolvedMetadataFields.map(renderMetadataField)}
           </div>
         )}
 

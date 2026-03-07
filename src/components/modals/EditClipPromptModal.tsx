@@ -1,7 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import API from '../../api/api';
 import { ClipPrompt } from '../../api/structs';
-import { ClipStyleField, ClipStyleSchema, ClipStyleSummary } from '../../api/clipstyleSchema';
+import {
+  ClipStyleField,
+  ClipStyleSchema,
+  ClipStyleSummary,
+  createEmptyClipStyleSchema,
+} from '../../api/clipstyleSchema';
 import { ClipStyleSelector } from '../selectors';
 import { Button, Input, TextArea } from '../ui';
 import Modal from './Modal';
@@ -37,21 +42,6 @@ const normalizeMetadataForSubmit = (metadata: Record<string, unknown>): Record<s
 
   return normalized;
 };
-
-const emptyClipStyleSchema = (
-  styleId: string,
-  styleSummary?: ClipStyleSummary
-): ClipStyleSchema => ({
-  id: styleId,
-  name: styleSummary?.name || styleId,
-  description: styleSummary?.description || '',
-  metadataFields: [],
-  mediaMetadataFields: {
-    image: [],
-    ai_video: [],
-    audio: [],
-  },
-});
 
 const EditClipPromptModal: React.FC<EditClipPromptModalProps> = ({
   isOpen,
@@ -133,7 +123,7 @@ const EditClipPromptModal: React.FC<EditClipPromptModalProps> = ({
       })
       .catch((error: Error) => {
         if (cancelled) return;
-        setStyleSchemas((prev) => ({ ...prev, [style]: emptyClipStyleSchema(style, styleSummary) }));
+        setStyleSchemas((prev) => ({ ...prev, [style]: createEmptyClipStyleSchema(style, styleSummary) }));
         setSchemaError(`Failed to load schema for "${style}": ${error.message}`);
       })
       .finally(() => {

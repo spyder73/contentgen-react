@@ -1,94 +1,72 @@
 # Frontend Agent Task
 
 ## Status
-ACTIVE
+DONE
 
 ## Wave
-Wave 2A: visual redesign pass (no IA reset).
+Wave 2C: validation hardening + connector/distributor UX contract alignment
 
-## Start Here
-- Keep this existing repository. Do not create a new repository.
-- Work on one task branch at a time: `codex/frontend-<task>`.
-- Keep each PR scoped to one theme (visual redesign + light UX polish).
+## Reasoning Level
+HIGH
 
-## Repository Bootstrap
-1. `git checkout <default-branch>`
-2. `git pull --ff-only`
-3. `git checkout -b codex/frontend-<task>`
-4. Run baseline checks.
-5. Implement scoped changes.
-6. Update `docs/results.md`.
-7. Commit, push, and open PR.
+## Scope
+Double-check and harden pipeline editor/runtime behavior and schema-driven clipstyle editing reliability.
 
-## Create Branch
-- Example: `git checkout -b codex/frontend-visual-redesign`
+## Re-Audit Mandatory (Orchestrator Edits)
+Double-check the following orchestrator-made edits from this session and classify each as `VALID`, `NEEDS FIX`, or `REVERT` in `docs/results.md`:
+- `src/api/clipstyleSchema.ts`
+- `src/api/clipstyleSchema.test.ts`
+- `src/api/structs/pipeline.ts`
+- `src/components/modals/EditClipPromptModal.tsx`
+- `src/components/clips/sections/MediaEditorSection.tsx`
+- `src/components/pipeline/CheckpointPanel.tsx`
+- `src/components/pipeline/PipelineEditor.tsx`
+- `src/components/pipeline/PipelineEditor.test.tsx`
+- `src/components/pipeline/PipelineFlow.tsx`
+- `src/components/pipeline/PipelineFlow.test.tsx`
+- `src/components/ideas/PipelineRunItem.tsx`
+- `src/components/selectors/modelSettingsHelpers.ts`
+- `src/components/selectors/modelSettingsHelpers.test.ts`
+- `src/components/pipeline/PipelineOutputFormatPanel.tsx`
+- `src/components/pipeline/PipelineManager.tsx`
 
-## Run Baseline Checks
-- `npm run build`
+## Mandatory Validation Pass
+1. Re-check `docs/results.md` claims against current code/tests.
+2. Run and record:
 - `npm test -- --watchAll=false`
-
-## Feature Tests (Required)
-- For every new feature/behavior change, add or update automated tests.
-- Prefer component/API helper tests; avoid snapshot-only coverage.
-- If test coverage is blocked by harness/tooling, document blocker + mitigation in `docs/results.md`.
-
-## Results Log (Required)
-- Keep `docs/results.md` updated on every iteration and commit.
-- Record: summary, changed files, checks run (with pass/fail), current blockers, next fix step.
-- Do not mark task complete until `docs/results.md` shows all required checks green.
-
-## GitHub Completion Rule (Required)
-- When scoped work is complete and checks are green, commit final changes on the `codex/...` branch.
-- Push the branch to GitHub and open a PR.
-- Include branch name and PR link in `docs/results.md`.
-
-## Definition of Done for This Repo
-1. Implementation complete for scoped task.
-2. `npm run build` passes.
-3. `npm test -- --watchAll=false` passes (or blocker documented in `docs/results.md`).
-4. Frontend API usage remains through `src/api/*`.
-5. `docs/results.md` is up to date.
-6. New/changed behavior is covered by automated tests.
-7. Branch is pushed and PR is opened.
-
-## Handoff Format
-- Change: `<what changed>`
-- Contract impact: `<none|list>`
-- Consumer action: `<repo + exact step>`
-- Validation: `<commands + result>`
-- Rollback: `<revert branch/PR + side effects>`
-- GitHub: `<branch + PR link>`
-
-## Objective
-Deliver a clean black/white typewriter-style visual redesign with subtle animations while keeping current information architecture and functionality.
-
-## Current State Facts
-- Core flow and component structure already work.
-- Clipstyle schemas and options are API-driven.
-- Frontend must remain contract-compatible with backend/registry responses.
+- `npm run build`
+3. Confirm API usage remains centralized under `src/api/*`.
 
 ## Priority Tasks
-1. Visual system:
-   - Introduce a coherent black/white minimal look.
-   - Use typewriter-style typography.
-   - Remove emoji usage from core UI labels/icons.
-2. Layout and hierarchy polish (without IA reset):
-   - Keep existing panels/workflow.
-   - Improve spacing, contrast, and readability.
-3. Motion:
-   - Add subtle, meaningful animations (entry/stagger/hover/modal transitions).
-   - Keep motion lightweight and non-distracting.
-4. API-driven UI consistency:
-   - Keep clipstyle rendering API-driven (no local schema/style fallback reintroduction).
-5. Quality:
-   - Verify desktop + mobile behavior.
-   - Add/update tests for changed interaction behavior.
+1. Connector/distributor editor correctness:
+- validate explicit checkpoint type support for `prompt`, `distributor`, and `connector`.
+- verify connector config (`strategy`, `source_checkpoint_id`) round-trips to backend template APIs.
+2. Fan-out/fan-in runtime UX verification:
+- verify run cards/flow views correctly represent:
+  - distributor fan-out counts
+  - connector fan-in source
+- confirm no false connector labeling on non-connector checkpoints.
+3. Idea creation contract verification:
+- validate end-to-end behavior:
+  - distributor terminal pipeline creates multiple clip prompt ideas.
+  - distributor -> connector pipeline creates one clip prompt idea.
+4. Schema fallback de-duplication:
+- verify shared empty clipstyle schema helper is used consistently (no duplicated local fallback shapes).
+- audit for leftover hardcoded style/schema fallbacks and remove or document intentional ones.
+5. Output format/control clarity:
+- validate that pipeline output format default state and behavior are explicit and non-conflicting with model settings.
+- document UX note in `docs/results.md` on precedence expectations.
 
-## Non-Goals
-- Full component architecture rewrite.
-- Backend contract changes.
-- New business features (auth, telegram, lora, credits, etc.).
+## Required Docs Updates
+- Update `docs/results.md` with:
+- commands and outcomes
+- manual QA matrix (desktop + mobile)
+- unresolved risks/blockers
+- branch + PR link when available
 
-## Risks
-- Introducing visual changes that reduce readability/accessibility.
-- Accidental reintroduction of hardcoded clipstyle behavior.
+## Definition of Done
+1. Build and test gates pass.
+2. Connector/distributor UX behavior is validated against backend contracts.
+3. Schema fallback behavior is consistent and de-duplicated.
+4. Results log is current and includes remaining risks.
+5. Task status is switched to `DONE` when complete.

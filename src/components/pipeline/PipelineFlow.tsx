@@ -23,14 +23,52 @@ const PipelineFlow: React.FC<PipelineFlowProps> = ({
     return template?.name || promptId || 'No prompt';
   };
 
+  const distributorById = checkpoints.reduce<Record<string, CheckpointConfig>>((acc, checkpoint) => {
+    if ((checkpoint.type || 'prompt') === 'distributor') {
+      acc[checkpoint.id] = checkpoint;
+    }
+    return acc;
+  }, {});
+
   const getInputSources = (checkpoint: CheckpointConfig): string[] => {
     return Object.entries(checkpoint.input_mapping || {}).map(([key, value]) => {
       if (value === 'initial_input') return `${key}: user input`;
       if (value.startsWith('checkpoint:')) {
-        return `${key}: ${value.replace('checkpoint:', '')}`;
+        const sourceId = value.replace('checkpoint:', '');
+        const source = distributorById[sourceId];
+        if (source) {
+          return `${key}: ${sourceId} (distributor output)`;
+        }
+        return `${key}: ${sourceId}`;
       }
       return `${key}: ${value}`;
     });
+  };
+
+  const getConnectorSources = (checkpoint: CheckpointConfig): string[] => {
+    const checkpointType = checkpoint.type || 'prompt';
+    if (checkpointType === 'connector') {
+      const configuredSource = checkpoint.connector?.source_checkpoint_id;
+      if (configuredSource && distributorById[configuredSource]) {
+        return [configuredSource];
+      }
+
+      const allDistributorIds = previousDistributors(checkpoint.id);
+      if (allDistributorIds.length > 0) {
+        return [allDistributorIds[allDistributorIds.length - 1]];
+      }
+      return [];
+    }
+    return [];
+  };
+
+  const previousDistributors = (checkpointId: string): string[] => {
+    const current = checkpoints.findIndex((item) => item.id === checkpointId);
+    if (current <= 0) return [];
+    return checkpoints
+      .slice(0, current)
+      .filter((item) => (item.type || 'prompt') === 'distributor')
+      .map((item) => item.id);
   };
 
   return (
@@ -77,6 +115,24 @@ const PipelineFlow: React.FC<PipelineFlowProps> = ({
 
             {/* Content */}
             <div className="flex-1 min-w-0">
+              {(() => {
+                const checkpointType = checkpoint.type || 'prompt';
+                const isConnector = checkpointType === 'connector';
+                return (
+                  <div className="flex items-center gap-1.5 mb-1 flex-wrap">
+                    {checkpointType === 'distributor' && (
+                      <span className="text-[10px] bg-white text-black px-1.5 py-0.5 rounded uppercase tracking-wide font-semibold">
+                        Distributor
+                      </span>
+                    )}
+                    {isConnector && (
+                      <span className="text-[10px] bg-zinc-800 border border-white/20 text-zinc-200 px-1.5 py-0.5 rounded uppercase tracking-wide">
+                        Connector
+                      </span>
+                    )}
+                  </div>
+                );
+              })()}
               <div className="flex items-center justify-between">
                 <h4 className="font-medium text-white truncate text-xs uppercase tracking-wide">
                   {checkpoint.name}
@@ -109,6 +165,19 @@ const PipelineFlow: React.FC<PipelineFlowProps> = ({
                     </span>
                   ))}
                 </div>
+              )}
+
+              {(checkpoint.type || 'prompt') === 'distributor' && (
+                <p className="text-[10px] text-zinc-400 mt-2 uppercase tracking-wide">
+                  Fan-out: delimiter {checkpoint.distributor?.delimiter || 'newline'} | max{' '}
+                  {checkpoint.distributor?.max_children || 8} children
+                </p>
+              )}
+
+              {getConnectorSources(checkpoint).length > 0 && (
+                <p className="text-[10px] text-zinc-400 mt-2 uppercase tracking-wide">
+                  Fan-in from {getConnectorSources(checkpoint).join(', ')}
+                </p>
               )}
 
               {/* Badges */}

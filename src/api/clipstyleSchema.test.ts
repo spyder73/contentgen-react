@@ -1,4 +1,5 @@
 import {
+  createEmptyClipStyleSchema,
   normalizeClipStyleList,
   normalizeClipStyleSchema,
 } from './clipstyleSchema';
@@ -51,5 +52,77 @@ describe('clipstyle schema normalization', () => {
     expect(schema.mediaMetadataFields.image).toHaveLength(1);
     expect(schema.mediaMetadataFields.ai_video).toHaveLength(1);
     expect(schema.mediaMetadataFields.audio).toEqual([]);
+  });
+
+  it('normalizes JSON Schema properties + required metadata fields', () => {
+    const schema = normalizeClipStyleSchema('story', {
+      schema: {
+        properties: {
+          frontText: {
+            title: 'Front Text',
+            type: 'array',
+            items: { type: 'string' },
+            description: 'One line per item',
+          },
+          partTwo: {
+            title: 'Part Two',
+            type: 'boolean',
+          },
+        },
+        required: ['frontText'],
+      },
+    });
+
+    expect(schema.metadataFields).toEqual([
+      expect.objectContaining({
+        key: 'frontText',
+        type: 'textarea',
+        required: true,
+      }),
+      expect.objectContaining({
+        key: 'partTwo',
+        type: 'checkbox',
+        required: false,
+      }),
+    ]);
+  });
+
+  it('merges clip_metadata_fields with JSON Schema properties', () => {
+    const schema = normalizeClipStyleSchema('story', {
+      schema: {
+        clip_metadata_fields: [{ key: 'frontText', type: 'textarea' }],
+        properties: {
+          partTwo: {
+            title: 'Part Two',
+            type: 'boolean',
+          },
+        },
+      },
+    });
+
+    expect(schema.metadataFields.map((field) => field.key)).toEqual([
+      'frontText',
+      'partTwo',
+    ]);
+  });
+
+  it('builds a stable empty schema fallback', () => {
+    const schema = createEmptyClipStyleSchema('standard', {
+      id: 'standard',
+      name: 'Standard',
+      description: 'Default style',
+    });
+
+    expect(schema).toEqual({
+      id: 'standard',
+      name: 'Standard',
+      description: 'Default style',
+      metadataFields: [],
+      mediaMetadataFields: {
+        image: [],
+        ai_video: [],
+        audio: [],
+      },
+    });
   });
 });

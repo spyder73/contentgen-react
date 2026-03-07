@@ -8,7 +8,7 @@ import PipelineEditor from './PipelineEditor';
 import PromptTemplateEditor from './PromptTemplateEditor';
 
 const DEFAULT_OUTPUT_FORMAT = {
-  enabled: true,
+  enabled: false,
   aspect_ratio: '9:16',
   image_long_edge: 1920,
   video_long_edge: 1920,

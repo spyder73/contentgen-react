@@ -87,6 +87,27 @@ export function clampToConstraint(value: number, field: ConstraintField): number
   if (field.min !== undefined && v < field.min) v = field.min;
   if (field.max !== undefined && v > field.max) v = field.max;
   if (field.type === 'integer') v = Math.round(v);
+
+  const multiplier = (() => {
+    if (typeof field.multiplier === 'number' && field.multiplier > 0) return field.multiplier;
+    if (typeof field.multiple_of === 'number' && field.multiple_of > 0) return field.multiple_of;
+    if (typeof field.step === 'number' && field.step > 1 && field.type === 'integer') return field.step;
+    return undefined;
+  })();
+
+  if (multiplier) {
+    const min = typeof field.min === 'number' ? field.min : 0;
+    const snapUnits = (v - min) / multiplier;
+    const snapped =
+      min +
+      (field.type === 'integer'
+        ? Math.floor(snapUnits)
+        : Math.round(snapUnits)) * multiplier;
+    v = snapped;
+    if (field.min !== undefined && v < field.min) v = field.min;
+    if (field.max !== undefined && v > field.max) v = field.max;
+    if (field.type === 'integer') v = Math.round(v);
+  }
   return v;
 }
 

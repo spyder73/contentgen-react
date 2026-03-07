@@ -7,7 +7,7 @@ interface PipelineOutputFormatPanelProps {
 }
 
 const DEFAULT_FORMAT: PipelineOutputFormat = {
-  enabled: true,
+  enabled: false,
   aspect_ratio: '9:16',
   image_long_edge: 1920,
   video_long_edge: 1920,
@@ -42,6 +42,9 @@ const PipelineOutputFormatPanel: React.FC<PipelineOutputFormatPanelProps> = ({
         <div>
           <p className="text-xs font-medium text-gray-300">Pipeline Output Format</p>
           <p className="text-xs text-gray-500">Keep image/video prompts on one aspect ratio</p>
+          <p className="text-[10px] text-gray-600 mt-0.5">
+            Enabled: pipeline format overrides model width/height defaults. Disabled: model settings apply.
+          </p>
         </div>
         <label className="text-xs text-gray-300 flex items-center gap-2">
           <input

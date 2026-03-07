@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { PipelineEditorProps } from './types';
 import PipelineFlow from './PipelineFlow';
 import CheckpointPanel from './CheckpointPanel';
-import { PipelineTemplate, CheckpointConfig } from '../../api/structs';
+import { PipelineTemplate, CheckpointConfig, CheckpointType } from '../../api/structs';
 import PipelineOutputFormatPanel from './PipelineOutputFormatPanel';
 import { ConfirmModal, Modal } from '../modals';
 import { Button, Input } from '../ui';
@@ -20,6 +20,7 @@ const PipelineEditor: React.FC<PipelineEditorProps> = ({
   const [showAddCheckpointModal, setShowAddCheckpointModal] = useState(false);
   const [newCheckpointId, setNewCheckpointId] = useState('');
   const [newCheckpointName, setNewCheckpointName] = useState('');
+  const [newCheckpointType, setNewCheckpointType] = useState<CheckpointType>('prompt');
   const [addCheckpointError, setAddCheckpointError] = useState('');
   const [checkpointToRemoveId, setCheckpointToRemoveId] = useState<string | null>(null);
 
@@ -50,6 +51,7 @@ const PipelineEditor: React.FC<PipelineEditorProps> = ({
   const resetAddCheckpointState = () => {
     setNewCheckpointId('');
     setNewCheckpointName('');
+    setNewCheckpointType('prompt');
     setAddCheckpointError('');
   };
 
@@ -87,6 +89,7 @@ const PipelineEditor: React.FC<PipelineEditorProps> = ({
     const newCheckpoint: CheckpointConfig = {
       id: newCheckpointId,
       name: newCheckpointName.trim() || newCheckpointId,
+      type: newCheckpointType,
       prompt_template_id: '',
       input_mapping: {},
       requires_confirm: true,
@@ -94,6 +97,19 @@ const PipelineEditor: React.FC<PipelineEditorProps> = ({
       allow_attachments: false,
       provider: '',
       model: '',
+      distributor:
+        newCheckpointType === 'distributor'
+          ? {
+              delimiter: 'newline',
+              max_children: 8,
+            }
+          : undefined,
+      connector:
+        newCheckpointType === 'connector'
+          ? {
+              strategy: 'first',
+            }
+          : undefined,
     };
 
     setLocalPipeline((prev) => ({
@@ -261,6 +277,20 @@ const PipelineEditor: React.FC<PipelineEditorProps> = ({
             value={newCheckpointName}
             onChange={(e) => setNewCheckpointName(e.target.value)}
           />
+          <div>
+            <label className="block text-xs uppercase tracking-wide text-zinc-400 mb-1">
+              Checkpoint Type
+            </label>
+            <select
+              value={newCheckpointType}
+              onChange={(e) => setNewCheckpointType(e.target.value as CheckpointType)}
+              className="w-full select"
+            >
+              <option value="prompt">Prompt (single output)</option>
+              <option value="distributor">Distributor (fan-out)</option>
+              <option value="connector">Connector (fan-in)</option>
+            </select>
+          </div>
 
           {addCheckpointError && (
             <p className="text-sm text-red-400">{addCheckpointError}</p>

@@ -57,6 +57,35 @@ const PipelineRunItem: React.FC<Props> = ({
     }
   };
 
+  const getCheckpointType = (index: number): 'prompt' | 'distributor' | 'connector' => {
+    return template.checkpoints[index]?.type || 'prompt';
+  };
+
+  const getFanInSources = (index: number): string[] => {
+    const checkpoint = template.checkpoints[index];
+    if (!checkpoint) return [];
+
+    if ((checkpoint.type || 'prompt') !== 'connector') {
+      return [];
+    }
+
+    const configuredSource = checkpoint.connector?.source_checkpoint_id;
+    if (configuredSource) {
+      const source = template.checkpoints.find((item) => item.id === configuredSource);
+      if ((source?.type || 'prompt') === 'distributor') {
+        return [configuredSource];
+      }
+    }
+
+    for (let i = index - 1; i >= 0; i--) {
+      const candidate = template.checkpoints[i];
+      if ((candidate?.type || 'prompt') === 'distributor') {
+        return [candidate.id];
+      }
+    }
+    return [];
+  };
+
   return (
     <div className="bg-black/50 border border-white/15 overflow-hidden">
       <div
@@ -109,6 +138,8 @@ const PipelineRunItem: React.FC<Props> = ({
           <div className="p-3 space-y-2">
             {template.checkpoints.map((checkpoint, index) => {
               const result = run.results?.[index];
+              const checkpointType = getCheckpointType(index);
+              const fanInSources = getFanInSources(index);
               const isCurrent = index === run.current_checkpoint;
               const isComplete = result?.status === 'completed';
               const isFailed = result?.status === 'failed';
@@ -147,6 +178,16 @@ const PipelineRunItem: React.FC<Props> = ({
                         {isComplete ? 'OK' : isFailed ? 'X' : isPending ? '-' : index + 1}
                       </span>
                       <span className="text-white font-medium text-xs">{checkpoint.name}</span>
+                      {checkpointType === 'distributor' && (
+                        <span className="text-[10px] uppercase tracking-wide bg-white text-black px-1.5 py-0.5 rounded">
+                          Distributor
+                        </span>
+                      )}
+                      {checkpointType === 'connector' && (
+                        <span className="text-[10px] uppercase tracking-wide bg-zinc-800 border border-white/20 text-zinc-200 px-1.5 py-0.5 rounded">
+                          Connector
+                        </span>
+                      )}
                     </div>
 
                     {result && (
@@ -158,6 +199,20 @@ const PipelineRunItem: React.FC<Props> = ({
 
                   {selectedCheckpoint === index && result && (
                     <div className="px-2.5 pb-2.5 space-y-2" onClick={(e) => e.stopPropagation()}>
+                      {checkpointType === 'distributor' && (
+                        <div className="text-[10px] text-zinc-400 uppercase tracking-wide">
+                          Fan-out: {(result.child_pipeline_ids || []).length} child pipeline
+                          {(result.child_pipeline_ids || []).length === 1 ? '' : 's'}
+                          {result.child_pipeline_ids && result.child_pipeline_ids.length > 0
+                            ? ` (${result.child_pipeline_ids.join(', ')})`
+                            : ''}
+                        </div>
+                      )}
+                      {fanInSources.length > 0 && (
+                        <div className="text-[10px] text-zinc-400 uppercase tracking-wide">
+                          Fan-in from {fanInSources.join(', ')}
+                        </div>
+                      )}
                       <pre className="text-[11px] text-slate-300 bg-black/70 p-2 rounded overflow-auto max-h-56 border border-white/10">
                         {formatOutput(result.output)}
                       </pre>

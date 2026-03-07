@@ -59,7 +59,7 @@ const IdeaInputForm: React.FC<Props> = ({
       <div className="attachment-surface space-y-3">
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
-            <p className="attachment-state">Attachment Pool</p>
+            <p className="attachment-state">Attachment Workspace</p>
             <span className="attachment-meta">{state.pipelineAttachmentCount} attached</span>
             <span className="attachment-meta">{state.isAttachmentPoolExpanded ? 'Expanded' : 'Collapsed'}</span>
           </div>
@@ -104,6 +104,7 @@ const IdeaInputForm: React.FC<Props> = ({
             <FileAttachmentSection
               fileAttachmentType={state.fileAttachmentType}
               isDraggingFiles={state.isDraggingFiles}
+              isUploadingFiles={state.isUploadingFiles}
               disabled={state.disabled}
               onFileAttachmentTypeChange={state.setFileAttachmentType}
               onFileInputChange={state.handleFileInputChange}

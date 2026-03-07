@@ -29,6 +29,7 @@ describe('clip API normalization', () => {
     expect(media).toEqual([
       {
         id: 'media-1',
+        media_id: 'media-1',
         type: 'audio',
         name: 'track-a.mp3',
         url: 'https://cdn.example.com/track-a.mp3',
@@ -36,6 +37,7 @@ describe('clip API normalization', () => {
       },
       {
         id: 'https://cdn.example.com/fallback.png',
+        media_id: 'https://cdn.example.com/fallback.png',
         type: 'unknown',
         name: 'https://cdn.example.com/fallback.png',
         url: 'https://cdn.example.com/fallback.png',

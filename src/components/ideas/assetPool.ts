@@ -91,16 +91,22 @@ export const normalizeAssetSource = (rawSource?: string): AssetSource => {
 };
 
 export const mediaItemToPoolItem = (item: AvailableMediaItem): AssetPoolItem => {
-  const mediaId = toStringValue(item.id);
+  const mediaId = toStringValue(item.media_id ?? item.id);
+  const source = normalizeAssetSource(item.source);
   return {
     id: `media:${mediaId}`,
     media_id: mediaId || undefined,
     type: toStringValue(item.type) || 'unknown',
     kind: normalizeAssetKind(item.type, item.mime_type),
-    source: 'media',
+    source: source === 'unknown' ? 'media' : source,
     name: toStringValue(item.name) || mediaId || 'media-item',
     url: toStringValue(item.url) || undefined,
     mime_type: toStringValue(item.mime_type) || undefined,
+    size_bytes:
+      typeof item.size_bytes === 'number' && Number.isFinite(item.size_bytes)
+        ? item.size_bytes
+        : undefined,
+    metadata: item.source ? { library_source: item.source } : undefined,
   };
 };
 

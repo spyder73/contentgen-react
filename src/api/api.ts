@@ -28,6 +28,8 @@ const API = {
   // Media
   getMediaItem: MediaAPI.getMediaItem,
   createMediaItem: MediaAPI.createMediaItem,
+  listMediaLibrary: MediaAPI.listMediaLibrary,
+  uploadMediaLibraryFile: MediaAPI.uploadMediaLibraryFile,
   createImage: MediaAPI.createImage,
   createAIVideo: MediaAPI.createAIVideo,
   createAudio: MediaAPI.createAudio,
@@ -43,6 +45,7 @@ const API = {
   listPipelines: PipelineAPI.listPipelines,
   continuePipeline: PipelineAPI.continuePipeline,
   regenerateCheckpoint: PipelineAPI.regenerateCheckpoint,
+  injectCheckpointPrompt: PipelineAPI.injectCheckpointPrompt,
   addPipelineAttachment: PipelineAPI.addAttachment,
   cancelPipeline: PipelineAPI.cancelPipeline,
 

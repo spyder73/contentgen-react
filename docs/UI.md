@@ -20,6 +20,8 @@ Key component domains:
 - dynamic model settings modal built from backend constraints fields.
 - provider/model selection with constraints prefetch.
 - pipeline run controls with pause/continue/regenerate flow.
+- attachment workspace with media explorer filtering (name/type/source), drag-drop intake, and stable `media_id` binding.
+- paused checkpoint additive prompt-injection controls with inline error messaging.
 - real-time refresh via websocket.
 
 ## UX Debt

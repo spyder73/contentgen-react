@@ -5,6 +5,7 @@ import { ATTACHMENT_TYPE_OPTIONS, FileAttachmentMode } from './types';
 interface FileAttachmentSectionProps {
   fileAttachmentType: FileAttachmentMode;
   isDraggingFiles: boolean;
+  isUploadingFiles?: boolean;
   disabled?: boolean;
   onFileAttachmentTypeChange: (value: FileAttachmentMode) => void;
   onFileInputChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
@@ -17,6 +18,7 @@ interface FileAttachmentSectionProps {
 const FileAttachmentSection: React.FC<FileAttachmentSectionProps> = ({
   fileAttachmentType,
   isDraggingFiles,
+  isUploadingFiles,
   disabled,
   onFileAttachmentTypeChange,
   onFileInputChange,
@@ -37,6 +39,7 @@ const FileAttachmentSection: React.FC<FileAttachmentSectionProps> = ({
       onDrop={onDrop}
     >
       <p className="attachment-meta mb-2">Drop files here or use the picker below.</p>
+      {isUploadingFiles && <p className="attachment-meta mb-2">Uploading files to media library...</p>}
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
         <Select
           value={fileAttachmentType}

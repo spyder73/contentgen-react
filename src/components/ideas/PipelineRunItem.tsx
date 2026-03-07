@@ -15,6 +15,11 @@ interface Props {
   template: PipelineTemplate;
   onContinue: () => void;
   onRegenerate: (checkpoint: number) => void;
+  onInjectPrompt: (
+    checkpoint: number,
+    text: string,
+    options?: { autoRegenerate?: boolean; source?: string }
+  ) => Promise<void>;
   onAddAttachment: (
     checkpoint: number,
     attachment: Omit<MediaAttachment, 'id' | 'created_at'>
@@ -38,7 +43,7 @@ const formatMetadataValue = (value: unknown): string => {
   }
 };
 
-const toActionableErrorMessage = (error: unknown): string => {
+const toActionableErrorMessage = (error: unknown, fallbackMessage: string): string => {
   const record = error as
     | {
         response?: { data?: { error?: string; message?: string } };
@@ -49,7 +54,7 @@ const toActionableErrorMessage = (error: unknown): string => {
     record?.response?.data?.error ||
     record?.response?.data?.message ||
     record?.message ||
-    'Failed to attach selected asset to this checkpoint.'
+    fallbackMessage
   );
 };
 
@@ -76,6 +81,7 @@ const PipelineRunItem: React.FC<Props> = ({
   template,
   onContinue,
   onRegenerate,
+  onInjectPrompt,
   onAddAttachment,
   onCancel,
   onRemove,
@@ -85,6 +91,9 @@ const PipelineRunItem: React.FC<Props> = ({
   const [selectedAssetByCheckpoint, setSelectedAssetByCheckpoint] = useState<Record<number, string>>({});
   const [attachLoadingByCheckpoint, setAttachLoadingByCheckpoint] = useState<Record<number, boolean>>({});
   const [attachErrorByCheckpoint, setAttachErrorByCheckpoint] = useState<Record<number, string>>({});
+  const [injectTextByCheckpoint, setInjectTextByCheckpoint] = useState<Record<number, string>>({});
+  const [injectLoadingByCheckpoint, setInjectLoadingByCheckpoint] = useState<Record<number, boolean>>({});
+  const [injectErrorByCheckpoint, setInjectErrorByCheckpoint] = useState<Record<number, string>>({});
 
   const isTerminal = ['completed', 'failed', 'cancelled'].includes(run.status);
   const isPaused = run.status === 'paused';
@@ -234,10 +243,42 @@ const PipelineRunItem: React.FC<Props> = ({
     } catch (error) {
       setAttachErrorByCheckpoint((prev) => ({
         ...prev,
-        [checkpointIndex]: toActionableErrorMessage(error),
+        [checkpointIndex]: toActionableErrorMessage(
+          error,
+          'Failed to attach selected asset to this checkpoint.'
+        ),
       }));
     } finally {
       setAttachLoadingByCheckpoint((prev) => ({ ...prev, [checkpointIndex]: false }));
+    }
+  };
+
+  const handleInjectPrompt = async (checkpointIndex: number) => {
+    const guidance = (injectTextByCheckpoint[checkpointIndex] || '').trim();
+    if (!guidance) {
+      setInjectErrorByCheckpoint((prev) => ({
+        ...prev,
+        [checkpointIndex]: 'Enter prompt guidance before injecting.',
+      }));
+      return;
+    }
+
+    setInjectLoadingByCheckpoint((prev) => ({ ...prev, [checkpointIndex]: true }));
+    setInjectErrorByCheckpoint((prev) => ({ ...prev, [checkpointIndex]: '' }));
+
+    try {
+      await onInjectPrompt(checkpointIndex, guidance, {
+        autoRegenerate: true,
+        source: 'frontend_pause_checkpoint',
+      });
+      setInjectTextByCheckpoint((prev) => ({ ...prev, [checkpointIndex]: '' }));
+    } catch (error) {
+      setInjectErrorByCheckpoint((prev) => ({
+        ...prev,
+        [checkpointIndex]: toActionableErrorMessage(error, 'Failed to inject prompt guidance.'),
+      }));
+    } finally {
+      setInjectLoadingByCheckpoint((prev) => ({ ...prev, [checkpointIndex]: false }));
     }
   };
 
@@ -398,6 +439,7 @@ const PipelineRunItem: React.FC<Props> = ({
               const reusableOptions = getReusableAssetsForCheckpoint(index);
               const selectedAssetId = selectedAssetByCheckpoint[index] || '';
               const selectedAsset = reusableOptions.find((item) => item.id === selectedAssetId) || null;
+              const injectText = injectTextByCheckpoint[index] || '';
 
               return (
                 <div
@@ -564,13 +606,64 @@ const PipelineRunItem: React.FC<Props> = ({
                       )}
 
                       {result && isCurrent && isPaused && (
-                        <div className="flex items-center gap-2 p-2 border border-white/20 bg-white/5 rounded">
-                          <p className="text-xs text-zinc-300 flex-1">
+                        <div className="space-y-2 p-2 border border-white/20 bg-white/5 rounded">
+                          <p className="text-xs text-zinc-300">
                             {canContinueCurrentCheckpoint
                               ? 'Review output before continuing.'
                               : 'Attach required assets before continuing.'}
                           </p>
-                          <div className="flex gap-2 flex-shrink-0">
+
+                          <div className="space-y-2">
+                            <label className="attachment-state" htmlFor={`inject-guidance-${run.id}-${index}`}>
+                              Additive Prompt Guidance
+                            </label>
+                            <textarea
+                              id={`inject-guidance-${run.id}-${index}`}
+                              value={injectText}
+                              onChange={(event) => {
+                                const next = event.target.value;
+                                setInjectTextByCheckpoint((prev) => ({ ...prev, [index]: next }));
+                                if (injectErrorByCheckpoint[index]) {
+                                  setInjectErrorByCheckpoint((prev) => ({ ...prev, [index]: '' }));
+                                }
+                              }}
+                              className="w-full input min-h-20"
+                              placeholder="Add focused guidance to merge with this checkpoint prompt..."
+                            />
+                            <div className="flex flex-wrap items-center gap-2">
+                              <Button
+                                variant="secondary"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  void handleInjectPrompt(index);
+                                }}
+                                disabled={!injectText.trim() || injectLoadingByCheckpoint[index]}
+                              >
+                                {injectLoadingByCheckpoint[index]
+                                  ? 'Injecting...'
+                                  : 'Inject + Regenerate'}
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() =>
+                                  setInjectTextByCheckpoint((prev) => ({ ...prev, [index]: '' }))
+                                }
+                                disabled={!injectText}
+                              >
+                                Clear Guidance
+                              </Button>
+                              <span className="attachment-meta">
+                                Guidance is run-scoped and append-only for this checkpoint.
+                              </span>
+                            </div>
+                            {injectErrorByCheckpoint[index] && (
+                              <p className="attachment-meta text-red-300">{injectErrorByCheckpoint[index]}</p>
+                            )}
+                          </div>
+
+                          <div className="flex flex-wrap items-center gap-2">
                             {checkpoint.allow_regenerate && (
                               <Button
                                 variant="secondary"

@@ -139,6 +139,21 @@ export function usePipelineRuns() {
     setRuns((prev) => new Map(prev).set(updated.id, updated));
   }, []);
 
+  const injectCheckpointPrompt = useCallback(
+    async (
+      runId: string,
+      checkpointIndex: number,
+      text: string,
+      options?: { autoRegenerate?: boolean; source?: string }
+    ) => {
+      await PipelineAPI.injectCheckpointPrompt(runId, checkpointIndex, text, options);
+      const updated = await PipelineAPI.getPipeline(runId);
+      setRuns((prev) => new Map(prev).set(updated.id, updated));
+      return updated;
+    },
+    []
+  );
+
   const cancelRun = useCallback(async (runId: string) => {
     await PipelineAPI.cancelPipeline(runId);
     removeStoredRun(runId);
@@ -177,6 +192,7 @@ export function usePipelineRuns() {
     startRun,
     continueRun,
     regenerateCheckpoint,
+    injectCheckpointPrompt,
     addCheckpointAttachment,
     cancelRun,
     removeRun,

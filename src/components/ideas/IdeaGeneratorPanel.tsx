@@ -31,6 +31,7 @@ const IdeaGeneratorPanel: React.FC<IdeaGeneratorPanelProps> = ({
     startRun,
     continueRun,
     regenerateCheckpoint,
+    injectCheckpointPrompt,
     addCheckpointAttachment,
     cancelRun,
     removeRun,
@@ -168,6 +169,9 @@ const IdeaGeneratorPanel: React.FC<IdeaGeneratorPanelProps> = ({
                 template={template}
                 onContinue={() => continueRun(run.id)}
                 onRegenerate={(checkpoint) => regenerateCheckpoint(run.id, checkpoint)}
+                onInjectPrompt={async (checkpoint, text, options) => {
+                  await injectCheckpointPrompt(run.id, checkpoint, text, options);
+                }}
                 onAddAttachment={async (checkpoint, attachment) => {
                   await addCheckpointAttachment(run.id, checkpoint, attachment);
                 }}

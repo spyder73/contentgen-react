@@ -33,6 +33,19 @@ interface AddAttachmentRequest {
   attachment: Omit<MediaAttachment, 'id' | 'created_at'>;
 }
 
+interface InjectCheckpointPromptRequest {
+  text: string;
+  auto_regenerate?: boolean;
+  source?: string;
+}
+
+interface InjectCheckpointPromptResponse {
+  status: string;
+  checkpoint_index: number;
+  injection_count?: number;
+  regenerated?: boolean;
+}
+
 interface CreatePipelineTemplateRequest {
   id: string;
   name: string;
@@ -299,6 +312,23 @@ const addAttachment = (
     } as AddAttachmentRequest)
     .then((res) => res.data);
 
+const injectCheckpointPrompt = (
+  pipelineId: string,
+  checkpointIndex: number,
+  text: string,
+  options?: { autoRegenerate?: boolean; source?: string }
+) =>
+  axios
+    .post<InjectCheckpointPromptResponse>(
+      `${BASE_URL}/pipelines/${pipelineId}/checkpoints/${checkpointIndex}/inject`,
+      {
+        text,
+        auto_regenerate: options?.autoRegenerate,
+        source: toStringValue(options?.source).trim() || undefined,
+      } as InjectCheckpointPromptRequest
+    )
+    .then((res) => res.data);
+
 const cancelPipeline = (pipelineId: string) =>
   axios
     .delete<{ status: string }>(`${BASE_URL}/pipelines/${pipelineId}`)
@@ -400,6 +430,7 @@ const PipelineAPI = {
   continuePipeline,
   regenerateCheckpoint,
   addAttachment,
+  injectCheckpointPrompt,
   cancelPipeline,
   createPipelineTemplate,
   getPipelineTemplate,

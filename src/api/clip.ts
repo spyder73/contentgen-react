@@ -36,10 +36,16 @@ interface NewClipIdeaRequest {
 
 export interface AvailableMediaItem {
   id: string;
+  media_id?: string;
   type: string;
   name: string;
   url?: string;
   mime_type?: string;
+  source?: string;
+  size_bytes?: number;
+  clip_id?: string;
+  created_at?: string;
+  metadata?: Record<string, unknown>;
 }
 
 // ==================== Helpers ====================
@@ -71,6 +77,7 @@ const normalizeAvailableMediaItem = (value: unknown, index: number): AvailableMe
     if (typeof value === 'string') {
       return {
         id: value,
+        media_id: value,
         type: 'unknown',
         name: value,
         url: value,
@@ -81,17 +88,39 @@ const normalizeAvailableMediaItem = (value: unknown, index: number): AvailableMe
 
   const url = toStringValue(value.url ?? value.file_url ?? value.asset_url ?? value.uri);
   const id = toStringValue(value.id ?? value.media_id ?? value.asset_id, url || `media-${index + 1}`);
+  if (!id) return null;
+  const metadata = isRecord(value.metadata) ? value.metadata : undefined;
+  const sizeBytesRaw = value.size_bytes ?? value.sizeBytes ?? value.size;
+  const sizeBytes =
+    typeof sizeBytesRaw === 'number'
+      ? sizeBytesRaw
+      : typeof sizeBytesRaw === 'string' && sizeBytesRaw.trim()
+        ? Number(sizeBytesRaw)
+        : undefined;
 
-  return {
+  const normalized: AvailableMediaItem = {
     id,
+    media_id: toStringValue(value.media_id ?? value.id ?? value.asset_id, id),
     type: toStringValue(value.type ?? value.media_type ?? value.kind, 'unknown'),
     name: toStringValue(
       value.name ?? value.file_name ?? value.filename ?? value.title,
       id
     ),
-    url: url || undefined,
-    mime_type: toStringValue(value.mime_type ?? value.mimeType ?? value.content_type) || undefined,
   };
+
+  if (url) normalized.url = url;
+  const mimeType = toStringValue(value.mime_type ?? value.mimeType ?? value.content_type);
+  if (mimeType) normalized.mime_type = mimeType;
+  const source = toStringValue(value.source ?? value.origin);
+  if (source) normalized.source = source;
+  if (Number.isFinite(sizeBytes)) normalized.size_bytes = sizeBytes;
+  const clipId = toStringValue(value.clip_id ?? value.clipId);
+  if (clipId) normalized.clip_id = clipId;
+  const createdAt = toStringValue(value.created_at ?? value.createdAt);
+  if (createdAt) normalized.created_at = createdAt;
+  if (metadata) normalized.metadata = metadata;
+
+  return normalized;
 };
 
 const normalizeAvailableMediaList = (payload: unknown): AvailableMediaItem[] => {

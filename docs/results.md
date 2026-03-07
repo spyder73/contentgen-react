@@ -1,5 +1,46 @@
 # Results Log
 
+## Wave 4B2 Delivery (2026-03-07)
+
+## UI Behavior Matrix (Attachment Workspace / Explorer / Inject Flow)
+| Flow | Target Behavior | Status | Evidence |
+|---|---|---|---|
+| Upload/drop intake with stable library IDs | Drag-drop/file picker uploads files to media-library endpoint and reuses returned stable `media_id`; legacy local fallback remains when endpoint is unavailable | `FIXED` | `useAssetPoolState` now uses `uploadMediaLibraryFile` and maps uploaded items into pool with `media_id`; fallback path preserved (`src/components/ideas/idea-input/useAssetPoolState.ts`, `src/api/media.ts`). |
+| File-explorer media browsing | Attachment workspace uses explorer-style listing with searchable/filterable rows (name/media_id/type/source) and clear add action | `FIXED` | `MediaCatalogSection` now renders search + type/source filters and ID-first rows (`src/components/ideas/idea-input/MediaCatalogSection.tsx`, `src/components/ideas/IdeaInputForm.tsx`). |
+| Start/checkpoint binding by `media_id` | Selected explorer items bind to start/checkpoint attachment rows using stable media IDs, including requirement-gated checkpoints | `FIXED` | Media-item mapping and start payload attachment shaping continue to emit stable `media_id` with checkpoint binding (`src/components/ideas/assetPool.ts`, `src/components/ideas/idea-input/useIdeaInputFormState.ts`, `src/components/ideas/IdeaInputForm.test.tsx`). |
+| Paused checkpoint prompt injection | Paused checkpoint UI supports additive guidance injection with `Inject + Regenerate`, inline errors, and continue/regenerate controls | `FIXED` | Added inject text controls and error handling in run card + API/hook wiring (`src/components/ideas/PipelineRunItem.tsx`, `src/hooks/usePipelineRuns.ts`, `src/api/pipeline.ts`, `src/components/ideas/PipelineRunItem.test.tsx`). |
+| Regression safety (required assets/reuse/replace/schedule) | Existing attachment gating, generated-output reuse, replace-media metadata paths, and scheduling behavior remain intact | `VALID` | Prior suites remain passing while new explorer/inject tests are added (`npm test -- --watchAll=false` full pass, including schedule and media modal suites). |
+
+## Payload/Contract Deltas + Compatibility Notes
+| Area | Previous Behavior | Wave 4B2 Behavior |
+|---|---|---|
+| Attachment workspace media source | Idea form loaded media list from `GET /clips/available-media` only | Idea form now prefers `GET /media/library` (ID-first) and falls back to `GET /clips/available-media` when needed (`src/components/ideas/idea-input/useAssetPoolState.ts`, `src/api/media.ts`). |
+| Manual upload intake | Dropped/picked files were local-only `file:*` pool rows | Files are now uploaded via `POST /media/library/upload` and mapped into asset pool as stable media references; local fallback retained for migration safety (`src/components/ideas/idea-input/useAssetPoolState.ts`, `src/api/media.ts`). |
+| Paused checkpoint prompt controls | Paused run UI only offered regenerate/continue actions | New inject endpoint support added: `POST /pipelines/:id/checkpoints/:index/inject` with additive guidance payload and optional auto-regenerate (`src/api/pipeline.ts`, `src/hooks/usePipelineRuns.ts`, `src/components/ideas/PipelineRunItem.tsx`). |
+| Available media normalization | Legacy list normalization did not consistently surface `media_id` alias fields | `AvailableMediaItem` normalization now preserves `media_id` and optional source/size/clip metadata for mixed payload variants (`src/api/clip.ts`, `src/api/clip.test.ts`). |
+
+## Revalidation Verdicts (Orchestrator-Touched Docs)
+| File | Verdict | Notes |
+|---|---|---|
+| `docs/AGENT_TASK.md` | `VALID` | Wave 4B2 scope matches the implemented attachment workspace and paused inject controls. |
+| `docs/CODING_GUIDELINES.md` | `VALID` | Changes keep API access centralized under `src/api/*`, preserve focused helper/component responsibilities, and add regression tests. |
+| `docs/API.md` | `NEEDS FIX` -> `VALID` | Updated with media-library explorer/upload and checkpoint inject endpoint usage to match current frontend API surface. |
+| `docs/UI.md` | `NEEDS FIX` -> `VALID` | Updated current-state notes to include attachment workspace explorer and paused prompt-injection UX. |
+
+## Validation Commands
+| Command | Result | Notes |
+|---|---|---|
+| `npm test -- --watchAll=false` | `pass` | 15 suites, 54 tests passing. Existing React `act` deprecation warning remains in test tooling output. |
+| `npm run build` | `pass` | Production build compiled successfully after Wave 4B2 changes. |
+
+## Manual QA Notes (Desktop + Mobile)
+| Area | Desktop | Mobile | Notes |
+|---|---|---|---|
+| Media explorer filtering + add-to-pool | Not run | Not run | Unit coverage added for query/type/source filtering and `media_id` binding; live visual/interaction pass pending. |
+| File drop/picker upload intake | Not run | Not run | Upload-to-library + fallback logic implemented; manual validation against live backend upload endpoint pending. |
+| Paused checkpoint inject/regenerate/continue flow | Not run | Not run | UI flow and error paths are unit-tested; live backend contract validation pending. |
+| Existing schedule and replace-media flows | Not run | Not run | Regression suites remained green in this wave; live integration pass still pending. |
+
 ## Wave 4B1 Delivery (2026-03-07)
 
 ## UI Behavior Matrix (Asset Pool / Checkpoint / Reuse / Replace)

@@ -6,8 +6,8 @@ Base URL is currently `http://localhost:81` from `src/api/helpers.ts`.
 
 ## Core Modules
 - `clip.ts`: clip CRUD, clip ideas, create-from-pipeline-output.
-- `media.ts`: media CRUD, regenerate, metadata edits.
-- `pipeline.ts`: pipeline runs + template CRUD + prompt template CRUD.
+- `media.ts`: media CRUD, media-library list/upload, regenerate, metadata edits.
+- `pipeline.ts`: pipeline runs + template CRUD + prompt template CRUD + checkpoint injection.
 - `models.ts`: model discovery + constraints retrieval.
 - `external.ts`: users, accounts, schedule.
 
@@ -60,6 +60,27 @@ Base URL is currently `http://localhost:81` from `src/api/helpers.ts`.
   - `source_run_id`
 - frontend keeps compatibility aliases in payload normalization (`name` + `filename`, `size_bytes` + `size`) to support mixed backend contract versions.
 
+### Media Library Explorer Contract (Wave 4B2)
+- `MediaAPI.listMediaLibrary(...)` calls `GET /media/library` and normalizes mixed payload variants into ID-first rows:
+  - stable `media_id` (mirrored as `id` for UI selectors)
+  - `type`, `name`, `source`, `mime_type`, `size_bytes`, optional `clip_id`
+- `MediaAPI.uploadMediaLibraryFile(file, ...)` calls `POST /media/library/upload` (multipart) and expects a stable `media_id` in response.
+- attachment workspace keeps compatibility fallback to `GET /clips/available-media` when `/media/library` routes are unavailable.
+
+### Checkpoint Prompt Injection Contract (Wave 4B2)
+- `PipelineAPI.injectCheckpointPrompt(runId, checkpointIndex, text, options)` calls:
+  - `POST /pipelines/:id/checkpoints/:index/inject`
+- request payload:
+```json
+{
+  "text": "Additive prompt guidance",
+  "auto_regenerate": true,
+  "source": "frontend_pause_checkpoint"
+}
+```
+- response payload (normalized passthrough): `{ status, checkpoint_index, injection_count?, regenerated? }`
+- UI flow uses inject + regenerate while paused and keeps explicit inline errors on failures.
+
 ### Clip Create From Pipeline Output
 `ClipAPI.createClipPromptFromJson(json, mediaProfile?)`:
 - parses pipeline output JSON.
@@ -87,6 +108,8 @@ Before send, `settingsToOutputSpec` converts dimensions -> `width` + `height`.
 1. websocket event names in frontend are partially legacy compared to backend emit set.
 2. style schema shape can vary by backend/registry version.
    - frontend now normalizes common payload variants from `/clipstyles` + `/clipstyles/:style/schema`.
+3. `/media/library` rollout is additive.
+   - frontend now prefers media-library endpoints and falls back to `/clips/available-media` for compatibility.
 
 ## Recommended API Cleanup Sequence
 1. standardize websocket event type map with backend emitted events.

@@ -95,6 +95,7 @@ describe('PipelineRunItem connector cues', () => {
         template={template}
         onContinue={() => undefined}
         onRegenerate={(_checkpoint) => undefined}
+        onInjectPrompt={async () => undefined}
         onAddAttachment={async () => undefined}
         onCancel={() => undefined}
         onRemove={() => undefined}
@@ -135,6 +136,7 @@ describe('PipelineRunItem connector cues', () => {
         template={templateWithAttachments}
         onContinue={() => undefined}
         onRegenerate={(_checkpoint) => undefined}
+        onInjectPrompt={async () => undefined}
         onAddAttachment={async () => undefined}
         onCancel={() => undefined}
         onRemove={() => undefined}
@@ -198,6 +200,7 @@ describe('PipelineRunItem connector cues', () => {
         template={templateWithAttachments}
         onContinue={() => undefined}
         onRegenerate={(_checkpoint) => undefined}
+        onInjectPrompt={async () => undefined}
         onAddAttachment={async () => undefined}
         onCancel={() => undefined}
         onRemove={() => undefined}
@@ -255,6 +258,7 @@ describe('PipelineRunItem connector cues', () => {
         template={templateWithAttachments}
         onContinue={() => undefined}
         onRegenerate={(_checkpoint) => undefined}
+        onInjectPrompt={async () => undefined}
         onAddAttachment={onAddAttachment}
         onCancel={() => undefined}
         onRemove={() => undefined}
@@ -277,6 +281,84 @@ describe('PipelineRunItem connector cues', () => {
           filename: 'split-frame',
         })
       );
+    });
+  });
+
+  it('injects paused checkpoint guidance and requests regenerate', async () => {
+    const pausedRun: PipelineRun = {
+      ...run,
+      status: 'paused',
+      current_checkpoint: 1,
+    };
+
+    const onInjectPrompt = jest.fn<Promise<void>, [number, string, any]>(async () => undefined);
+
+    render(
+      <PipelineRunItem
+        run={pausedRun}
+        template={template}
+        onContinue={() => undefined}
+        onRegenerate={(_checkpoint) => undefined}
+        onInjectPrompt={onInjectPrompt}
+        onAddAttachment={async () => undefined}
+        onCancel={() => undefined}
+        onRemove={() => undefined}
+      />
+    );
+
+    fireEvent.click(screen.getByText('Expand'));
+    fireEvent.click(screen.getByText('Draft'));
+
+    const guidanceField = screen.getByLabelText('Additive Prompt Guidance');
+    fireEvent.change(guidanceField, { target: { value: 'Focus on product closeups and clean transitions.' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Inject + Regenerate' }));
+
+    await waitFor(() => {
+      expect(onInjectPrompt).toHaveBeenCalledWith(1, 'Focus on product closeups and clean transitions.', {
+        autoRegenerate: true,
+        source: 'frontend_pause_checkpoint',
+      });
+    });
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('Additive Prompt Guidance')).toHaveValue('');
+    });
+  });
+
+  it('shows actionable checkpoint inject errors', async () => {
+    const pausedRun: PipelineRun = {
+      ...run,
+      status: 'paused',
+      current_checkpoint: 1,
+    };
+
+    const onInjectPrompt = jest.fn<Promise<void>, [number, string, any]>(
+      async () => Promise.reject({ response: { data: { error: 'Inject failed: template missing' } } })
+    );
+
+    render(
+      <PipelineRunItem
+        run={pausedRun}
+        template={template}
+        onContinue={() => undefined}
+        onRegenerate={(_checkpoint) => undefined}
+        onInjectPrompt={onInjectPrompt}
+        onAddAttachment={async () => undefined}
+        onCancel={() => undefined}
+        onRemove={() => undefined}
+      />
+    );
+
+    fireEvent.click(screen.getByText('Expand'));
+    fireEvent.click(screen.getByText('Draft'));
+
+    fireEvent.change(screen.getByLabelText('Additive Prompt Guidance'), {
+      target: { value: 'Try a documentary tone.' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Inject + Regenerate' }));
+
+    await waitFor(() => {
+      expect(screen.getByText('Inject failed: template missing')).toBeInTheDocument();
     });
   });
 
@@ -315,6 +397,7 @@ describe('PipelineRunItem connector cues', () => {
         template={templateWithRequiredAssets}
         onContinue={() => undefined}
         onRegenerate={(_checkpoint) => undefined}
+        onInjectPrompt={async () => undefined}
         onAddAttachment={async () => undefined}
         onCancel={() => undefined}
         onRemove={() => undefined}

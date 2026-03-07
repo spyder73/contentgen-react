@@ -156,4 +156,37 @@ describe('pipeline attachment normalization', () => {
     );
     expect((mockedAxios.post.mock.calls[0]?.[1] as any).initial_attachments).toHaveLength(1);
   });
+
+  it('posts checkpoint prompt injection with additive guidance fields', async () => {
+    mockedAxios.post.mockResolvedValueOnce({
+      data: {
+        status: 'paused',
+        checkpoint_index: 2,
+        injection_count: 3,
+        regenerated: true,
+      },
+    } as any);
+
+    const response = await PipelineAPI.injectCheckpointPrompt('run-7', 2, 'Prefer tighter framing.', {
+      autoRegenerate: true,
+      source: 'frontend_pause_checkpoint',
+    });
+
+    expect(response).toEqual(
+      expect.objectContaining({
+        status: 'paused',
+        checkpoint_index: 2,
+        injection_count: 3,
+        regenerated: true,
+      })
+    );
+    expect(mockedAxios.post).toHaveBeenCalledWith(
+      expect.stringContaining('/pipelines/run-7/checkpoints/2/inject'),
+      {
+        text: 'Prefer tighter framing.',
+        auto_regenerate: true,
+        source: 'frontend_pause_checkpoint',
+      }
+    );
+  });
 });

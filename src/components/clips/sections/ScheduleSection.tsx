@@ -1,42 +1,83 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Account } from '../../../api/structs/user';
-import { Button, Badge } from '../../ui';
+import { Button, Badge, TextArea } from '../../ui';
 import API from '../../../api/api';
 
 interface ScheduleSectionProps {
   clipId: string;
+  initialCaption: string;
   activeAccount: Account;
   fileUrls: string[];
 }
 
 const ScheduleSection: React.FC<ScheduleSectionProps> = ({
   clipId,
+  initialCaption,
   activeAccount,
   fileUrls,
 }) => {
   const [isScheduling, setIsScheduling] = useState(false);
+  const [caption, setCaption] = useState(initialCaption);
+  const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>(activeAccount.platforms);
   const [result, setResult] = useState<{ success: boolean; message: string } | null>(null);
 
+  useEffect(() => {
+    setSelectedPlatforms(activeAccount.platforms);
+  }, [activeAccount.platforms]);
+
+  useEffect(() => {
+    setCaption(initialCaption);
+  }, [initialCaption]);
+
+  const captionChanged = useMemo(() => caption !== initialCaption, [caption, initialCaption]);
+
+  const togglePlatform = (platform: string) => {
+    setSelectedPlatforms((prev) => (
+      prev.includes(platform)
+        ? prev.filter((value) => value !== platform)
+        : [...prev, platform]
+    ));
+  };
+
   const handleSchedule = async () => {
+    if (selectedPlatforms.length === 0) {
+      setResult({
+        success: false,
+        message: 'Select at least one platform before scheduling.',
+      });
+      return;
+    }
+
     setIsScheduling(true);
     setResult(null);
+
     try {
-      const response = await API.scheduleClip(clipId, activeAccount.platforms);
+      if (captionChanged) {
+        await API.editClipMetadata(clipId, 'caption', caption);
+      }
+
+      const response = await API.scheduleClip(clipId, selectedPlatforms);
       if (response.success) {
         setResult({
           success: true,
-          message: `Scheduled for ${response.scheduled_date}`,
+          message:
+            response.message ||
+            (response.scheduled_date
+              ? `Scheduled for ${response.scheduled_date}`
+              : response.run_id
+                ? `Scheduling run queued (${response.run_id})`
+                : 'Scheduling accepted'),
         });
       } else {
         setResult({
           success: false,
-          message: response.error || 'Unknown error',
+          message: response.error || response.message || 'Unknown error',
         });
       }
     } catch (error: any) {
       setResult({
         success: false,
-        message: error.message || 'Failed to schedule',
+        message: error.message || 'Failed to schedule clip',
       });
     } finally {
       setIsScheduling(false);
@@ -62,6 +103,52 @@ const ScheduleSection: React.FC<ScheduleSectionProps> = ({
         </div>
       </div>
 
+      <div className="space-y-2">
+        <label className="attachment-state">Platforms</label>
+        {activeAccount.platforms.length === 0 ? (
+          <p className="attachment-meta">No platforms available for this account.</p>
+        ) : (
+          <>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+              {activeAccount.platforms.map((platform) => (
+                <label
+                  key={platform}
+                  className="flex items-center gap-2 rounded border border-white/15 px-2 py-1 text-sm text-slate-200"
+                >
+                  <input
+                    type="checkbox"
+                    aria-label={platform}
+                    checked={selectedPlatforms.includes(platform)}
+                    onChange={() => togglePlatform(platform)}
+                    disabled={isScheduling}
+                  />
+                  <span className="truncate">{platform}</span>
+                </label>
+              ))}
+            </div>
+            <p className="attachment-meta">
+              {selectedPlatforms.length} of {activeAccount.platforms.length} selected
+            </p>
+          </>
+        )}
+      </div>
+
+      <div className="space-y-2">
+        <label className="attachment-state">Caption</label>
+        <TextArea
+          value={caption}
+          onChange={(event) => setCaption(event.target.value)}
+          rows={4}
+          placeholder="Write the post caption..."
+          disabled={isScheduling}
+        />
+        <p className="attachment-meta">
+          {captionChanged
+            ? 'Caption edits will be saved to clip metadata before scheduling.'
+            : 'Using caption currently saved on this clip.'}
+        </p>
+      </div>
+
       {/* Files to Upload */}
       <div className="p-3 bg-slate-800/30 rounded-lg">
         <p className="text-slate-400 text-sm mb-2">Files to upload:</p>
@@ -78,11 +165,11 @@ const ScheduleSection: React.FC<ScheduleSectionProps> = ({
       <Button
         variant="success"
         onClick={handleSchedule}
-        disabled={isScheduling}
+        disabled={isScheduling || selectedPlatforms.length === 0}
         loading={isScheduling}
         className="w-full"
       >
-        📅 Schedule to {activeAccount.platforms.join(', ')}
+        📅 Schedule to {selectedPlatforms.join(', ')}
       </Button>
 
       {/* Result Message */}

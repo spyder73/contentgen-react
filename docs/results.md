@@ -1,5 +1,51 @@
 # Results Log
 
+## Wave 4C3 Delivery (2026-03-07)
+
+## Scheduling UX Parity Matrix
+| Flow | Target Behavior | Status | Evidence |
+|---|---|---|---|
+| Platform selection per run | Show account platforms as selectable controls, default all selected, allow deselection per schedule action | `FIXED` | `ScheduleSection` now renders per-platform checkboxes and keeps all selected by default (`src/components/clips/sections/ScheduleSection.tsx`). |
+| Schedule payload by selected platforms | Submit only user-selected platforms to scheduler route | `FIXED` | `handleSchedule` now calls `API.scheduleClip(clipId, selectedPlatforms)` (`src/components/clips/sections/ScheduleSection.tsx`); covered by `ScheduleSection.test.tsx`. |
+| Caption visibility in schedule flow | Show current clip caption in Schedule & Publish panel | `FIXED` | Clip caption is extracted from metadata in `ClipPromptItem` and passed to schedule panel (`src/components/clips/ClipPromptItem.tsx`, `src/components/clips/sections/ScheduleSection.tsx`). |
+| Caption edit persistence before scheduling | Persist edited caption to clip metadata before scheduler submit | `FIXED` | Scheduling flow now saves caption via `API.editClipMetadata(..., 'caption', ...)` before calling `API.scheduleClip(...)` (`src/components/clips/sections/ScheduleSection.tsx`); order validated in `ScheduleSection.test.tsx`. |
+| Scheduler contract/error behavior | Keep `/v1/schedule` canonical compatibility and actionable error strings | `VALID` | No API route-order changes in Wave 4C3; scheduling still uses existing External API compatibility chain from prior wave (`src/api/external.ts`, `src/api/externalHelpers.ts`). |
+
+## Payload/Contract Deltas
+| Area | Previous Behavior | Wave 4C3 Behavior |
+|---|---|---|
+| Scheduling payload platforms | Always sent `activeAccount.platforms` from panel | Sends only currently selected platform subset from Schedule & Publish UI (`src/components/clips/sections/ScheduleSection.tsx`). |
+| Caption update path during schedule | No caption field shown/updated in schedule flow | If edited, caption is persisted to clip metadata via clip edit API before schedule submit (`src/components/clips/sections/ScheduleSection.tsx`). |
+| Scheduler API contract | Canonical `/v1/schedule` + compatibility fallback chain | `NO CHANGE` in this wave; behavior preserved (`src/api/external.ts`). |
+
+## Attachment Pool Interaction Matrix
+| Interaction | Desktop | Mobile | Status | Evidence |
+|---|---|---|---|---|
+| Collapse/expand attachment pool | Supported | Supported | `FIXED` | Added attachment pool toggle with explicit expanded/collapsed state + attached count (`src/components/ideas/IdeaInputForm.tsx`, `src/components/ideas/IdeaInputForm.test.tsx`). |
+| Drag-and-drop file attach | Supported (drop zone) | Not primary interaction | `FIXED` | Drop zone handles drag enter/over/leave/drop and adds dropped files to attachments (`src/components/ideas/IdeaInputForm.tsx`, `src/components/ideas/IdeaInputForm.test.tsx`). |
+| Click-to-upload fallback | Supported | Supported | `VALID` | Existing file input remains active in attachment panel (`src/components/ideas/IdeaInputForm.tsx`). |
+
+## Revalidation Verdicts (Orchestrator-Touched Docs)
+| File | Verdict | Notes |
+|---|---|---|
+| `docs/AGENT_TASK.md` | `VALID` | Wave 4C3 requirements are coherent and implemented in this delivery. |
+| `docs/CODING_GUIDELINES.md` | `VALID` | No conflicts with implementation approach; API-layer access and focused UI updates were preserved. |
+| `docs/API.md` | `VALID` | API abstraction and contract guidance still matches current frontend architecture. |
+| `docs/UI.md` | `VALID` | Current wave changes align with iterative UX improvement direction (no full redesign). |
+
+## Validation Commands
+| Command | Result | Notes |
+|---|---|---|
+| `npm test -- --watchAll=false` | `pass` | 13 suites, 41 tests passing, including new schedule/caption and attachment pool tests. Existing React `act` deprecation warning remains from test tooling. |
+| `npm run build` | `pass` | Production build compiled successfully after Wave 4C3 changes. |
+
+## Manual QA Notes (Desktop + Mobile)
+| Area | Desktop | Mobile | Notes |
+|---|---|---|---|
+| Schedule platform toggles + caption edit | Not run | Not run | Implemented and unit-tested; live end-to-end scheduler validation pending. |
+| Attachment pool collapse/expand | Not run | Not run | Implemented and unit-tested for visible state transitions. |
+| Attachment drag/drop + picker fallback | Not run | Not run | Drag/drop and file picker both wired; manual touch/mobile interaction pass still pending. |
+
 ## Wave 4C1 Delivery (2026-03-07)
 
 ## Scheduling/Account Parity Matrix

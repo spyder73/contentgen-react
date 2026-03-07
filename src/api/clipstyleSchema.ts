@@ -227,6 +227,21 @@ const normalizeMediaFields = (raw: unknown): Record<MediaType, ClipStyleField[]>
   return base;
 };
 
+export const emptyClipStyleSchema = (
+  styleId: string,
+  styleSummary?: ClipStyleSummary
+): ClipStyleSchema => ({
+  id: styleId,
+  name: styleSummary?.name || styleId,
+  description: styleSummary?.description || '',
+  metadataFields: [],
+  mediaMetadataFields: {
+    image: [],
+    ai_video: [],
+    audio: [],
+  },
+});
+
 export const normalizeClipStyleSchema = (
   styleId: string,
   payload: unknown,

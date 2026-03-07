@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { MediaItem, MediaType } from '../../../api/structs/media';
 import { MediaProfile, MediaOutputSpec } from '../../../api/structs/media-spec';
-import { ClipStyleSchema } from '../../../api/clipstyleSchema';
+import { ClipStyleSchema, emptyClipStyleSchema } from '../../../api/clipstyleSchema';
 import API from '../../../api/api';
 import { MediaSection } from '../../ui';
 import { AddMediaModal, MediaPreviewModal } from '../../modals';
@@ -15,18 +15,6 @@ interface MediaEditorSectionProps {
   onRefresh: () => void;
   mediaProfile: MediaProfile;
 }
-
-const emptyClipStyleSchema = (styleId: string): ClipStyleSchema => ({
-  id: styleId,
-  name: styleId,
-  description: '',
-  metadataFields: [],
-  mediaMetadataFields: {
-    image: [],
-    ai_video: [],
-    audio: [],
-  },
-});
 
 const MediaEditorSection: React.FC<MediaEditorSectionProps> = ({
   clipId,

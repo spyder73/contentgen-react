@@ -32,6 +32,18 @@ export interface MediaAttachment {
   metadata?: Record<string, unknown>;
 }
 
+export interface PipelineInputAttachment {
+  type: string;
+  source?: string;
+  state?: string;
+  url?: string;
+  name?: string;
+  mime_type?: string;
+  size_bytes?: number;
+  media_id?: string;
+  metadata?: Record<string, unknown>;
+}
+
 export interface CheckpointResult {
   checkpoint_id: string;
   status: CheckpointStatus;
@@ -56,6 +68,7 @@ export interface PipelineRun {
   results: CheckpointResult[];
   auto_mode: boolean;
   media_profile?: MediaProfile;
+  music_media_id?: string | null;
   provider?: string;
   model?: string;
   created_at: string;

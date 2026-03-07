@@ -18,9 +18,18 @@ const ScheduleButton: React.FC<ScheduleButtonProps> = ({ clipId, activeAccount }
     try {
       const response = await API.scheduleClip(clipId, activeAccount.platforms);
       if (response.success) {
-        setResult(`✓ Scheduled for ${response.scheduled_date}`);
+        setResult(
+          `✓ ${
+            response.message ||
+            (response.scheduled_date
+              ? `Scheduled for ${response.scheduled_date}`
+              : response.run_id
+                ? `Scheduling run queued (${response.run_id})`
+                : 'Scheduling accepted')
+          }`
+        );
       } else {
-        setResult(`✗ ${response.error}`);
+        setResult(`✗ ${response.error || response.message || 'Unknown error'}`);
       }
     } catch (error: any) {
       setResult(`✗ ${error.message}`);

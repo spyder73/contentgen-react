@@ -16,6 +16,7 @@ interface NewClipPromptRequest {
   imagePrompts?: MediaPrompt[];
   aiVideoPrompts?: MediaPrompt[];
   audioPrompts?: MediaPrompt[];
+  music_media_id?: string | null;
   metadata?: ClipMetadata;
   clipStyle?: string;
 }
@@ -24,12 +25,21 @@ interface EditClipPromptRequest {
   name?: string;
   metadata?: ClipMetadata;
   clipStyle?: string;
+  music_media_id?: string | null;
 }
 
 interface NewClipIdeaRequest {
   clip_idea: string;
   clip_prompt_json?: string;
   clip_prompt_list?: string[];
+}
+
+export interface AvailableMediaItem {
+  id: string;
+  type: string;
+  name: string;
+  url?: string;
+  mime_type?: string;
 }
 
 // ==================== Helpers ====================
@@ -45,6 +55,61 @@ const withDefaultOutputSpec = (
     const mergedSpec = p.outputSpec ? { ...fallback, ...p.outputSpec } : { ...fallback };
     return { ...p, outputSpec: mergedSpec };
   });
+};
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value);
+
+const toStringValue = (value: unknown, fallback = ''): string => {
+  if (typeof value === 'string') return value;
+  if (value === undefined || value === null) return fallback;
+  return String(value);
+};
+
+const normalizeAvailableMediaItem = (value: unknown, index: number): AvailableMediaItem | null => {
+  if (!isRecord(value)) {
+    if (typeof value === 'string') {
+      return {
+        id: value,
+        type: 'unknown',
+        name: value,
+        url: value,
+      };
+    }
+    return null;
+  }
+
+  const url = toStringValue(value.url ?? value.file_url ?? value.asset_url ?? value.uri);
+  const id = toStringValue(value.id ?? value.media_id ?? value.asset_id, url || `media-${index + 1}`);
+
+  return {
+    id,
+    type: toStringValue(value.type ?? value.media_type ?? value.kind, 'unknown'),
+    name: toStringValue(
+      value.name ?? value.file_name ?? value.filename ?? value.title,
+      id
+    ),
+    url: url || undefined,
+    mime_type: toStringValue(value.mime_type ?? value.mimeType ?? value.content_type) || undefined,
+  };
+};
+
+const normalizeAvailableMediaList = (payload: unknown): AvailableMediaItem[] => {
+  const items = isRecord(payload)
+    ? (Array.isArray(payload.media_files)
+      ? payload.media_files
+      : Array.isArray(payload.items)
+        ? payload.items
+        : Array.isArray(payload.data)
+          ? payload.data
+          : [])
+    : Array.isArray(payload)
+      ? payload
+      : [];
+
+  return items
+    .map((item, index) => normalizeAvailableMediaItem(item, index))
+    .filter((item): item is AvailableMediaItem => Boolean(item));
 };
 
 // ==================== Clip API ====================
@@ -135,7 +200,9 @@ const deleteIdea = (clipIdea: string) =>
 // ==================== Available Media ====================
 
 const getAvailableMedia = () =>
-  axios.get(`${BASE_URL}/clips/available-media`).then((res) => res.data.media_files || []);
+  axios
+    .get(`${BASE_URL}/clips/available-media`)
+    .then((res) => normalizeAvailableMediaList(res.data));
 
 // ==================== Export ====================
 

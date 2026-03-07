@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { PipelineRun } from '../api/structs';
 import PipelineAPI from '../api/pipeline';
 import { MediaProfile } from '../api/structs/media-spec';
+import { PipelineInputAttachment } from '../api/structs/pipeline';
 
 const STORAGE_KEY = 'active_pipeline_runs';
 const TERMINAL_STATES = ['completed', 'failed', 'cancelled'];
@@ -102,6 +103,8 @@ export function usePipelineRuns() {
       input: string,
       options: {
         autoMode: boolean;
+        initialAttachments?: PipelineInputAttachment[];
+        musicMediaId?: string | null;
         provider: string;
         model: string;
         mediaProfile?: MediaProfile;

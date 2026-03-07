@@ -5,6 +5,7 @@ import {
   PipelineTemplate,
   PromptTemplate,
   MediaAttachment,
+  PipelineInputAttachment,
   CheckpointConfig,
   PipelineOutputFormat,
 } from './structs';
@@ -16,6 +17,8 @@ interface StartPipelineRequest {
   template_id: string;
   initial_input: string;
   auto_mode?: boolean;
+  initial_attachments?: PipelineInputAttachment[];
+  music_media_id?: string | null;
   media_profile?: MediaProfile;
   provider?: string;
   model?: string;
@@ -132,6 +135,53 @@ const normalizeAttachmentList = (value: unknown): MediaAttachment[] | undefined 
     .filter((attachment): attachment is MediaAttachment => Boolean(attachment));
 };
 
+const normalizeInputAttachment = (value: PipelineInputAttachment): PipelineInputAttachment | null => {
+  const type = toStringValue(value.type).trim();
+  if (!type) return null;
+
+  const normalized: PipelineInputAttachment = { type };
+
+  const assignString = (
+    key: 'source' | 'state' | 'url' | 'name' | 'mime_type' | 'media_id',
+    raw: unknown
+  ) => {
+    const next = toStringValue(raw).trim();
+    if (next) {
+      normalized[key] = next;
+    }
+  };
+
+  assignString('source', value.source);
+  assignString('state', value.state);
+  assignString('url', value.url);
+  assignString('name', value.name);
+  assignString('mime_type', value.mime_type);
+  assignString('media_id', value.media_id);
+
+  const sizeBytes = toNumberValue(value.size_bytes);
+  if (sizeBytes !== undefined) {
+    normalized.size_bytes = sizeBytes;
+  }
+
+  if (isRecord(value.metadata)) {
+    normalized.metadata = value.metadata;
+  }
+
+  return normalized;
+};
+
+const normalizeInputAttachments = (
+  value?: PipelineInputAttachment[]
+): PipelineInputAttachment[] | undefined => {
+  if (!value?.length) return undefined;
+
+  const normalized = value
+    .map((attachment) => normalizeInputAttachment(attachment))
+    .filter((attachment): attachment is PipelineInputAttachment => Boolean(attachment));
+
+  return normalized.length > 0 ? normalized : undefined;
+};
+
 const normalizePipelineRun = (run: unknown): PipelineRun => {
   if (!isRecord(run)) return run as PipelineRun;
 
@@ -163,6 +213,8 @@ const startPipeline = (
   initialInput: string,
   options?: {
     autoMode?: boolean;
+    initialAttachments?: PipelineInputAttachment[];
+    musicMediaId?: string | null;
     mediaProfile?: MediaProfile;
     provider?: string;
     model?: string;
@@ -173,6 +225,8 @@ const startPipeline = (
       template_id: templateId,
       initial_input: initialInput,
       auto_mode: options?.autoMode ?? true,
+      initial_attachments: normalizeInputAttachments(options?.initialAttachments),
+      music_media_id: toStringValue(options?.musicMediaId).trim() || undefined,
       media_profile: options?.mediaProfile,
       provider: options?.provider,
       model: options?.model,

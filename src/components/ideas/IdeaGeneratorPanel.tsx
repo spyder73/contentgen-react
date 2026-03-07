@@ -7,6 +7,7 @@ import PipelineRunItem from './PipelineRunItem';
 import { usePipelineRuns } from '../../hooks/usePipelineRuns';
 import { MediaProfile } from '../../api/structs/media-spec';
 import { extractClipPromptJsonList } from './ideaOutput';
+import { PipelineInputAttachment } from '../../api/structs/pipeline';
 
 interface IdeaGeneratorPanelProps {
   chatProvider: string;
@@ -79,9 +80,17 @@ const IdeaGeneratorPanel: React.FC<IdeaGeneratorPanelProps> = ({
     }
   }, [runs, handleCompleted]);
 
-  const handleStart = async (input: string, templateId: string, autoMode: boolean) => {
+  const handleStart = async (
+    input: string,
+    templateId: string,
+    autoMode: boolean,
+    attachments: PipelineInputAttachment[],
+    musicMediaId?: string | null
+  ) => {
     await startRun(templateId, input, {
       autoMode,
+      initialAttachments: attachments,
+      musicMediaId,
       provider: chatProvider,
       model: chatModel,
       mediaProfile,

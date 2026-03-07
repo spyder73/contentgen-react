@@ -170,6 +170,7 @@ describe('pipeline attachment normalization', () => {
     const response = await PipelineAPI.injectCheckpointPrompt('run-7', 2, 'Prefer tighter framing.', {
       autoRegenerate: true,
       source: 'frontend_pause_checkpoint',
+      mode: 'with_prior_output_context',
     });
 
     expect(response).toEqual(
@@ -184,8 +185,15 @@ describe('pipeline attachment normalization', () => {
       expect.stringContaining('/pipelines/run-7/checkpoints/2/inject'),
       {
         text: 'Prefer tighter framing.',
+        guidance: 'Prefer tighter framing.',
+        prompt: 'Prefer tighter framing.',
         auto_regenerate: true,
         source: 'frontend_pause_checkpoint',
+        context_mode: 'with_prior_output_context',
+        injection_mode: 'with_prior_output_context',
+        include_prior_output_context: true,
+        include_context: true,
+        use_prior_output_context: true,
       }
     );
   });

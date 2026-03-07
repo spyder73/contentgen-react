@@ -8,6 +8,7 @@ import {
   PipelineInputAttachment,
   CheckpointConfig,
   PipelineOutputFormat,
+  CheckpointInjectionMode,
 } from './structs';
 import { MediaProfile } from './structs/media-spec';
 
@@ -35,8 +36,15 @@ interface AddAttachmentRequest {
 
 interface InjectCheckpointPromptRequest {
   text: string;
+  guidance?: string;
+  prompt?: string;
   auto_regenerate?: boolean;
   source?: string;
+  context_mode?: CheckpointInjectionMode;
+  injection_mode?: CheckpointInjectionMode;
+  include_prior_output_context?: boolean;
+  include_context?: boolean;
+  use_prior_output_context?: boolean;
 }
 
 interface InjectCheckpointPromptResponse {
@@ -227,6 +235,9 @@ const normalizeInputAttachments = (
   return normalized.length > 0 ? normalized : undefined;
 };
 
+const normalizeInjectionMode = (value?: CheckpointInjectionMode): CheckpointInjectionMode =>
+  value === 'with_prior_output_context' ? value : 'guidance_only';
+
 const normalizePipelineRun = (run: unknown): PipelineRun => {
   if (!isRecord(run)) return run as PipelineRun;
 
@@ -316,18 +327,33 @@ const injectCheckpointPrompt = (
   pipelineId: string,
   checkpointIndex: number,
   text: string,
-  options?: { autoRegenerate?: boolean; source?: string }
+  options?: {
+    autoRegenerate?: boolean;
+    source?: string;
+    mode?: CheckpointInjectionMode;
+  }
 ) =>
-  axios
-    .post<InjectCheckpointPromptResponse>(
-      `${BASE_URL}/pipelines/${pipelineId}/checkpoints/${checkpointIndex}/inject`,
-      {
-        text,
-        auto_regenerate: options?.autoRegenerate,
-        source: toStringValue(options?.source).trim() || undefined,
-      } as InjectCheckpointPromptRequest
-    )
-    .then((res) => res.data);
+  {
+    const mode = normalizeInjectionMode(options?.mode);
+    const includePriorOutputContext = mode === 'with_prior_output_context';
+    return axios
+      .post<InjectCheckpointPromptResponse>(
+        `${BASE_URL}/pipelines/${pipelineId}/checkpoints/${checkpointIndex}/inject`,
+        {
+          text,
+          guidance: text,
+          prompt: text,
+          auto_regenerate: options?.autoRegenerate,
+          source: toStringValue(options?.source).trim() || undefined,
+          context_mode: mode,
+          injection_mode: mode,
+          include_prior_output_context: includePriorOutputContext,
+          include_context: includePriorOutputContext,
+          use_prior_output_context: includePriorOutputContext,
+        } as InjectCheckpointPromptRequest
+      )
+      .then((res) => res.data);
+  };
 
 const cancelPipeline = (pipelineId: string) =>
   axios

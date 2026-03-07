@@ -85,4 +85,72 @@ describe('media library API normalization', () => {
       expect.any(FormData)
     );
   });
+
+  it('falls back from /media/library to legacy /media on 405', async () => {
+    mockedAxios.get
+      .mockRejectedValueOnce({ response: { status: 405 } } as any)
+      .mockResolvedValueOnce({
+        data: {
+          items: [
+            {
+              media_id: 'media-legacy-1',
+              type: 'image',
+              name: 'legacy-cover.png',
+            },
+          ],
+        },
+      } as any);
+
+    const items = await MediaAPI.listMediaLibrary({ type: 'image' });
+
+    expect(items).toEqual([
+      expect.objectContaining({
+        media_id: 'media-legacy-1',
+      }),
+    ]);
+    expect(mockedAxios.get).toHaveBeenNthCalledWith(
+      1,
+      expect.stringContaining('/media/library'),
+      expect.objectContaining({ params: expect.objectContaining({ type: 'image' }) })
+    );
+    expect(mockedAxios.get).toHaveBeenNthCalledWith(
+      2,
+      expect.stringContaining('/media'),
+      expect.objectContaining({ params: expect.objectContaining({ type: 'image' }) })
+    );
+  });
+
+  it('falls back from /media/library/upload to legacy /media/upload on 404', async () => {
+    mockedAxios.post
+      .mockRejectedValueOnce({ response: { status: 404 } } as any)
+      .mockResolvedValueOnce({
+        data: {
+          media_item: {
+            media_id: 'media-legacy-upload',
+            type: 'video',
+            file_name: 'legacy.mp4',
+          },
+        },
+      } as any);
+
+    const file = new File(['video'], 'legacy.mp4', { type: 'video/mp4' });
+    const item = await MediaAPI.uploadMediaLibraryFile(file, { type: 'video' });
+
+    expect(item).toEqual(
+      expect.objectContaining({
+        media_id: 'media-legacy-upload',
+        type: 'video',
+      })
+    );
+    expect(mockedAxios.post).toHaveBeenNthCalledWith(
+      1,
+      expect.stringContaining('/media/library/upload'),
+      expect.any(FormData)
+    );
+    expect(mockedAxios.post).toHaveBeenNthCalledWith(
+      2,
+      expect.stringContaining('/media/upload'),
+      expect.any(FormData)
+    );
+  });
 });

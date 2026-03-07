@@ -1,59 +1,82 @@
 # Frontend Agent Task
 
 ## Status
-DONE
+ACTIVE
 
 ## Wave
-Wave 3A: notification visibility + theme toggle + asset attachment UX preflight
+Wave 4B2-HF1: attachment workspace restructure + injection mode clarity
 
 ## Reasoning Level
-HIGH
+- Baseline: `HIGH`
+- Escalate to `VERY HIGH` equivalent care for:
+  - mixed backend contract compatibility (`/media/library/*` vs legacy routes)
+  - paused checkpoint inject/regenerate flow correctness
+  - state model decisions for regeneration context persistence
+- De-escalate to `MEDIUM` for:
+  - visual polish and non-contractual layout refinements
 
-## Scope
-Fix the websocket notification popup layering bug, add user-selectable dark/light mode, and harden frontend readiness for asset-pool/pipeline-attachment flows while preserving schema-driven metadata editing reliability (Vision module 2).
+## Goal Alignment
+Deliver an attachment-first UX that matches product direction: browse reusable media, attach at start or checkpoint, inject guidance while paused, and make regeneration context behavior explicit.
+
+## User Feedback To Implement
+1. Upload and attach should be a first-class action, not hidden.
+2. File explorer should support grouped browsing (`audio`, `video`, `image`) with clear names/previews.
+3. During paused checkpoints, user must clearly choose regeneration behavior:
+   - guidance only
+   - guidance + prior output context (chat-like continuity)
+4. Frontend should support both context behaviors and surface which one is active.
+
+## Required Local Standards
+- Follow and maintain `docs/CODING_GUIDELINES.md` for this repo while implementing this wave.
 
 ## Priority Tasks
-1. WebSocket notification visibility fix (Slack-style popup behavior):
-- investigate why toast/notification popups render behind overlays/opacity layers.
-- ensure notifications render in the top layer (portal + z-index + stacking-context safe behavior).
-- verify behavior while modals, drawers, and loading overlays are open.
-2. Theme mode support:
-- add explicit light/dark theme toggle in a persistent, discoverable location.
-- persist user selection locally and apply on app boot without visual flash.
-- ensure contrast/readability for pipeline cards, modal surfaces, forms, and websocket notifications in both modes.
-3. Asset pool + pipeline attachments UI preflight:
-- verify frontend can render attachment metadata from backend pipeline runs/templates without layout breakage.
-- validate empty/loading/error states for attachment surfaces.
-- verify that attachment-related payload handling remains API-layer driven (`src/api/*`) and does not regress clipstyle metadata rendering.
-4. Clipstyle metadata editing reliability regression sweep (Vision module 2):
-- confirm frontend still renders registry/backend-provided style metadata fields for both clip and media editors.
-- document any schema edge-cases that still require backend/registry normalization.
+1. Attachment entry-point restructure:
+   - add a visible `Attach Files` action in the primary controls area (placement can be finalized in implementation, but must be obvious in both desktop and mobile).
+   - keep drag/drop and file picker available.
+2. File explorer redesign:
+   - implement explorer view with explicit type groups/tabs: `audio`, `video`, `image`.
+   - each row/card must show filename, type, and stable `media_id`; include lightweight preview where practical.
+   - include quick attach actions for initial run and checkpoint-level attach.
+3. API compatibility hardening:
+   - list route strategy: prefer `GET /media/library`, fallback to legacy `GET /media`.
+   - upload route strategy: prefer `POST /media/library/upload`, fallback to legacy `POST /media/upload`.
+   - show actionable inline errors for `405` and `413` (not generic failure text).
+4. Checkpoint injection UX and mode controls:
+   - inject payload must be backward-compatible during migration (send the field set needed to satisfy both old/new backend parsers).
+   - add explicit mode control:
+     - `Guidance only`
+     - `Guidance + prior output context`
+   - preserve paused flow: inject -> regenerate -> continue, with clear status and error states.
+5. Regression safety:
+   - keep required-asset gating, generated-output reuse, replace-media behavior, and scheduling flows stable.
+6. Revalidation directive:
+   - explicitly re-check orchestrator-touched docs and classify each as `VALID`, `NEEDS FIX`, or `REVERT` in `docs/results.md`.
 
 ## Mandatory Validation Pass
-1. Re-check `docs/results.md` claims against current code/tests.
-2. Run and record:
+1. Run and record:
 - `npm test -- --watchAll=false`
 - `npm run build`
-3. Provide a short manual QA matrix (desktop + mobile):
-- notifications during overlay states
-- dark/light mode toggle and persistence
-- attachment rendering states
-- clipstyle metadata edit forms
-
-## Coordination Notes
-- For UX choices (toggle placement, notification copy priority, attachment affordances), capture open questions for Dorian directly in `docs/results.md` so product feedback can be resolved quickly.
+2. Add/extend tests for:
+- route fallback behavior (`/media/library/*` -> legacy fallback)
+- attachment explorer grouping/filtering and stable ID selection
+- paused checkpoint injection mode selection and payload mapping
+- `405`/`413` user-facing error handling
+- regression coverage for schedule platform/caption and replace-media flows
 
 ## Required Docs Updates
+- Update `docs/API.md` and `docs/UI.md` to document:
+  - dual-route compatibility behavior
+  - injection mode options and payload semantics
+  - final placement/interaction model for `Attach Files`
 - Update `docs/results.md` with:
-- changed files and why
-- command outcomes
-- manual QA evidence
-- unresolved risks/blockers
-- branch + PR link when available
+  - behavior matrix for new explorer + checkpoint attach flows
+  - compatibility matrix for route fallback outcomes
+  - revalidation verdicts (`VALID`/`NEEDS FIX`/`REVERT`)
+  - command outcomes
+  - manual QA notes for desktop + mobile
 
 ## Definition of Done
-1. Notifications are always visible above overlays and actionable.
-2. Dark/light mode toggle is implemented and persistent.
-3. Attachment-related UI states are stable and documented.
-4. Schema-driven metadata editing remains reliable.
-5. Build/tests pass and task status is switched to `DONE`.
+1. Attachment workspace is clearly discoverable and supports grouped explorer browsing (`audio`, `video`, `image`).
+2. Frontend handles both media-library and legacy media routes without breaking uploads/listing.
+3. Paused checkpoint injection offers explicit mode choice and works end-to-end.
+4. Regressions are covered by tests and required checks pass.

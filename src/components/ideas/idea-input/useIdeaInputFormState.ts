@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { PipelineTemplate } from '../../../api/structs';
 import { PipelineInputAttachment } from '../../../api/structs/pipeline';
 import { useLocalStorage } from '../../../hooks/useLocalStorage';
@@ -42,6 +42,7 @@ export const useIdeaInputFormState = ({
     disabled,
     onError: setSubmitError,
   });
+  const addAssetToPool = pool.addAssetToPool;
 
   React.useEffect(() => {
     if (templates.length && !templateId) {
@@ -136,6 +137,21 @@ export const useIdeaInputFormState = ({
     });
   };
 
+  const bindAssetToCheckpoint = useCallback(
+    (checkpointId: string, asset: AssetPoolItem) => {
+      addAssetToPool(asset);
+      setCheckpointBindings((previous) => {
+        const existing = previous[checkpointId] || [];
+        if (existing.includes(asset.id)) return previous;
+        return {
+          ...previous,
+          [checkpointId]: [...existing, asset.id],
+        };
+      });
+    },
+    [addAssetToPool]
+  );
+
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!input.trim() || !templateId) return;
@@ -186,6 +202,7 @@ export const useIdeaInputFormState = ({
     checkpointBindingRows,
     checkpointBindings,
     toggleCheckpointBinding,
+    bindAssetToCheckpoint,
     submitDisabled: !input.trim() || loading || disabled || unmetRequiredCheckpoints.length > 0,
     disabled,
     generatedAssets,

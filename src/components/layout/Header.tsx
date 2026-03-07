@@ -54,6 +54,7 @@ interface HeaderProps {
   onSelectAccount: (id: string) => void;
   themeMode: ThemeMode;
   onThemeToggle: () => void;
+  onOpenUploadLibrary: () => void;
   
   // Modals
   onOpenProxyModal: () => void;
@@ -91,6 +92,7 @@ const Header: React.FC<HeaderProps> = ({
   onSelectAccount,
   themeMode,
   onThemeToggle,
+  onOpenUploadLibrary,
   onOpenProxyModal,
 }) => {
   const [showPipelineManager, setShowPipelineManager] = useState(false);
@@ -113,6 +115,14 @@ const Header: React.FC<HeaderProps> = ({
                 onClick={() => setShowPipelineManager(true)}
               >
                 Pipelines
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={onOpenUploadLibrary}
+                className="border border-dashed border-white/40 bg-black/20 text-white"
+              >
+                Upload Media
               </Button>
               <Button
                 variant="ghost"

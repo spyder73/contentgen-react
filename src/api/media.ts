@@ -42,6 +42,12 @@ interface MediaLibraryListQuery {
   source?: string;
 }
 
+interface HttpErrorWithStatus {
+  response?: {
+    status?: number;
+  };
+}
+
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
 
@@ -126,6 +132,14 @@ const normalizeMediaLibraryUploadResponse = (payload: unknown): MediaLibraryItem
   return normalizeMediaLibraryItem(payload, 0);
 };
 
+const getHttpStatus = (error: unknown): number | undefined =>
+  (error as HttpErrorWithStatus | undefined)?.response?.status;
+
+const shouldFallbackToLegacyRoute = (error: unknown): boolean => {
+  const status = getHttpStatus(error);
+  return status === 404 || status === 405;
+};
+
 // ==================== API Functions ====================
 
 const getMediaItem = (mediaId: string) =>
@@ -134,16 +148,27 @@ const getMediaItem = (mediaId: string) =>
 const createMediaItem = (request: NewMediaItemRequest) =>
   axios.post(`${BASE_URL}/media`, request).then((res) => res.data.media_id);
 
-const listMediaLibrary = (query?: MediaLibraryListQuery) =>
-  axios
-    .get(`${BASE_URL}/media/library`, {
-      params: {
-        search: query?.search?.trim() || undefined,
-        type: query?.type?.trim() || undefined,
-        source: query?.source?.trim() || undefined,
-      },
-    })
-    .then((res) => normalizeMediaLibraryList(res.data));
+const listMediaLibrary = async (query?: MediaLibraryListQuery): Promise<MediaLibraryItem[]> => {
+  const params = {
+    search: query?.search?.trim() || undefined,
+    type: query?.type?.trim() || undefined,
+    source: query?.source?.trim() || undefined,
+  };
+
+  try {
+    const payload = await axios
+      .get(`${BASE_URL}/media/library`, { params })
+      .then((res) => res.data);
+    return normalizeMediaLibraryList(payload);
+  } catch (error) {
+    if (!shouldFallbackToLegacyRoute(error)) {
+      throw error;
+    }
+  }
+
+  const legacyPayload = await axios.get(`${BASE_URL}/media`, { params }).then((res) => res.data);
+  return normalizeMediaLibraryList(legacyPayload);
+};
 
 const uploadMediaLibraryFile = async (
   file: File,
@@ -158,9 +183,18 @@ const uploadMediaLibraryFile = async (
     body.append('source', options.source.trim());
   }
 
-  const payload = await axios
-    .post(`${BASE_URL}/media/library/upload`, body)
-    .then((res) => res.data);
+  let payload: unknown;
+  try {
+    payload = await axios
+      .post(`${BASE_URL}/media/library/upload`, body)
+      .then((res) => res.data);
+  } catch (error) {
+    if (!shouldFallbackToLegacyRoute(error)) {
+      throw error;
+    }
+    payload = await axios.post(`${BASE_URL}/media/upload`, body).then((res) => res.data);
+  }
+
   const normalized = normalizeMediaLibraryUploadResponse(payload);
   if (!normalized) {
     throw new Error('Upload succeeded but no media ID was returned.');

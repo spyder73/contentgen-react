@@ -10,6 +10,46 @@ interface UseAssetPoolStateArgs {
   onError?: (message: string) => void;
 }
 
+interface HttpErrorRecord {
+  response?: {
+    status?: number;
+    data?: {
+      error?: string;
+      message?: string;
+      detail?: string;
+    };
+  };
+  message?: string;
+}
+
+const getHttpStatus = (error: unknown): number | undefined =>
+  (error as HttpErrorRecord | undefined)?.response?.status;
+
+const getInlineMediaError = (error: unknown, context: 'list' | 'upload'): string => {
+  const status = getHttpStatus(error);
+  const details =
+    (error as HttpErrorRecord | undefined)?.response?.data?.error ||
+    (error as HttpErrorRecord | undefined)?.response?.data?.message ||
+    (error as HttpErrorRecord | undefined)?.response?.data?.detail ||
+    (error as HttpErrorRecord | undefined)?.message;
+
+  if (status === 405) {
+    return context === 'list'
+      ? 'Media listing is disabled (HTTP 405). Enable GET /media/library or legacy GET /media.'
+      : 'Media upload is disabled (HTTP 405). Enable POST /media/library/upload or legacy POST /media/upload.';
+  }
+
+  if (status === 413) {
+    return 'File is too large for upload (HTTP 413). Choose a smaller file or raise the upload size limit.';
+  }
+
+  if (context === 'list') {
+    return details || 'Failed to load media library items.';
+  }
+
+  return details || 'Failed to upload file to the media library.';
+};
+
 export const useAssetPoolState = ({ disabled, onError }: UseAssetPoolStateArgs) => {
   const [attachmentType, setAttachmentType] = useState<AttachmentType>('music');
   const [attachmentUrl, setAttachmentUrl] = useState('');
@@ -20,6 +60,18 @@ export const useAssetPoolState = ({ disabled, onError }: UseAssetPoolStateArgs) 
   const [isAttachmentPoolExpanded, setIsAttachmentPoolExpanded] = useState(true);
   const [isDraggingFiles, setIsDraggingFiles] = useState(false);
   const [isUploadingFiles, setIsUploadingFiles] = useState(false);
+  const [libraryError, setLibraryError] = useState('');
+  const [uploadError, setUploadError] = useState('');
+  const fileInputRef = React.useRef<HTMLInputElement | null>(null);
+
+  const registerFileInputRef = useCallback((node: HTMLInputElement | null) => {
+    fileInputRef.current = node;
+  }, []);
+
+  const openFilePicker = useCallback(() => {
+    if (disabled) return;
+    fileInputRef.current?.click();
+  }, [disabled]);
 
   const replaceAvailableMedia = useCallback((items: AvailableMediaItem[]) => {
     setAvailableMedia((previous) => {
@@ -59,9 +111,8 @@ export const useAssetPoolState = ({ disabled, onError }: UseAssetPoolStateArgs) 
   const loadAvailableMedia = useCallback(async () => {
     try {
       const libraryItems = await API.listMediaLibrary();
-      if (Array.isArray(libraryItems) && libraryItems.length > 0) {
-        replaceAvailableMedia(
-          libraryItems.map((item) => ({
+      const normalized = Array.isArray(libraryItems)
+        ? libraryItems.map((item) => ({
             id: item.media_id || item.id,
             media_id: item.media_id || item.id,
             type: item.type || 'unknown',
@@ -74,18 +125,12 @@ export const useAssetPoolState = ({ disabled, onError }: UseAssetPoolStateArgs) 
             created_at: item.created_at,
             metadata: item.metadata,
           }))
-        );
-        return;
-      }
-    } catch {
-      // Fallback to legacy available-media route while backend library endpoint rolls out.
-    }
-
-    try {
-      const items = await API.getAvailableMedia();
-      replaceAvailableMedia(Array.isArray(items) ? items : []);
-    } catch {
+        : [];
+      replaceAvailableMedia(normalized);
+      setLibraryError('');
+    } catch (error) {
       replaceAvailableMedia([]);
+      setLibraryError(getInlineMediaError(error, 'list'));
     }
   }, [replaceAvailableMedia]);
 
@@ -122,7 +167,8 @@ export const useAssetPoolState = ({ disabled, onError }: UseAssetPoolStateArgs) 
       if (files.length === 0) return;
 
       setIsUploadingFiles(true);
-      let usedLegacyFallback = false;
+      let usedLocalFallback = false;
+      let latestUploadError = '';
 
       for (const file of files) {
         const inferredType =
@@ -148,8 +194,15 @@ export const useAssetPoolState = ({ disabled, onError }: UseAssetPoolStateArgs) 
           };
           mergeAvailableMedia([normalized], { prepend: true });
           addAssetToPool(mediaItemToPoolItem(normalized));
-        } catch {
-          usedLegacyFallback = true;
+          latestUploadError = '';
+        } catch (error) {
+          const status = getHttpStatus(error);
+          latestUploadError = getInlineMediaError(error, 'upload');
+          if (status === 405 || status === 413) {
+            continue;
+          }
+
+          usedLocalFallback = true;
           addAssetToPool({
             id: `file:${file.name}:${file.lastModified}:${file.size}`,
             type: inferredType,
@@ -167,7 +220,8 @@ export const useAssetPoolState = ({ disabled, onError }: UseAssetPoolStateArgs) 
       }
 
       setIsUploadingFiles(false);
-      if (usedLegacyFallback) {
+      setUploadError(latestUploadError);
+      if (usedLocalFallback) {
         onError?.('Media-library upload is unavailable; files were added as local attachments.');
       }
     },
@@ -200,6 +254,7 @@ export const useAssetPoolState = ({ disabled, onError }: UseAssetPoolStateArgs) 
 
   const handleFileInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files || []);
+    setUploadError('');
     void addFilesAsAttachments(files);
     event.target.value = '';
   };
@@ -229,6 +284,7 @@ export const useAssetPoolState = ({ disabled, onError }: UseAssetPoolStateArgs) 
     setIsDraggingFiles(false);
     if (disabled) return;
     const files = Array.from(event.dataTransfer.files || []);
+    setUploadError('');
     void addFilesAsAttachments(files);
   };
 
@@ -266,8 +322,12 @@ export const useAssetPoolState = ({ disabled, onError }: UseAssetPoolStateArgs) 
     selectedMusic,
     isAttachmentPoolExpanded,
     setIsAttachmentPoolExpanded,
+    openFilePicker,
+    registerFileInputRef,
     isDraggingFiles,
     isUploadingFiles,
+    libraryError,
+    uploadError,
     handleAddUrlAttachment,
     handleFileInputChange,
     handleDragEnter,

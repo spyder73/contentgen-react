@@ -28,6 +28,7 @@ import { ToastMessage } from './toast';
 function App() {
   const [ideasRefreshTrigger, setIdeasRefreshTrigger] = useState(0);
   const [clipsRefreshTrigger, setClipsRefreshTrigger] = useState(0);
+  const [openLibrarySignal, setOpenLibrarySignal] = useState(0);
   const [toast, setToast] = useState<ToastMessage | null>(null);
   const [storedThemeMode, setStoredThemeMode] = useLocalStorage<string>(THEME_STORAGE_KEY, getDocumentTheme());
   const themeMode = isThemeMode(storedThemeMode) ? storedThemeMode : 'dark';
@@ -134,6 +135,7 @@ function App() {
         onSelectAccount={handleSelectAccount}
         themeMode={themeMode}
         onThemeToggle={() => setStoredThemeMode(themeMode === 'dark' ? 'light' : 'dark')}
+        onOpenUploadLibrary={() => setOpenLibrarySignal((value) => value + 1)}
         onOpenProxyModal={() => setShowProxyModal(true)}
       />
 
@@ -149,6 +151,7 @@ function App() {
                   chatProvider={chatProvider}
                   chatModel={chatModel}
                   mediaProfile={mediaProfile}
+                  openLibrarySignal={openLibrarySignal}
                 />
               </div>
             </div>

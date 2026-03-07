@@ -61,23 +61,36 @@ Base URL is currently `http://localhost:81` from `src/api/helpers.ts`.
 - frontend keeps compatibility aliases in payload normalization (`name` + `filename`, `size_bytes` + `size`) to support mixed backend contract versions.
 
 ### Media Library Explorer Contract (Wave 4B2)
-- `MediaAPI.listMediaLibrary(...)` calls `GET /media/library` and normalizes mixed payload variants into ID-first rows:
+- `MediaAPI.listMediaLibrary(...)` calls `GET /media/library` and falls back to legacy `GET /media` on `404`/`405`.
+- list responses are normalized into ID-first rows:
   - stable `media_id` (mirrored as `id` for UI selectors)
   - `type`, `name`, `source`, `mime_type`, `size_bytes`, optional `clip_id`
-- `MediaAPI.uploadMediaLibraryFile(file, ...)` calls `POST /media/library/upload` (multipart) and expects a stable `media_id` in response.
-- attachment workspace keeps compatibility fallback to `GET /clips/available-media` when `/media/library` routes are unavailable.
+- `MediaAPI.uploadMediaLibraryFile(file, ...)` calls `POST /media/library/upload` (multipart) and falls back to legacy `POST /media/upload` on `404`/`405`.
+- attachment workspace renders actionable inline upload/list errors for:
+  - `405`: route/method not enabled for media list/upload
+  - `413`: upload payload too large
 
 ### Checkpoint Prompt Injection Contract (Wave 4B2)
 - `PipelineAPI.injectCheckpointPrompt(runId, checkpointIndex, text, options)` calls:
   - `POST /pipelines/:id/checkpoints/:index/inject`
-- request payload:
+- request payload sends migration-safe compatibility fields for both parser generations:
 ```json
 {
   "text": "Additive prompt guidance",
+  "guidance": "Additive prompt guidance",
+  "prompt": "Additive prompt guidance",
   "auto_regenerate": true,
-  "source": "frontend_pause_checkpoint"
+  "source": "frontend_pause_checkpoint",
+  "context_mode": "guidance_only|with_prior_output_context",
+  "injection_mode": "guidance_only|with_prior_output_context",
+  "include_prior_output_context": false,
+  "include_context": false,
+  "use_prior_output_context": false
 }
 ```
+- mode semantics in paused UI:
+  - `guidance_only`: regenerate with additive prompt only
+  - `with_prior_output_context`: regenerate with additive prompt plus prior output context
 - response payload (normalized passthrough): `{ status, checkpoint_index, injection_count?, regenerated? }`
 - UI flow uses inject + regenerate while paused and keeps explicit inline errors on failures.
 
@@ -109,7 +122,7 @@ Before send, `settingsToOutputSpec` converts dimensions -> `width` + `height`.
 2. style schema shape can vary by backend/registry version.
    - frontend now normalizes common payload variants from `/clipstyles` + `/clipstyles/:style/schema`.
 3. `/media/library` rollout is additive.
-   - frontend now prefers media-library endpoints and falls back to `/clips/available-media` for compatibility.
+- frontend now prefers media-library endpoints and falls back to legacy `/media` routes for compatibility.
 
 ## Recommended API Cleanup Sequence
 1. standardize websocket event type map with backend emitted events.

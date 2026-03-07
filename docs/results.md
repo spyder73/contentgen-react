@@ -1,5 +1,46 @@
 # Results Log
 
+## Wave 4B2-HF1 Delivery (2026-03-07)
+
+## UI Behavior Matrix (Attachment Workspace Restructure + Injection Mode)
+| Flow | Target Behavior | Status | Evidence |
+|---|---|---|---|
+| Primary attach entrypoint | `Attach Files` is first-class in primary controls and opens upload flow without hunting through collapsed sections | `FIXED` | Added explicit `Attach Files` control beside run controls and wired it to expand workspace + trigger picker (`src/components/ideas/idea-input/IdeaStartControls.tsx`, `src/components/ideas/IdeaInputForm.tsx`, `src/components/ideas/idea-input/useAssetPoolState.ts`). |
+| Explorer grouping + previews | Explorer uses explicit `image`/`video`/`audio` groups with filename/type/stable `media_id` and lightweight previews | `FIXED` | Reworked media explorer into tabbed groups with card previews and required metadata (`src/components/ideas/idea-input/MediaCatalogSection.tsx`). |
+| Quick attach actions | Each media item supports quick attach to run start and checkpoint binding | `FIXED` | Added per-item actions for start pool attach + direct checkpoint binding (`src/components/ideas/idea-input/MediaCatalogSection.tsx`, `src/components/ideas/idea-input/useIdeaInputFormState.ts`). |
+| Paused checkpoint mode clarity | Paused inject flow exposes explicit mode selection and surfaces active mode in UI | `FIXED` | Added `Guidance only` vs `Guidance + prior output context` controls and active-mode copy (`src/components/ideas/PipelineRunItem.tsx`). |
+| Inject payload compatibility | Inject request ships additive compatibility fields for mixed backend parser versions | `FIXED` | Inject payload now includes `text` aliases plus mode/context aliases (`src/api/pipeline.ts`, `src/api/pipeline.test.ts`). |
+| 405/413 actionable inline errors | Media list/upload failures surface actionable inline text (not generic errors) | `FIXED` | Added explicit status-aware messaging for `405` and `413` in attachment workspace (`src/components/ideas/idea-input/useAssetPoolState.ts`, `src/components/ideas/idea-input/FileAttachmentSection.tsx`, `src/components/ideas/IdeaInputForm.test.tsx`). |
+
+## Compatibility Matrix (Route Fallback Outcomes)
+| Operation | Primary Route | Fallback Route | Trigger | Result |
+|---|---|---|---|---|
+| Media list | `GET /media/library` | `GET /media` | `404` or `405` from primary | Legacy list response is normalized to stable `media_id` rows (`src/api/media.ts`, `src/api/media.test.ts`). |
+| Media upload | `POST /media/library/upload` | `POST /media/upload` | `404` or `405` from primary | Legacy upload response is normalized and returned as stable media entry (`src/api/media.ts`, `src/api/media.test.ts`). |
+| Media upload size guard | `POST /media/library/upload` then fallback | none for `413` | `413` from backend | Inline UI message instructs user to reduce file size / raise limit (`src/components/ideas/idea-input/useAssetPoolState.ts`, `src/components/ideas/IdeaInputForm.test.tsx`). |
+
+## Revalidation Verdicts (Orchestrator-Touched Docs)
+| File | Verdict | Notes |
+|---|---|---|
+| `docs/AGENT_TASK.md` | `VALID` | HF1 scope now implemented: attach-first entrypoint, grouped explorer, legacy route fallback, and injection mode clarity are present. |
+| `docs/CODING_GUIDELINES.md` | `VALID` | API calls remain centralized under `src/api/*`; logic stays in hooks/helpers; regression tests added for new behavior. |
+| `docs/API.md` | `NEEDS FIX` -> `VALID` | Updated to document `/media/library -> /media` and `/media/library/upload -> /media/upload` fallback plus injection mode payload semantics. |
+| `docs/UI.md` | `NEEDS FIX` -> `VALID` | Updated with primary `Attach Files` placement, explorer tabs/previews/quick attach, and paused inject mode UX. |
+
+## Validation Commands
+| Command | Result | Notes |
+|---|---|---|
+| `npm test -- --watchAll=false` | `pass` | 15 suites, 59 tests passing (includes new media fallback, explorer grouping/quick attach, inject mode, and 405/413 error tests). Existing React `act` deprecation warning remains from tooling versions. |
+| `npm run build` | `pass` | Production build compiled successfully after HF1 updates. |
+
+## Manual QA Notes (Desktop + Mobile)
+| Area | Desktop | Mobile | Notes |
+|---|---|---|---|
+| Primary `Attach Files` discoverability + picker trigger | Not run | Not run | Implemented and test-backed; live UI ergonomics pass pending. |
+| Explorer tab previews + quick checkpoint attach | Not run | Not run | Unit coverage verifies grouped filtering and checkpoint binding payload mapping; interactive visual pass pending. |
+| 405/413 inline error rendering | Not run | Not run | Unit tests cover status-specific inline copy; live backend simulation still pending. |
+| Paused inject mode selection + payload mapping | Not run | Not run | Unit tests cover mode-specific inject payload (`guidance_only` vs `with_prior_output_context`). |
+
 ## Wave 4B2 Delivery (2026-03-07)
 
 ## UI Behavior Matrix (Attachment Workspace / Explorer / Inject Flow)

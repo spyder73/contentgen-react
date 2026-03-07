@@ -317,12 +317,14 @@ describe('PipelineRunItem connector cues', () => {
       expect(onInjectPrompt).toHaveBeenCalledWith(1, 'Focus on product closeups and clean transitions.', {
         autoRegenerate: true,
         source: 'frontend_pause_checkpoint',
+        mode: 'guidance_only',
       });
     });
 
     await waitFor(() => {
       expect(screen.getByLabelText('Additive Prompt Guidance')).toHaveValue('');
     });
+    expect(screen.queryByRole('button', { name: 'Clear Guidance' })).not.toBeInTheDocument();
   });
 
   it('shows actionable checkpoint inject errors', async () => {
@@ -360,6 +362,47 @@ describe('PipelineRunItem connector cues', () => {
     await waitFor(() => {
       expect(screen.getByText('Inject failed: template missing')).toBeInTheDocument();
     });
+  });
+
+  it('injects guidance with prior output context mode when selected', async () => {
+    const pausedRun: PipelineRun = {
+      ...run,
+      status: 'paused',
+      current_checkpoint: 1,
+    };
+
+    const onInjectPrompt = jest.fn<Promise<void>, [number, string, any]>(async () => undefined);
+
+    render(
+      <PipelineRunItem
+        run={pausedRun}
+        template={template}
+        onContinue={() => undefined}
+        onRegenerate={(_checkpoint) => undefined}
+        onInjectPrompt={onInjectPrompt}
+        onAddAttachment={async () => undefined}
+        onCancel={() => undefined}
+        onRemove={() => undefined}
+      />
+    );
+
+    fireEvent.click(screen.getByText('Expand'));
+    fireEvent.click(screen.getByText('Draft'));
+    fireEvent.click(screen.getByLabelText('Guidance + prior output context'));
+    fireEvent.change(screen.getByLabelText('Additive Prompt Guidance'), {
+      target: { value: 'Keep narrative continuity with prior frame pacing.' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Inject + Regenerate' }));
+
+    await waitFor(() => {
+      expect(onInjectPrompt).toHaveBeenCalledWith(1, 'Keep narrative continuity with prior frame pacing.', {
+        autoRegenerate: true,
+        source: 'frontend_pause_checkpoint',
+        mode: 'with_prior_output_context',
+      });
+    });
+
+    expect(screen.getByText('Active mode: Guidance + prior output context')).toBeInTheDocument();
   });
 
   it('blocks continue when required checkpoint assets are missing', () => {

@@ -14,6 +14,7 @@ interface IdeaGeneratorPanelProps {
   chatProvider: string;
   chatModel: string;
   mediaProfile: MediaProfile;
+  openLibrarySignal?: number;
   onIdeasCreated: () => void;
 }
 
@@ -21,6 +22,7 @@ const IdeaGeneratorPanel: React.FC<IdeaGeneratorPanelProps> = ({
   chatProvider,
   chatModel,
   mediaProfile,
+  openLibrarySignal = 0,
   onIdeasCreated,
 }) => {
   const [templates, setTemplates] = useState<PipelineTemplate[]>([]);
@@ -153,7 +155,12 @@ const IdeaGeneratorPanel: React.FC<IdeaGeneratorPanelProps> = ({
   return (
     <div className="space-y-2">
       {/* Input Form */}
-      <IdeaInputForm templates={templates} onStart={handleStart} generatedAssets={generatedAssets} />
+      <IdeaInputForm
+        templates={templates}
+        onStart={handleStart}
+        generatedAssets={generatedAssets}
+        openLibrarySignal={openLibrarySignal}
+      />
 
       {/* Pipeline Runs */}
       {visibleRuns.length > 0 && (

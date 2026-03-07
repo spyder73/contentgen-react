@@ -6,8 +6,10 @@ interface FileAttachmentSectionProps {
   fileAttachmentType: FileAttachmentMode;
   isDraggingFiles: boolean;
   isUploadingFiles?: boolean;
+  errorMessage?: string;
   disabled?: boolean;
   onFileAttachmentTypeChange: (value: FileAttachmentMode) => void;
+  fileInputRef?: (node: HTMLInputElement | null) => void;
   onFileInputChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
   onDragEnter: (event: React.DragEvent<HTMLDivElement>) => void;
   onDragOver: (event: React.DragEvent<HTMLDivElement>) => void;
@@ -19,8 +21,10 @@ const FileAttachmentSection: React.FC<FileAttachmentSectionProps> = ({
   fileAttachmentType,
   isDraggingFiles,
   isUploadingFiles,
+  errorMessage,
   disabled,
   onFileAttachmentTypeChange,
+  fileInputRef,
   onFileInputChange,
   onDragEnter,
   onDragOver,
@@ -28,7 +32,7 @@ const FileAttachmentSection: React.FC<FileAttachmentSectionProps> = ({
   onDrop,
 }) => (
   <div className="space-y-2">
-    <label className="attachment-state">Attach File</label>
+    <label className="attachment-state">Attach Files</label>
     <div
       className={`rounded border border-dashed px-3 py-3 ${
         isDraggingFiles ? 'border-blue-400 bg-blue-900/20' : 'border-white/20 bg-black/10'
@@ -40,6 +44,7 @@ const FileAttachmentSection: React.FC<FileAttachmentSectionProps> = ({
     >
       <p className="attachment-meta mb-2">Drop files here or use the picker below.</p>
       {isUploadingFiles && <p className="attachment-meta mb-2">Uploading files to media library...</p>}
+      {errorMessage && <p className="attachment-meta mb-2 text-red-300">{errorMessage}</p>}
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
         <Select
           value={fileAttachmentType}
@@ -48,6 +53,7 @@ const FileAttachmentSection: React.FC<FileAttachmentSectionProps> = ({
           selectSize="sm"
         />
         <input
+          ref={fileInputRef}
           type="file"
           onChange={onFileInputChange}
           className="block w-full text-xs text-slate-300 file:mr-2 file:rounded-none file:border file:border-white/20 file:bg-black/30 file:px-2 file:py-1 file:text-xs file:text-slate-200"

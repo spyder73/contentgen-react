@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { PipelineRun } from '../api/structs';
 import PipelineAPI from '../api/pipeline';
 import { MediaProfile } from '../api/structs/media-spec';
-import { MediaAttachment, PipelineInputAttachment } from '../api/structs/pipeline';
+import { CheckpointInjectionMode, MediaAttachment, PipelineInputAttachment } from '../api/structs/pipeline';
 
 const STORAGE_KEY = 'active_pipeline_runs';
 const TERMINAL_STATES = ['completed', 'failed', 'cancelled'];
@@ -144,7 +144,11 @@ export function usePipelineRuns() {
       runId: string,
       checkpointIndex: number,
       text: string,
-      options?: { autoRegenerate?: boolean; source?: string }
+      options?: {
+        autoRegenerate?: boolean;
+        source?: string;
+        mode?: CheckpointInjectionMode;
+      }
     ) => {
       await PipelineAPI.injectCheckpointPrompt(runId, checkpointIndex, text, options);
       const updated = await PipelineAPI.getPipeline(runId);

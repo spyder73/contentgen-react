@@ -19,6 +19,7 @@ export type CheckpointStatus =
   | 'skipped';
 
 export type CheckpointType = 'prompt' | 'distributor' | 'connector';
+export type CheckpointInjectionMode = 'guidance_only' | 'with_prior_output_context';
 
 export interface MediaAttachment {
   id: string;

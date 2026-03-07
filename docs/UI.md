@@ -20,8 +20,9 @@ Key component domains:
 - dynamic model settings modal built from backend constraints fields.
 - provider/model selection with constraints prefetch.
 - pipeline run controls with pause/continue/regenerate flow.
-- attachment workspace with media explorer filtering (name/type/source), drag-drop intake, and stable `media_id` binding.
-- paused checkpoint additive prompt-injection controls with inline error messaging.
+- attachment workspace with a primary-controls `Attach Files` entrypoint, drag-drop/file-picker intake, and stable `media_id` binding.
+- media explorer grouped by explicit tabs (`image`, `video`, `audio`) with filename/type/`media_id`, lightweight previews, and quick attach actions (start + checkpoint).
+- paused checkpoint additive prompt-injection controls with explicit mode selection (`Guidance only` vs `Guidance + prior output context`) and inline error messaging.
 - real-time refresh via websocket.
 
 ## UX Debt
@@ -33,6 +34,18 @@ Key component domains:
 - keep existing IA and component boundaries.
 - improve clarity with explicit sections and progressive disclosure.
 - avoid full visual rewrite before contract cleanup lands.
+
+## Attachment Interaction Model (Wave 4B2-HF1)
+1. Primary controls row includes `Attach Files` so upload/attach is first-class on desktop and mobile.
+2. Attachment workspace remains expandable and contains:
+   - media explorer tabs (`image`, `video`, `audio`)
+   - quick attach to start pool
+   - quick attach directly to checkpoint bindings
+   - drag/drop and manual file picker
+3. Media list/upload inline errors are actionable:
+   - `405`: route/method unavailable
+   - `413`: upload size exceeded
+4. Paused checkpoint inject panel now shows active regeneration mode and includes it in inject requests.
 
 ## Schema-Driven Form Strategy
 Priority: clipstyle metadata forms.

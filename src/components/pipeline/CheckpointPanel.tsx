@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { CheckpointConfig, PromptTemplate } from '../../api/structs';
+import { CheckpointConfig, CheckpointType, ConnectorStrategy, PromptTemplate } from '../../api/structs';
 
 interface CheckpointPanelProps {
   checkpoint: CheckpointConfig;
@@ -21,6 +21,10 @@ const CheckpointPanel: React.FC<CheckpointPanelProps> = ({
   const [newMappingKey, setNewMappingKey] = useState('');
   const currentIndex = allCheckpoints.findIndex((c) => c.id === checkpoint.id);
   const previousCheckpoints = allCheckpoints.slice(0, currentIndex);
+  const previousDistributorCheckpoints = previousCheckpoints.filter(
+    (item) => (item.type || 'prompt') === 'distributor'
+  );
+  const normalizedType: CheckpointType = checkpoint.type || 'prompt';
 
   const handleChange = <K extends keyof CheckpointConfig>(
     field: K,
@@ -37,9 +41,10 @@ const CheckpointPanel: React.FC<CheckpointPanelProps> = ({
   };
 
   const handleAddInputMapping = () => {
-    if (!newMappingKey.trim()) return;
-    if (checkpoint.input_mapping[newMappingKey.trim()]) return;
-    handleInputMappingChange(newMappingKey.trim(), 'initial_input');
+    const key = newMappingKey.trim();
+    if (!key) return;
+    if ((checkpoint.input_mapping || {})[key]) return;
+    handleInputMappingChange(key, 'initial_input');
     setNewMappingKey('');
   };
 
@@ -47,6 +52,92 @@ const CheckpointPanel: React.FC<CheckpointPanelProps> = ({
     const newMapping = { ...checkpoint.input_mapping };
     delete newMapping[key];
     onUpdate({ ...checkpoint, input_mapping: newMapping });
+  };
+
+  const handleCheckpointTypeChange = (value: CheckpointType) => {
+    if (value === 'distributor') {
+      onUpdate({
+        ...checkpoint,
+        type: 'distributor',
+        distributor: checkpoint.distributor || {
+          delimiter: 'newline',
+          max_children: 8,
+        },
+        connector: undefined,
+      });
+      return;
+    }
+
+    if (value === 'connector') {
+      const fallbackSource =
+        previousDistributorCheckpoints[previousDistributorCheckpoints.length - 1]?.id;
+      onUpdate({
+        ...checkpoint,
+        type: 'connector',
+        distributor: undefined,
+        connector: checkpoint.connector || {
+          strategy: 'first',
+          source_checkpoint_id: fallbackSource,
+        },
+      });
+      return;
+    }
+
+    onUpdate({
+      ...checkpoint,
+      type: 'prompt',
+      distributor: undefined,
+      connector: undefined,
+    });
+  };
+
+  const handleDistributorChange = (field: 'delimiter' | 'max_children', value: string) => {
+    const current = checkpoint.distributor || {
+      delimiter: 'newline',
+      max_children: 8,
+    };
+
+    if (field === 'max_children') {
+      const parsed = Number(value);
+      onUpdate({
+        ...checkpoint,
+        distributor: {
+          ...current,
+          max_children: Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : 1,
+        },
+      });
+      return;
+    }
+
+    onUpdate({
+      ...checkpoint,
+      distributor: {
+        ...current,
+        delimiter: value || 'newline',
+      },
+    });
+  };
+
+  const handleConnectorChange = (
+    field: 'strategy' | 'source_checkpoint_id',
+    value: string
+  ) => {
+    const current = checkpoint.connector || {
+      strategy: 'first' as ConnectorStrategy,
+      source_checkpoint_id:
+        previousDistributorCheckpoints[previousDistributorCheckpoints.length - 1]?.id,
+    };
+
+    onUpdate({
+      ...checkpoint,
+      connector: {
+        ...current,
+        [field]:
+          field === 'source_checkpoint_id'
+            ? value || undefined
+            : (value as ConnectorStrategy),
+      },
+    });
   };
 
   return (
@@ -78,63 +169,151 @@ const CheckpointPanel: React.FC<CheckpointPanelProps> = ({
         </div>
 
         <div>
-          <label className="block font-medium text-gray-400 mb-1 uppercase tracking-wide">Prompt Template</label>
-          <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-2 items-start min-w-0">
-            <select
-              value={checkpoint.prompt_template_id}
-              onChange={(e) => handleChange('prompt_template_id', e.target.value)}
-              className="w-full select min-w-0"
-            >
-              <option value="">Select Prompt</option>
-              {promptTemplates.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.name}
-                </option>
-              ))}
-            </select>
-            <button onClick={() => onEditPrompt(checkpoint.prompt_template_id)} className="btn btn-sm btn-ghost">
-              Edit
-            </button>
-          </div>
+          <label className="block font-medium text-gray-400 mb-1 uppercase tracking-wide">Checkpoint Type</label>
+          <select
+            value={normalizedType}
+            onChange={(e) => handleCheckpointTypeChange(e.target.value as CheckpointType)}
+            className="w-full select"
+          >
+            <option value="prompt">Prompt (single output)</option>
+            <option value="distributor">Distributor (fan-out)</option>
+            <option value="connector">Connector (fan-in)</option>
+          </select>
         </div>
 
-        <div>
-          <label className="text-gray-400 uppercase tracking-wide block mb-2">Input Mappings</label>
-          <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-2 mb-2">
-            <input
-              value={newMappingKey}
-              onChange={(e) => setNewMappingKey(e.target.value)}
-              className="input"
-              placeholder="variable name"
-            />
-            <button onClick={handleAddInputMapping} className="btn btn-sm btn-ghost">Add</button>
+        {normalizedType !== 'connector' && (
+          <div>
+            <label className="block font-medium text-gray-400 mb-1 uppercase tracking-wide">Prompt Template</label>
+            <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-2 items-start min-w-0">
+              <select
+                value={checkpoint.prompt_template_id}
+                onChange={(e) => handleChange('prompt_template_id', e.target.value)}
+                className="w-full select min-w-0"
+              >
+                <option value="">Select Prompt</option>
+                {promptTemplates.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.name}
+                  </option>
+                ))}
+              </select>
+              <button onClick={() => onEditPrompt(checkpoint.prompt_template_id)} className="btn btn-sm btn-ghost">
+                Edit
+              </button>
+            </div>
           </div>
+        )}
 
-          <div className="space-y-2">
-            {Object.entries(checkpoint.input_mapping || {}).map(([key, value]) => (
-              <div key={key} className="grid grid-cols-1 sm:grid-cols-[90px_1fr_auto] gap-2 items-center min-w-0">
-                <input type="text" value={key} disabled className="input" />
+        {normalizedType === 'distributor' && (
+          <div className="space-y-2 rounded border border-white/10 bg-white/5 p-2.5">
+            <p className="text-[10px] uppercase tracking-[0.15em] text-zinc-300">Distributor Config</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <div>
+                <label className="block font-medium text-gray-400 mb-1 uppercase tracking-wide">Delimiter</label>
                 <select
-                  value={value}
-                  onChange={(e) => handleInputMappingChange(key, e.target.value)}
-                  className="w-full select min-w-0"
+                  value={checkpoint.distributor?.delimiter || 'newline'}
+                  onChange={(e) => handleDistributorChange('delimiter', e.target.value)}
+                  className="w-full select"
                 >
-                  <option value="initial_input">User Input</option>
-                  {previousCheckpoints.map((c) => (
-                    <option key={c.id} value={`checkpoint:${c.id}`}>
-                      From: {c.name}
+                  <option value="newline">Newline</option>
+                  <option value="json_array">JSON Array</option>
+                  <option value="json_objects">JSON Objects</option>
+                </select>
+              </div>
+              <div>
+                <label className="block font-medium text-gray-400 mb-1 uppercase tracking-wide">Max Children</label>
+                <input
+                  type="number"
+                  min={1}
+                  value={checkpoint.distributor?.max_children || 8}
+                  onChange={(e) => handleDistributorChange('max_children', e.target.value)}
+                  className="input"
+                />
+              </div>
+            </div>
+            <p className="text-[10px] text-zinc-500">
+              Distributor checkpoints split one output into child runs.
+            </p>
+          </div>
+        )}
+
+        {normalizedType === 'connector' && (
+          <div className="space-y-2 rounded border border-white/10 bg-white/5 p-2.5">
+            <p className="text-[10px] uppercase tracking-[0.15em] text-zinc-300">Connector Config</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <div>
+                <label className="block font-medium text-gray-400 mb-1 uppercase tracking-wide">Strategy</label>
+                <select
+                  value={checkpoint.connector?.strategy || 'first'}
+                  onChange={(e) => handleConnectorChange('strategy', e.target.value)}
+                  className="w-full select"
+                >
+                  <option value="first">First</option>
+                  <option value="longest">Longest</option>
+                </select>
+              </div>
+              <div>
+                <label className="block font-medium text-gray-400 mb-1 uppercase tracking-wide">Source</label>
+                <select
+                  value={checkpoint.connector?.source_checkpoint_id || ''}
+                  onChange={(e) => handleConnectorChange('source_checkpoint_id', e.target.value)}
+                  className="w-full select"
+                >
+                  <option value="">Latest Distributor (auto)</option>
+                  {previousDistributorCheckpoints.map((item) => (
+                    <option key={item.id} value={item.id}>
+                      {item.name}
                     </option>
                   ))}
                 </select>
-                <button onClick={() => handleRemoveInputMapping(key)} className="btn btn-sm btn-ghost">Remove</button>
               </div>
-            ))}
-
-            {Object.keys(checkpoint.input_mapping || {}).length === 0 && (
-              <p className="text-xs text-gray-500 italic">No input mappings.</p>
-            )}
+            </div>
+            <p className="text-[10px] text-zinc-500">
+              Connector checkpoints select one result from a distributor fan-out.
+            </p>
           </div>
-        </div>
+        )}
+
+        {normalizedType !== 'connector' && (
+          <div>
+            <label className="text-gray-400 uppercase tracking-wide block mb-2">Input Mappings</label>
+            <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-2 mb-2">
+              <input
+                value={newMappingKey}
+                onChange={(e) => setNewMappingKey(e.target.value)}
+                className="input"
+                placeholder="variable name"
+              />
+              <button onClick={handleAddInputMapping} className="btn btn-sm btn-ghost">Add</button>
+            </div>
+
+            <div className="space-y-2">
+              {Object.entries(checkpoint.input_mapping || {}).map(([key, value]) => (
+                <div key={key} className="grid grid-cols-1 sm:grid-cols-[90px_1fr_auto] gap-2 items-center min-w-0">
+                  <input type="text" value={key} disabled className="input" />
+                  <select
+                    value={value}
+                    onChange={(e) => handleInputMappingChange(key, e.target.value)}
+                    className="w-full select min-w-0"
+                  >
+                    <option value="initial_input">User Input</option>
+                    {previousCheckpoints.map((c) => (
+                      <option key={c.id} value={`checkpoint:${c.id}`}>
+                        From: {c.name}
+                        {c.type === 'distributor' ? ' (from distributor)' : ''}
+                      </option>
+                    ))}
+                  </select>
+                  <button onClick={() => handleRemoveInputMapping(key)} className="btn btn-sm btn-ghost">Remove</button>
+                </div>
+              ))}
+
+              {Object.keys(checkpoint.input_mapping || {}).length === 0 && (
+                <p className="text-xs text-gray-500 italic">No input mappings.</p>
+              )}
+            </div>
+          </div>
+        )}
 
         <div className="grid grid-cols-2 gap-2">
           <div>

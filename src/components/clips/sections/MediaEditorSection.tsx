@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { MediaItem, MediaType } from '../../../api/structs/media';
 import { MediaProfile, MediaOutputSpec } from '../../../api/structs/media-spec';
-import { ClipStyleSchema } from '../../../api/clipstyleSchema';
+import { ClipStyleSchema, createEmptyClipStyleSchema } from '../../../api/clipstyleSchema';
 import API from '../../../api/api';
 import { MediaSection } from '../../ui';
 import { AddMediaModal, MediaPreviewModal } from '../../modals';
@@ -16,18 +16,6 @@ interface MediaEditorSectionProps {
   mediaProfile: MediaProfile;
 }
 
-const emptyClipStyleSchema = (styleId: string): ClipStyleSchema => ({
-  id: styleId,
-  name: styleId,
-  description: '',
-  metadataFields: [],
-  mediaMetadataFields: {
-    image: [],
-    ai_video: [],
-    audio: [],
-  },
-});
-
 const MediaEditorSection: React.FC<MediaEditorSectionProps> = ({
   clipId,
   images,
@@ -41,7 +29,7 @@ const MediaEditorSection: React.FC<MediaEditorSectionProps> = ({
   const [addMediaType, setAddMediaType] = useState<MediaType>('image');
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewType, setPreviewType] = useState<'image' | 'video'>('image');
-  const [styleSchema, setStyleSchema] = useState<ClipStyleSchema>(() => emptyClipStyleSchema(clipStyle));
+  const [styleSchema, setStyleSchema] = useState<ClipStyleSchema>(() => createEmptyClipStyleSchema(clipStyle));
 
   React.useEffect(() => {
     let cancelled = false;
@@ -53,7 +41,7 @@ const MediaEditorSection: React.FC<MediaEditorSectionProps> = ({
       })
       .catch(() => {
         if (!cancelled) {
-          setStyleSchema(emptyClipStyleSchema(clipStyle));
+          setStyleSchema(createEmptyClipStyleSchema(clipStyle));
         }
       });
 

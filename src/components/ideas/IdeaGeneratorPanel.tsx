@@ -6,6 +6,7 @@ import IdeaInputForm from './IdeaInputForm';
 import PipelineRunItem from './PipelineRunItem';
 import { usePipelineRuns } from '../../hooks/usePipelineRuns';
 import { MediaProfile } from '../../api/structs/media-spec';
+import { extractClipPromptJsonList } from './ideaOutput';
 
 interface IdeaGeneratorPanelProps {
   chatProvider: string;
@@ -48,7 +49,12 @@ const IdeaGeneratorPanel: React.FC<IdeaGeneratorPanelProps> = ({
         const run = runs.find((r) => r.id === runId);
         if (!run) return;
 
-        await ClipAPI.createIdea(run.initial_input, output);
+        const clipPromptList = extractClipPromptJsonList(output);
+        if (clipPromptList.length <= 1) {
+          await ClipAPI.createIdea(run.initial_input, clipPromptList[0] || output);
+        } else {
+          await ClipAPI.createIdeas(run.initial_input, clipPromptList);
+        }
 
         onIdeasCreated();
         removeRun(runId);

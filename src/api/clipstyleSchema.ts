@@ -38,6 +38,21 @@ export interface ClipStyleSchema {
   mediaMetadataFields: Record<MediaType, ClipStyleField[]>;
 }
 
+export const createEmptyClipStyleSchema = (
+  styleId: string,
+  styleSummary?: ClipStyleSummary
+): ClipStyleSchema => ({
+  id: styleId,
+  name: styleSummary?.name || styleId,
+  description: styleSummary?.description || '',
+  metadataFields: [],
+  mediaMetadataFields: {
+    image: [],
+    ai_video: [],
+    audio: [],
+  },
+});
+
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null;
 
@@ -114,6 +129,7 @@ const normalizeFieldType = (raw: unknown, hasOptions: boolean): ClipStyleFieldTy
   if (type === 'select-media' || type === 'media_select') return 'select-media';
   if (type === 'number' || type === 'int' || type === 'integer' || type === 'float') return 'number';
   if (type === 'boolean' || type === 'bool' || type === 'checkbox') return 'checkbox';
+  if (type === 'array') return 'textarea';
   return hasOptions ? 'select' : 'text';
 };
 
@@ -122,7 +138,7 @@ const normalizeFieldOptions = (raw: unknown): ClipStyleFieldOption[] | undefined
 
   const options = raw
     .map((item): ClipStyleFieldOption | null => {
-      if (typeof item === 'string' || typeof item === 'number') {
+      if (typeof item === 'string' || typeof item === 'number' || typeof item === 'boolean') {
         const value = String(item);
         return { value, label: value };
       }
@@ -130,6 +146,7 @@ const normalizeFieldOptions = (raw: unknown): ClipStyleFieldOption[] | undefined
       if (!isRecord(item)) return null;
 
       const value =
+        toStringOrEmpty(item.const) ||
         toStringOrEmpty(item.value) ||
         toStringOrEmpty(item.id) ||
         toStringOrEmpty(item.key) ||
@@ -145,6 +162,17 @@ const normalizeFieldOptions = (raw: unknown): ClipStyleFieldOption[] | undefined
     .filter((item): item is ClipStyleFieldOption => Boolean(item));
 
   return options.length > 0 ? options : undefined;
+};
+
+const normalizeRequiredSet = (raw: unknown): Set<string> => {
+  if (!Array.isArray(raw)) return new Set();
+
+  return new Set(
+    raw
+      .filter((item): item is string => typeof item === 'string')
+      .map((item) => item.trim())
+      .filter(Boolean)
+  );
 };
 
 const normalizeFieldsArray = (raw: unknown): ClipStyleField[] => {
@@ -178,7 +206,9 @@ const normalizeFieldsArray = (raw: unknown): ClipStyleField[] => {
 
       if (!key) return null;
 
-      const options = normalizeFieldOptions(item.options ?? item.enum ?? item.choices);
+      const options = normalizeFieldOptions(
+        item.options ?? item.enum ?? item.choices ?? item.oneOf ?? item.anyOf
+      );
 
       const inferredType =
         typeof item.widget === 'string' && item.widget.toLowerCase() === 'textarea'
@@ -198,6 +228,83 @@ const normalizeFieldsArray = (raw: unknown): ClipStyleField[] => {
       };
     })
     .filter((field): field is ClipStyleField => Boolean(field));
+};
+
+const normalizeJsonSchemaFields = (
+  rawProperties: unknown,
+  rawRequired: unknown
+): ClipStyleField[] => {
+  if (!isRecord(rawProperties)) return [];
+
+  const required = normalizeRequiredSet(rawRequired);
+
+  return Object.entries(rawProperties)
+    .map(([key, value]): ClipStyleField | null => {
+      if (!isRecord(value)) return null;
+
+      const options = normalizeFieldOptions(
+        value.enum ??
+          value.options ??
+          value.choices ??
+          value.oneOf ??
+          value.anyOf ??
+          (isRecord(value.items)
+            ? value.items.enum ?? value.items.oneOf ?? value.items.anyOf
+            : undefined)
+      );
+
+      const explicitType = value.type ?? (isRecord(value.items) ? value.items.type : undefined);
+      const inferredType =
+        typeof value.widget === 'string' && value.widget.toLowerCase() === 'textarea'
+          ? 'textarea'
+          : normalizeFieldType(explicitType, Boolean(options));
+
+      return {
+        key,
+        label: toStringOrEmpty(value.title) || toStringOrEmpty(value.label) || humanize(key),
+        type: inferredType,
+        placeholder: toStringOrEmpty(value.placeholder) || undefined,
+        description: toStringOrEmpty(value.description) || undefined,
+        options,
+        required: required.has(key) || Boolean(value.required),
+        defaultValue:
+          value.default_value !== undefined ? value.default_value : value.default,
+      };
+    })
+    .filter((field): field is ClipStyleField => Boolean(field));
+};
+
+const mergeClipStyleFields = (...fieldGroups: ClipStyleField[][]): ClipStyleField[] => {
+  const merged = new Map<string, ClipStyleField>();
+
+  fieldGroups.flat().forEach((field) => {
+    const existing = merged.get(field.key);
+    if (!existing) {
+      merged.set(field.key, field);
+      return;
+    }
+
+    const existingLooksFallback = existing.label === humanize(existing.key);
+    const nextLooksFallback = field.label === humanize(field.key);
+    const shouldUseIncomingType = existing.type === 'text' && field.type !== 'text';
+
+    merged.set(field.key, {
+      ...existing,
+      label:
+        !existing.label || (existingLooksFallback && !nextLooksFallback)
+          ? field.label
+          : existing.label,
+      type: shouldUseIncomingType ? field.type : existing.type,
+      placeholder: existing.placeholder ?? field.placeholder,
+      description: existing.description ?? field.description,
+      options: existing.options ?? field.options,
+      required: Boolean(existing.required || field.required),
+      defaultValue:
+        existing.defaultValue !== undefined ? existing.defaultValue : field.defaultValue,
+    });
+  });
+
+  return Array.from(merged.values());
 };
 
 const toMediaType = (value: string): MediaType | null => {
@@ -235,9 +342,30 @@ export const normalizeClipStyleSchema = (
   const record = isRecord(payload) ? payload : {};
   const schema = isRecord(record.schema) ? record.schema : record;
 
-  const metadataFields = normalizeFieldsArray(
-    schema.metadata_fields ?? schema.metadataFields ?? schema.fields
+  const descriptorFields = normalizeFieldsArray(
+    schema.metadata_fields ??
+      schema.metadataFields ??
+      schema.clip_metadata_fields ??
+      schema.clipMetadataFields ??
+      schema.fields ??
+      record.metadata_fields ??
+      record.metadataFields ??
+      record.clip_metadata_fields ??
+      record.clipMetadataFields ??
+      record.fields
   );
+
+  const jsonSchemaFields = normalizeJsonSchemaFields(
+    schema.properties ??
+      (isRecord(schema.metadata_schema) ? schema.metadata_schema.properties : undefined) ??
+      record.properties ??
+      (isRecord(record.metadata_schema) ? record.metadata_schema.properties : undefined),
+    schema.required ??
+      (isRecord(schema.metadata_schema) ? schema.metadata_schema.required : undefined) ??
+      record.required ??
+      (isRecord(record.metadata_schema) ? record.metadata_schema.required : undefined)
+  );
+  const metadataFields = mergeClipStyleFields(descriptorFields, jsonSchemaFields);
 
   const mediaMetadataFields = normalizeMediaFields(
     schema.media_metadata_fields ?? schema.mediaMetadataFields ?? schema.media_fields

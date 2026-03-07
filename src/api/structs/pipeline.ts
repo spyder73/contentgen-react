@@ -18,7 +18,7 @@ export type CheckpointStatus =
   | 'awaiting_confirm'
   | 'skipped';
 
-export type CheckpointType = 'prompt' | 'distributor';
+export type CheckpointType = 'prompt' | 'distributor' | 'connector';
 
 export interface MediaAttachment {
   id: string;
@@ -70,6 +70,13 @@ export interface DistributorConfig {
   max_children: number;
 }
 
+export type ConnectorStrategy = 'first' | 'longest';
+
+export interface ConnectorConfig {
+  strategy: ConnectorStrategy;
+  source_checkpoint_id?: string;
+}
+
 export interface CheckpointConfig {
   id: string;
   name: string;
@@ -82,6 +89,7 @@ export interface CheckpointConfig {
   provider?: string;
   model?: string;
   distributor?: DistributorConfig;
+  connector?: ConnectorConfig;
 }
 
 export interface PipelineOutputFormat {

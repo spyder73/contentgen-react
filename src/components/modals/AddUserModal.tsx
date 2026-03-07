@@ -6,27 +6,43 @@ import { Button, Input } from '../ui';
 interface AddUserModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (username: string, userID: number) => void;
+  onSubmit: (username: string, userID: number) => Promise<void>;
 }
 
 const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, onSubmit }) => {
   const [username, setUsername] = useState('');
   const [userIDInput, setUserIDInput] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!username.trim() || !userIDInput.trim()) return;
-
-    const userID = parseUserID(userIDInput);
-    if (isNaN(userID)) {
-      alert('Invalid User ID');
+    setErrorMessage('');
+    if (!username.trim() || !userIDInput.trim()) {
+      setErrorMessage('Username and user ID are required.');
       return;
     }
 
-    onSubmit(username.trim(), userID);
-    setUsername('');
-    setUserIDInput('');
-    onClose();
+    const userID = parseUserID(userIDInput);
+    if (isNaN(userID)) {
+      setErrorMessage('Invalid User ID');
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      await onSubmit(username.trim(), userID);
+      setUsername('');
+      setUserIDInput('');
+      onClose();
+    } catch (error) {
+      const message = error instanceof Error && error.message.trim()
+        ? error.message.trim()
+        : 'Failed to add user';
+      setErrorMessage(message);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -55,10 +71,17 @@ const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, onSubmit }
           <Button type="button" variant="secondary" className="flex-1" onClick={onClose}>
             Cancel
           </Button>
-          <Button type="submit" variant="primary" className="flex-1">
+          <Button
+            type="submit"
+            variant="primary"
+            className="flex-1"
+            loading={isSubmitting}
+            disabled={isSubmitting}
+          >
             Add User
           </Button>
         </div>
+        {errorMessage && <p className="text-xs text-danger">{errorMessage}</p>}
       </form>
     </Modal>
   );

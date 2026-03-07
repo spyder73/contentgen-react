@@ -11,8 +11,104 @@ export type WebSocketEventType =
   | 'UpdateClipPromptFileURL'
   | 'UpdateImagePromptFileURL'
   | 'UpdateAIVideoPromptFileURL'
-  | 'schedule_update'
+  | 'run_update'
   | string;
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value);
+
+const toStringValue = (value: unknown): string => {
+  if (typeof value === 'string') return value.trim();
+  if (typeof value === 'number') return String(value);
+  return '';
+};
+
+const getEventPayload = (value: unknown): Record<string, unknown> => {
+  if (!isRecord(value)) return {};
+  return isRecord(value.data) ? value.data : value;
+};
+
+const isSchedulerRunUpdate = (payload: Record<string, unknown>): boolean => {
+  const explicitType = toStringValue(payload.type).toLowerCase();
+  if (explicitType === 'run_update') {
+    return true;
+  }
+
+  const eventType = toStringValue(payload.event_type).toLowerCase();
+  if (eventType.startsWith('run.')) {
+    return true;
+  }
+
+  const context = [
+    payload.kind,
+    payload.type,
+    payload.run_type,
+    payload.scope,
+    payload.domain,
+    payload.owner,
+    payload.source,
+    payload.message,
+  ]
+    .map((item) => toStringValue(item).toLowerCase())
+    .join(' ');
+
+  return (
+    context.includes('scheduler') ||
+    context.includes('schedule') ||
+    context.includes('publish') ||
+    context.includes('posting')
+  );
+};
+
+export const buildRunUpdateToast = (rawEvent: unknown): ToastMessage | null => {
+  const payload = getEventPayload(rawEvent);
+  if (!isSchedulerRunUpdate(payload)) return null;
+
+  const status = toStringValue(
+    payload.status ?? payload.run_status ?? payload.state
+  ).toLowerCase();
+  const message =
+    toStringValue(payload.message) ||
+    toStringValue(payload.detail) ||
+    toStringValue(payload.error);
+
+  if (status === 'completed' || status === 'succeeded' || status === 'success') {
+    return {
+      text: message || 'Scheduling run completed.',
+      level: 'success',
+    };
+  }
+
+  if (status === 'failed' || status === 'error') {
+    return {
+      text: message || 'Scheduling run failed.',
+      level: 'error',
+    };
+  }
+
+  if (status === 'cancelled' || status === 'canceled') {
+    return {
+      text: message || 'Scheduling run cancelled.',
+      level: 'warning',
+    };
+  }
+
+  if (status === 'queued' || status === 'pending' || status === 'running' || status === 'started') {
+    return {
+      text: message || 'Scheduling run in progress...',
+      level: 'info',
+    };
+  }
+
+  if (!status && message) {
+    return {
+      text: message,
+      level: 'info',
+    };
+  }
+
+  return null;
+};
 
 interface UseWebSocketEventsOptions {
   onRefreshIdeas: () => void;
@@ -57,14 +153,14 @@ export function useWebSocketEvents({ onRefreshIdeas, onRefreshClips, onToast }: 
         onToast?.({ text: 'Video generated', level: 'success' });
         break;
 
-      // Schedule events
-      case 'schedule_update':
-        if (data.success) {
-          onToast?.({ text: `Scheduled: ${data.message}`, level: 'success' });
-        } else {
-          onToast?.({ text: `Schedule failed: ${data.message}`, level: 'error' });
+      case 'run_update': {
+        onRefreshClips();
+        const toast = buildRunUpdateToast(data);
+        if (toast) {
+          onToast?.(toast);
         }
         break;
+      }
 
       default:
         console.log('Unknown event:', eventType);

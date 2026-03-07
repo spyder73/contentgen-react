@@ -75,4 +75,9 @@
 - [x] Required checks green
 - [x] Docs updated
 - [x] Rollback notes included
-- [ ] Branch pushed + PR opened
+- [x] Branch pushed + PR opened
+
+## GitHub
+- Branch: `codex/frontend-visual-redesign`
+- PR: `https://github.com/spyder73/contentgen-react/pull/new/codex/frontend-visual-redesign`
+- Note: GitHub CLI (`gh`) is not installed in this environment, so PR creation command could not be executed automatically.

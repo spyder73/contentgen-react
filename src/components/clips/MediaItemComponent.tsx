@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import API from '../../api/api';
 import { MediaItem } from '../../api/structs/media';
 import { MediaOutputSpec } from '../../api/structs/media-spec';
+import { ClipStyleField } from '../../api/clipstyleSchema';
 import { EditMediaModal } from '../modals';
 import { Button, Thumbnail } from '../ui';
 import { constructMediaUrl } from '../../api/helpers';
@@ -9,6 +10,7 @@ import { constructMediaUrl } from '../../api/helpers';
 interface MediaItemComponentProps {
   item: MediaItem;
   clipStyle: string;
+  metadataFields: ClipStyleField[];
   onRefresh: () => void;
   outputSpec?: MediaOutputSpec;
   onPreview?: (url: string) => void;
@@ -17,6 +19,7 @@ interface MediaItemComponentProps {
 const MediaItemComponent: React.FC<MediaItemComponentProps> = ({
   item,
   clipStyle,
+  metadataFields,
   onRefresh,
   outputSpec,
   onPreview,
@@ -92,7 +95,7 @@ const MediaItemComponent: React.FC<MediaItemComponentProps> = ({
             variant="ghost"
             onClick={() => setIsEditing(true)}
           >
-            ✏️
+            Edit
           </Button>
           <Button
             size="sm"
@@ -100,7 +103,7 @@ const MediaItemComponent: React.FC<MediaItemComponentProps> = ({
             onClick={handleRegenerate}
             disabled={isRegenerating}
           >
-            {isRegenerating ? '⏳' : '🔄'}
+            {isRegenerating ? '...' : 'Regenerate'}
           </Button>
           <Button
             size="sm"
@@ -108,7 +111,7 @@ const MediaItemComponent: React.FC<MediaItemComponentProps> = ({
             onClick={handleDelete}
             disabled={isDeleting}
           >
-            {isDeleting ? '⏳' : '🗑️'}
+            {isDeleting ? '...' : 'Delete'}
           </Button>
         </div>
       </div>
@@ -117,6 +120,7 @@ const MediaItemComponent: React.FC<MediaItemComponentProps> = ({
         isOpen={isEditing}
         onClose={() => setIsEditing(false)}
         item={item}
+        metadataFields={metadataFields}
         outputSpec={item.output_spec ?? outputSpec}
         onSuccess={() => {
           setIsEditing(false);

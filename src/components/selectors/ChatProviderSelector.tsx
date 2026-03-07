@@ -65,8 +65,6 @@ const ChatProviderSelector: React.FC<ChatProviderSelectorProps> = ({
 
   return (
     <div className="flex gap-2 items-center">
-      <span className="text-muted text-sm">💬</span>
-
       <Select
         options={CHAT_PROVIDERS}
         value={provider}

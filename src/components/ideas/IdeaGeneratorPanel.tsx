@@ -89,13 +89,13 @@ const IdeaGeneratorPanel: React.FC<IdeaGeneratorPanelProps> = ({
   const visibleRuns = runs.filter((r) => r.status !== 'completed');
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-2">
       {/* Input Form */}
       <IdeaInputForm templates={templates} onStart={handleStart} />
 
       {/* Pipeline Runs */}
       {visibleRuns.length > 0 && (
-        <div className="space-y-3">
+        <div className="space-y-2">
           {visibleRuns.map((run) => {
             const template = getTemplate(run.pipeline_template_id);
             if (!template) return null;

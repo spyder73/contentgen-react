@@ -46,14 +46,14 @@ const IdeaItem: React.FC<IdeaItemProps> = ({ idea, onCreatePrompt, onDelete }) =
               onClick={() => onCreatePrompt(idea)}
               disabled={!isReady}
             >
-              ✨ Create
+              Create
             </Button>
             <Button
               variant="ghost"
               size="sm"
               onClick={() => onDelete(idea.clip_idea)}
             >
-              🗑️
+              Delete
             </Button>
           </div>
         </div>

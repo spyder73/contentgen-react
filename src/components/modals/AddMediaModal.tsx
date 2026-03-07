@@ -76,9 +76,9 @@ const AddMediaModal: React.FC<AddMediaModalProps> = ({
             value={type}
             onChange={(e) => setType(e.target.value as MediaType)}
             options={[
-              { value: 'image', label: '🖼️ Image' },
-              { value: 'ai_video', label: '🎬 AI Video' },
-              { value: 'audio', label: '🎵 Audio' },
+              { value: 'image', label: 'Image' },
+              { value: 'ai_video', label: 'AI Video' },
+              { value: 'audio', label: 'Audio' },
             ]}
             selectSize="sm"
           />

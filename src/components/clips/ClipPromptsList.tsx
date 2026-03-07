@@ -56,11 +56,11 @@ const ClipPromptsList: React.FC<ClipPromptsListProps> = ({
   return (
     <div className="flex flex-col h-full gap-4">
       <div className="flex items-center justify-between shrink-0">
-        <h2 className="section-title">🎬 Clips ({clips.length})</h2>
+        <h2 className="section-title">Clips ({clips.length})</h2>
       </div>
 
       <div className="flex-1 overflow-y-auto">
-        <div className="space-y-4 pr-2">
+        <div className="space-y-4 pr-2 motion-stagger">
           {clips.map((clip) => (
             <ClipPromptItem
               key={clip.id}

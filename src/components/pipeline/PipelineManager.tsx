@@ -32,19 +32,27 @@ const PipelineManager: React.FC<PipelineManagerProps> = ({ isOpen, onClose }) =>
   const [selectedPipelineId, setSelectedPipelineId] = useState<string | null>(null);
   const [editingPrompt, setEditingPrompt] = useState<PromptTemplate | null>(null);
   const [isCreatingPrompt, setIsCreatingPrompt] = useState(false);
+  const [newPipelineId, setNewPipelineId] = useState('');
+  const [newPipelineName, setNewPipelineName] = useState('');
+  const [showCreatePipeline, setShowCreatePipeline] = useState(false);
 
   const selectedPipeline = pipelines.find((p) => p.id === selectedPipelineId) || null;
 
   const handleCreatePipeline = async () => {
-    const id = prompt('Enter pipeline ID (e.g., my-pipeline):');
-    if (!id) return;
-
-    const name = prompt('Enter pipeline name:');
-    if (!name) return;
+    if (!newPipelineId.trim() || !newPipelineName.trim()) return;
 
     try {
-      const created = await createPipeline(id, name, [], '', DEFAULT_OUTPUT_FORMAT);
+      const created = await createPipeline(
+        newPipelineId.trim(),
+        newPipelineName.trim(),
+        [],
+        '',
+        DEFAULT_OUTPUT_FORMAT
+      );
       setSelectedPipelineId(created.id);
+      setShowCreatePipeline(false);
+      setNewPipelineId('');
+      setNewPipelineName('');
     } catch (err: any) {
       alert(`Failed to create: ${err.message}`);
     }
@@ -101,51 +109,76 @@ const PipelineManager: React.FC<PipelineManagerProps> = ({ isOpen, onClose }) =>
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-40">
-      <div className="bg-gray-900 rounded-xl w-full max-w-6xl h-[85vh] flex flex-col overflow-hidden shadow-2xl border border-gray-700">
+    <div className="fixed inset-0 bg-black/85 flex items-center justify-center z-[180] p-4">
+      <div className="bg-zinc-950 border border-white/20 w-full max-w-6xl h-[88vh] flex flex-col overflow-hidden shadow-2xl">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-700 bg-gray-800/50">
+        <div className="flex items-center justify-between px-5 py-3 border-b border-white/10 bg-black/70">
           <div>
-            <h2 className="text-xl font-bold text-white">🔧 Pipeline Manager</h2>
-            <p className="text-sm text-gray-400">
-              Create and manage AI generation pipelines
+            <h2 className="text-base font-semibold uppercase tracking-[0.2em] text-white">Pipeline Manager</h2>
+            <p className="text-xs text-gray-400 mt-1">
+              Build and run generation flows.
             </p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             <button
               onClick={() => {
                 setIsCreatingPrompt(true);
                 setEditingPrompt(null);
               }}
-              className="text-sm bg-purple-600 hover:bg-purple-500 text-white px-3 py-2 rounded transition-colors"
+              className="btn btn-sm btn-ghost"
             >
-              + New Prompt
+              New Prompt
+            </button>
+            <button
+              onClick={() => setShowCreatePipeline((value) => !value)}
+              className="btn btn-sm btn-ghost"
+            >
+              New Pipeline
             </button>
             <button
               onClick={onClose}
-              className="text-gray-400 hover:text-white text-2xl px-2 hover:bg-gray-700 rounded transition-colors"
+              className="btn btn-sm btn-ghost"
             >
-              ×
+              Close
             </button>
           </div>
         </div>
+        {showCreatePipeline && (
+          <div className="grid grid-cols-1 md:grid-cols-[1fr_1fr_auto] gap-2 px-5 py-3 border-b border-white/10 bg-black/50">
+            <input
+              value={newPipelineId}
+              onChange={(e) => setNewPipelineId(e.target.value)}
+              placeholder="Pipeline ID (e.g., ideation-v1)"
+              className="input"
+            />
+            <input
+              value={newPipelineName}
+              onChange={(e) => setNewPipelineName(e.target.value)}
+              placeholder="Pipeline Name"
+              className="input"
+            />
+            <button className="btn btn-primary" onClick={handleCreatePipeline}>
+              Create
+            </button>
+          </div>
+        )}
 
         {/* Body */}
         <div className="flex flex-1 overflow-hidden">
           {/* Sidebar - Pipeline List */}
-          <div className="w-64 border-r border-gray-700 bg-gray-800/30">
+          <div className="w-64 border-r border-white/10 bg-black/35">
             <PipelineList
               pipelines={pipelines}
               selectedId={selectedPipelineId}
               onSelect={setSelectedPipelineId}
-              onCreate={handleCreatePipeline}
+              onCreate={() => setShowCreatePipeline(true)}
               onDelete={handleDeletePipeline}
               isLoading={pipelinesLoading}
             />
           </div>
 
           {/* Main Content */}
-          <div className="flex-1 overflow-hidden bg-gray-850">
+          <div className="flex-1 overflow-hidden bg-black">
             {selectedPipeline ? (
               <PipelineEditor
                 key={selectedPipeline.id}
@@ -160,15 +193,14 @@ const PipelineManager: React.FC<PipelineManagerProps> = ({ isOpen, onClose }) =>
             ) : (
               <div className="flex items-center justify-center h-full text-gray-500">
                 <div className="text-center">
-                  <div className="text-5xl mb-4">🔧</div>
-                  <p className="text-lg">Select a pipeline from the list</p>
+                  <p className="text-base uppercase tracking-wide text-zinc-300">Select a pipeline</p>
                   <p className="text-sm mt-2 text-gray-600">
                     or{' '}
                     <button
-                      onClick={handleCreatePipeline}
-                      className="text-blue-400 hover:text-blue-300 underline"
+                      onClick={() => setShowCreatePipeline(true)}
+                      className="text-zinc-300 hover:text-white underline"
                     >
-                      create a new one
+                      create a new pipeline
                     </button>{' '}
                     to get started
                   </p>

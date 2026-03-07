@@ -115,7 +115,7 @@ const ImageProviderSelector: React.FC<ImageProviderSelectorProps> = ({
           className="btn-ghost btn-sm"
           title="Image model settings"
         >
-          ⚙️
+          Settings
         </button>
       </div>
 

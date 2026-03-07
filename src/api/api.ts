@@ -19,6 +19,9 @@ const API = {
   getClipPrompts: ClipAPI.getClipPrompts,
   getClipPrompt: ClipAPI.getClipPrompt,
   editClipPrompt: ClipAPI.editClipPrompt,
+  editClipMetadata: ClipAPI.editClipMetadata,
+  getClipStyles: ClipAPI.getClipStyles,
+  getClipStyleSchema: ClipAPI.getClipStyleSchema,
   deleteClipPrompt: ClipAPI.deleteClipPrompt,
   getAvailableMedia: ClipAPI.getAvailableMedia,
 

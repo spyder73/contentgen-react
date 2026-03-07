@@ -50,26 +50,21 @@ Before send, `settingsToOutputSpec` converts dimensions -> `width` + `height`.
 - unknown events trigger conservative list refresh.
 
 ## Known Drift
-1. `ClipAPI.editClipMetadata` calls `PUT /clips/:id/metadata`.
-   - backend route is not currently registered.
-2. frontend clipstyle choices are still hardcoded in `src/clipStyles/*`.
-   - model constraints are dynamic, but clipstyle field forms are not fully registry-driven yet.
-3. websocket event names in frontend are partially legacy compared to backend emit set.
+1. websocket event names in frontend are partially legacy compared to backend emit set.
+2. style schema shape can vary by backend/registry version.
+   - frontend now normalizes common payload variants from `/clipstyles` + `/clipstyles/:style/schema`.
 
 ## Recommended API Cleanup Sequence
-1. consume backend clipstyle passthrough endpoints once added.
-2. generate clip metadata forms from clipstyle schema.
-3. resolve `/clips/:id/metadata` mismatch.
-4. standardize websocket event type map with backend emitted events.
+1. standardize websocket event type map with backend emitted events.
+2. align clipstyle schema response shape to a single canonical format.
 
 ## Test and CI Notes
 Current test status:
-- `npm test -- --watchAll=false` fails due to Jest + axios ESM parsing.
-- use `npm run build` as first required CI gate.
+- `npm test -- --watchAll=false` passes.
+- `npm run build` passes.
 
 Queued stabilization options:
-- configure Jest transform strategy for axios ESM, or
-- move to Vitest and port suites incrementally.
+- react-dom test-utils deprecation warning appears in the test console with current tooling versions.
 
 ## File References
 - API base/helper: `src/api/helpers.ts`

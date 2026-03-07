@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { MediaItem, MediaType } from '../../../api/structs/media';
 import { MediaProfile, MediaOutputSpec } from '../../../api/structs/media-spec';
+import { ClipStyleSchema } from '../../../api/clipstyleSchema';
+import API from '../../../api/api';
 import { MediaSection } from '../../ui';
 import { AddMediaModal, MediaPreviewModal } from '../../modals';
 
@@ -13,6 +15,18 @@ interface MediaEditorSectionProps {
   onRefresh: () => void;
   mediaProfile: MediaProfile;
 }
+
+const emptyClipStyleSchema = (styleId: string): ClipStyleSchema => ({
+  id: styleId,
+  name: styleId,
+  description: '',
+  metadataFields: [],
+  mediaMetadataFields: {
+    image: [],
+    ai_video: [],
+    audio: [],
+  },
+});
 
 const MediaEditorSection: React.FC<MediaEditorSectionProps> = ({
   clipId,
@@ -27,6 +41,26 @@ const MediaEditorSection: React.FC<MediaEditorSectionProps> = ({
   const [addMediaType, setAddMediaType] = useState<MediaType>('image');
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewType, setPreviewType] = useState<'image' | 'video'>('image');
+  const [styleSchema, setStyleSchema] = useState<ClipStyleSchema>(() => emptyClipStyleSchema(clipStyle));
+
+  React.useEffect(() => {
+    let cancelled = false;
+
+    API.getClipStyleSchema(clipStyle)
+      .then((schema) => {
+        if (cancelled) return;
+        setStyleSchema(schema);
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setStyleSchema(emptyClipStyleSchema(clipStyle));
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [clipStyle]);
 
   const getOutputSpec = (type: MediaType): MediaOutputSpec | undefined => {
     switch (type) {
@@ -51,9 +85,10 @@ const MediaEditorSection: React.FC<MediaEditorSectionProps> = ({
       <div className="space-y-4">
         <MediaSection
           title="Images"
-          icon="🖼️"
+          icon=""
           items={images}
           clipStyle={clipStyle}
+          mediaMetadataFields={styleSchema.mediaMetadataFields}
           onRefresh={onRefresh}
           outputSpec={getOutputSpec('image')}
           onPreview={(url) => handlePreview(url, 'image')}
@@ -62,9 +97,10 @@ const MediaEditorSection: React.FC<MediaEditorSectionProps> = ({
 
         <MediaSection
           title="AI Videos"
-          icon="🎬"
+          icon=""
           items={aiVideos}
           clipStyle={clipStyle}
+          mediaMetadataFields={styleSchema.mediaMetadataFields}
           onRefresh={onRefresh}
           outputSpec={getOutputSpec('ai_video')}
           onPreview={(url) => handlePreview(url, 'ai_video')}
@@ -73,9 +109,10 @@ const MediaEditorSection: React.FC<MediaEditorSectionProps> = ({
 
         <MediaSection
           title="Audio"
-          icon="🎵"
+          icon=""
           items={audios}
           clipStyle={clipStyle}
+          mediaMetadataFields={styleSchema.mediaMetadataFields}
           onRefresh={onRefresh}
           outputSpec={getOutputSpec('audio')}
           onAdd={() => openAddMedia('audio')}

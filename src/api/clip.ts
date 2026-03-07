@@ -2,6 +2,12 @@ import axios from 'axios';
 import { BASE_URL } from './helpers';
 import { ClipMetadata } from './structs';
 import { MediaOutputSpec, MediaProfile, MediaPrompt } from './structs/media-spec';
+import {
+  ClipStyleSchema,
+  ClipStyleSummary,
+  normalizeClipStyleList,
+  normalizeClipStyleSchema,
+} from './clipstyleSchema';
 
 // ==================== Request Types ====================
 
@@ -73,8 +79,33 @@ const createClipPromptFromJson = (
 const editClipPrompt = (clipId: string, request: EditClipPromptRequest) =>
   axios.put(`${BASE_URL}/clips/${clipId}`, request).then((res) => res.data);
 
-const editClipMetadata = (clipId: string, key: string, value: any) =>
-  axios.put(`${BASE_URL}/clips/${clipId}/metadata`, { key, value }).then((res) => res.data);
+const editClipMetadata = async (clipId: string, key: string, value: any) => {
+  const clipPrompt = await getClipPrompt(clipId);
+  const existingMetadata = clipPrompt?.metadata || {};
+
+  return editClipPrompt(clipId, {
+    metadata: {
+      ...existingMetadata,
+      [key]: value,
+    },
+  });
+};
+
+const getClipStyles = async (): Promise<ClipStyleSummary[]> => {
+  const payload = await axios.get(`${BASE_URL}/clipstyles`).then((res) => res.data);
+  return normalizeClipStyleList(payload);
+};
+
+const getClipStyleSchema = async (
+  styleId: string,
+  fallbackSummary?: ClipStyleSummary
+): Promise<ClipStyleSchema> => {
+  const payload = await axios
+    .get(`${BASE_URL}/clipstyles/${encodeURIComponent(styleId)}/schema`)
+    .then((res) => res.data);
+
+  return normalizeClipStyleSchema(styleId, payload, fallbackSummary);
+};
 
 const deleteClipPrompt = (clipId: string) =>
   axios.delete(`${BASE_URL}/clips/${clipId}`).then((res) => res.data);
@@ -117,6 +148,8 @@ const ClipAPI = {
   createClipPromptFromJson,
   editClipPrompt,
   editClipMetadata,
+  getClipStyles,
+  getClipStyleSchema,
   deleteClipPrompt,
   getAvailableMedia,
   getIdeas,

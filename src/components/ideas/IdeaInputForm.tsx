@@ -77,7 +77,7 @@ const IdeaInputForm: React.FC<Props> = ({ templates, onStart, disabled }) => {
           `}
           title={autoMode ? 'Auto mode: Pipeline runs automatically' : 'Manual mode: Confirm each step'}
         >
-          {autoMode ? '⚡ Auto' : '✋ Manual'}
+          {autoMode ? 'Auto' : 'Manual'}
         </button>
 
         <Button
@@ -85,7 +85,7 @@ const IdeaInputForm: React.FC<Props> = ({ templates, onStart, disabled }) => {
           disabled={!input.trim() || loading || disabled}
           loading={loading}
         >
-          🚀 Generate
+          Generate
         </Button>
       </div>
 

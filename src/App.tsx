@@ -162,7 +162,7 @@ function App() {
   };
 
   return (
-    <div className="h-screen flex flex-col bg-slate-900">
+    <div className="h-screen flex flex-col bg-black">
       <Toast message={toast} onClose={() => setToast(null)} />
 
       <Header
@@ -201,10 +201,10 @@ function App() {
       {/* Main Content */}
       <main className="flex-1 overflow-hidden">
         <div className="page-container h-full py-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-full">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 h-full min-h-0">
             {/* Ideas Panel */}
-            <div className="card flex flex-col overflow-hidden h-full">
-              <div className="card-body flex-1 flex flex-col overflow-hidden">
+            <div className="card flex flex-col h-full min-h-0">
+              <div className="card-body flex-1 flex flex-col min-h-0">
                 <IdeasList
                   refreshTrigger={ideasRefreshTrigger}
                   chatProvider={chatProvider}
@@ -215,8 +215,8 @@ function App() {
             </div>
 
             {/* Clips Panel */}
-            <div className="card flex flex-col overflow-hidden h-full">
-              <div className="card-body flex-1 flex flex-col overflow-hidden">
+            <div className="card flex flex-col h-full min-h-0">
+              <div className="card-body flex-1 flex flex-col min-h-0">
                 <ClipPromptsList
                   refreshTrigger={clipsRefreshTrigger}
                   mediaProfile={mediaProfile}

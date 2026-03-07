@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 
 interface ModalProps {
   isOpen: boolean;
@@ -21,34 +22,45 @@ const Modal: React.FC<ModalProps> = ({
   children,
   size = 'md',
 }) => {
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        onClose();
+      }
+    };
+
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
-  return (
-    <div 
-      className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50"
+  return createPortal(
+    <div
+      className="fixed inset-0 bg-black/85 flex items-center justify-center z-[240] p-4"
       onClick={onClose}
     >
       <div
-        className={`bg-slate-800 rounded-xl p-6 w-full ${sizeClasses[size]} max-h-[90vh] overflow-y-auto animate-slide-up`}
+        className={`bg-zinc-950 border border-white/20 p-5 w-full ${sizeClasses[size]} max-h-[90vh] overflow-y-auto animate-slide-up shadow-2xl`}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header */}
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-bold text-white">{title}</h2>
+        <div className="flex justify-between items-center mb-4 border-b border-white/10 pb-3">
+          <h2 className="text-sm font-semibold uppercase tracking-[0.2em] text-white">{title}</h2>
           <button
             onClick={onClose}
-            className="text-slate-400 hover:text-white transition-colors"
+            className="btn btn-sm btn-ghost"
+            type="button"
           >
-            ✕
+            Close
           </button>
         </div>
 
-        {/* Body */}
-        <div className="space-y-4">
-          {children}
-        </div>
+        <div className="space-y-4">{children}</div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 

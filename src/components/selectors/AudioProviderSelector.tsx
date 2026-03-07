@@ -14,8 +14,8 @@ interface AudioProviderSelectorProps {
 }
 
 const AUDIO_PROVIDERS: { value: string; label: string }[] = [
-  { value: 'suno', label: '🎵 Suno' },
-  { value: 'udio', label: '🎶 Udio' },
+  { value: 'suno', label: 'Suno' },
+  { value: 'udio', label: 'Udio' },
 ];
 
 const AudioProviderSelector: React.FC<AudioProviderSelectorProps> = ({
@@ -43,7 +43,7 @@ const AudioProviderSelector: React.FC<AudioProviderSelectorProps> = ({
           value={model}
           onChange={(e) => onModelChange(e.target.value)}
           placeholder="Model (optional)"
-          className="w-32 bg-slate-700 border border-slate-600 rounded px-2 py-1 text-sm text-white placeholder-slate-400"
+          className="w-32 input input-sm"
         />
 
         <button
@@ -52,7 +52,7 @@ const AudioProviderSelector: React.FC<AudioProviderSelectorProps> = ({
           className="btn-ghost btn-sm"
           title="Audio model settings"
         >
-          ⚙️
+          Settings
         </button>
       </div>
 

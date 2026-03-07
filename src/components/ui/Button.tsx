@@ -44,7 +44,7 @@ const Button: React.FC<ButtonProps> = ({
         disabled={disabled || loading}
         {...props}
       >
-        {loading ? '⏳' : children}
+        {loading ? '...' : children}
       </button>
     );
   }
@@ -55,7 +55,7 @@ const Button: React.FC<ButtonProps> = ({
       disabled={disabled || loading}
       {...props}
     >
-      {loading ? '⏳ Loading...' : children}
+      {loading ? 'Loading...' : children}
     </button>
   );
 };

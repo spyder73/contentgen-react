@@ -1,5 +1,78 @@
 # Results Log
 
+## Wave 3A Follow-Up Fixes (2026-03-07)
+
+## User Feedback Addressed
+| Issue | Resolution |
+|---|---|
+| Theme toggle should be near user area and behave like a switch | Implemented top-right switch control adjacent to user menu (`src/components/layout/Header.tsx`, `src/index.css`). |
+| Warning/failure notifications should use stronger colors | Toast payload now supports severity and renders distinct success/info/warning/error colors (`src/toast.ts`, `src/App.tsx`, `src/hooks/useWebSocketEvents.ts`, `src/components/layout/Toast.tsx`, `src/index.css`). |
+| Clip style selector in edit clip modal looked wrong in light/dark themes | Removed hardcoded old slate styling and switched to theme-aware select styling (`src/components/selectors/ClipStyleSelector.tsx`, `src/index.css`). |
+| Edit clip modal could not scroll to lower fields (e.g., music URL) | Modal content now allows vertical scrolling in long forms (`src/components/modals/Modal.tsx`). |
+| Edit media modal did not show text/position metadata fields | Media metadata editor now merges schema fields with actual item metadata keys (including fallback for `text`/`position`) so fields remain editable (`src/components/modals/EditMediaModal.tsx`). |
+
+## Validation Commands
+| Command | Result | Notes |
+|---|---|---|
+| `npm test -- --watchAll=false` | `pass` | 8 suites, 23 tests passing. Existing React `act` deprecation warning remains in test output. |
+| `npm run build` | `pass` | Compiled successfully with follow-up fixes. |
+
+## Wave 3A Delivery (2026-03-07)
+
+## Re-Check Summary
+| Area | Status | Evidence |
+|---|---|---|
+| Notification layering | `FIXED` | Toast now renders via portal (`document.body`) at top-layer z-index (`src/components/layout/Toast.tsx`) and stays above modal overlays (`src/components/modals/Modal.tsx`, `src/components/pipeline/PipelineManager.tsx`). |
+| Theme toggle + persistence | `FIXED` | Header toggle added (`src/components/layout/Header.tsx`), theme persisted in local storage and applied from app state (`src/App.tsx`, `src/theme.ts`), and pre-hydration boot script prevents flash (`public/index.html`). |
+| Attachment preflight UI | `FIXED` | API-layer attachment normalization added (`src/api/pipeline.ts`), typed attachment metadata support added (`src/api/structs/pipeline.ts`), and run detail UI now renders loading/empty/unavailable/error + metadata states (`src/components/ideas/PipelineRunItem.tsx`). |
+| Clipstyle metadata editing reliability | `VALID` | Existing schema normalization and editor rendering paths remain intact; regression coverage still green in `src/api/clipstyleSchema.test.ts` and related UI tests. |
+
+## Changed Files
+| File | Why |
+|---|---|
+| `src/components/layout/Toast.tsx` | Fixed layering bug by moving toast rendering to portal and introducing accessibility attributes. |
+| `src/components/layout/Header.tsx` | Added persistent, discoverable theme toggle control in header actions. |
+| `src/App.tsx` | Wired theme persistence + apply-on-change and passed toggle state/actions to header. |
+| `src/theme.ts` | Added shared theme helpers/types (`applyTheme`, storage key, mode guards). |
+| `public/index.html` | Added pre-React boot script to apply saved theme before paint (no flash). |
+| `src/index.css` | Added dark/light theme tokens and surface/form/notification styles for readability in both modes. |
+| `src/components/modals/Modal.tsx` | Switched to shared modal classes to inherit theme-safe surfaces. |
+| `src/components/pipeline/PipelineManager.tsx` | Aligned manager overlay shell with shared modal layering/surface classes. |
+| `src/api/structs/pipeline.ts` | Extended `MediaAttachment` typing for metadata/source/size preflight payloads. |
+| `src/api/pipeline.ts` | Added attachment normalization in API layer for run/list responses. |
+| `src/components/ideas/PipelineRunItem.tsx` | Added attachment rendering surfaces + metadata display + loading/empty/error/unavailable states. |
+| `src/api/pipeline.test.ts` | Added tests for attachment normalization with mixed backend payload shapes. |
+| `src/components/ideas/PipelineRunItem.test.tsx` | Added tests for attachment rendering states and metadata display. |
+| `src/hooks/useLocalStorage.ts` | Updated setter typing to support state-updater callbacks used by theme toggle flow. |
+
+## Validation Commands
+| Command | Result | Notes |
+|---|---|---|
+| `npm test -- --watchAll=false` | `pass` | 8 suites, 23 tests passing. Existing React `act` deprecation warning remains from current test stack. |
+| `npm run build` | `pass` | Compiled successfully after TypeScript cast tightening in `src/api/pipeline.ts`. |
+
+## Manual QA Matrix (Desktop + Mobile)
+| Area | Desktop | Mobile | Evidence |
+|---|---|---|---|
+| Notifications during overlay states | Not run | Not run | Implementation updated to portal + top z-index; manual interaction pass still required. |
+| Dark/light mode toggle + persistence | Not run | Not run | Theme boot script + persisted toggle implemented; manual visual pass still required. |
+| Attachment rendering states | Not run | Not run | Unit coverage now includes loading/empty/metadata attachment states in run cards. |
+| Clipstyle metadata edit forms | Not run | Not run | Existing schema normalization tests pass; live payload/manual editing pass pending. |
+
+## Open Questions for Dorian (UX/Product)
+1. Theme toggle placement: keep in current top-left header actions row, or move near user menu for global preferences grouping?
+2. Notification priority: should websocket toasts always remain green success style, or should failures/warnings use severity-specific colors and ordering?
+3. Attachment affordances: should attachment rows include explicit actions beyond URL open (copy URL, quick preview, or remove/replace when backend supports it)?
+
+## Unresolved Risks / Blockers
+- Manual desktop/mobile UI verification is still pending for overlay+toast behavior and theme contrast across all screens.
+- Light-theme support currently relies on tokenized components plus targeted utility overrides; additional visual QA may surface edge classes that need explicit tuning.
+- Clipstyle metadata rendering still depends on backend/registry schema consistency for uncommon field contracts.
+
+## GitHub
+- Branch: `codex/frontend-distributor-connector`
+- PR: pending (no link available yet)
+
 ## Wave 2C Revalidation (2026-03-07)
 
 ## Re-Audit Classification (Orchestrator Edits)

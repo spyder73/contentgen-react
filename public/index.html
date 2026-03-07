@@ -28,6 +28,29 @@
   </head>
   <body>
     <noscript>You need to enable JavaScript to run this app.</noscript>
+    <script>
+      (function () {
+        var key = 'contentgen-theme';
+        var theme = 'dark';
+        try {
+          var stored = localStorage.getItem(key);
+          if (stored) {
+            try {
+              stored = JSON.parse(stored);
+            } catch (parseError) {
+              // Ignore parse errors and fall back to raw string checks.
+            }
+          }
+          if (stored === 'light' || stored === 'dark') {
+            theme = stored;
+          }
+        } catch (error) {
+          // Local storage might be blocked; fall back to dark mode.
+        }
+        document.documentElement.setAttribute('data-theme', theme);
+        document.documentElement.style.colorScheme = theme;
+      })();
+    </script>
     <div id="root"></div>
     <!--
       This HTML file is a template.

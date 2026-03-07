@@ -39,11 +39,11 @@ const Modal: React.FC<ModalProps> = ({
 
   return createPortal(
     <div
-      className="fixed inset-0 bg-black/85 flex items-center justify-center z-[240] p-4"
+      className="modal-overlay z-[240]"
       onClick={onClose}
     >
       <div
-        className={`bg-zinc-950 border border-white/20 p-5 w-full ${sizeClasses[size]} max-h-[90vh] overflow-y-auto animate-slide-up shadow-2xl`}
+        className={`modal-content p-5 overflow-y-auto ${sizeClasses[size]} animate-slide-up`}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex justify-between items-center mb-4 border-b border-white/10 pb-3">

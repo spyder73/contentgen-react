@@ -23,11 +23,15 @@ import { IdeasList } from './components/ideas';
 import { ClipPromptsList } from './components/clips';
 import { useWebSocketEvents } from './hooks';
 import { useLocalStorage } from './hooks/useLocalStorage';
+import { applyTheme, getDocumentTheme, isThemeMode, THEME_STORAGE_KEY } from './theme';
+import { ToastMessage } from './toast';
 
 function App() {
   const [ideasRefreshTrigger, setIdeasRefreshTrigger] = useState(0);
   const [clipsRefreshTrigger, setClipsRefreshTrigger] = useState(0);
-  const [toast, setToast] = useState<string | null>(null);
+  const [toast, setToast] = useState<ToastMessage | null>(null);
+  const [storedThemeMode, setStoredThemeMode] = useLocalStorage<string>(THEME_STORAGE_KEY, getDocumentTheme());
+  const themeMode = isThemeMode(storedThemeMode) ? storedThemeMode : 'dark';
 
   // Image provider state
   const [imageProvider, setImageProvider] = useLocalStorage<ImageProvider>('imageProvider', DEFAULT_IMAGE_PROVIDER);
@@ -82,8 +86,13 @@ function App() {
   useWebSocketEvents({ 
     onRefreshIdeas: refreshIdeas,
     onRefreshClips: refreshClips,
-    onToast: setToast 
+    onToast: (message) =>
+      setToast(typeof message === 'string' ? { text: message, level: 'info' } : message),
   });
+
+  useEffect(() => {
+    applyTheme(themeMode);
+  }, [themeMode]);
 
   // Fetch users on mount
   useEffect(() => {
@@ -121,7 +130,7 @@ function App() {
       await API.setActiveUser(userId);
       const user = users.find((u) => u.id === userId);
       setActiveUser(user || null);
-      setToast(`Switched to ${user?.username}`);
+      setToast({ text: `Switched to ${user?.username}`, level: 'success' });
     } catch (error) {
       console.error('Failed to select user:', error);
     }
@@ -134,7 +143,7 @@ function App() {
       if (activeUser?.id === userId) {
         setActiveUser(null);
       }
-      setToast('User removed');
+      setToast({ text: 'User removed', level: 'warning' });
     } catch (error) {
       console.error('Failed to remove user:', error);
     }
@@ -144,7 +153,7 @@ function App() {
     try {
       const account = await API.setActiveAccount(accountId);
       setActiveAccount(account);
-      setToast(`Switched to @${account.username}`);
+      setToast({ text: `Switched to @${account.username}`, level: 'success' });
     } catch (error) {
       console.error('Failed to select account:', error);
     }
@@ -155,14 +164,14 @@ function App() {
       const user = await API.addUser(username, userId);
       setUsers([...users, user]);
       setShowAddUserModal(false);
-      setToast(`Added ${username}`);
+      setToast({ text: `Added ${username}`, level: 'success' });
     } catch (error) {
       console.error('Failed to add user:', error);
     }
   };
 
   return (
-    <div className="h-screen flex flex-col bg-black">
+    <div className="app-shell h-screen flex flex-col">
       <Toast message={toast} onClose={() => setToast(null)} />
 
       <Header
@@ -195,6 +204,8 @@ function App() {
         onSelectUser={handleSelectUser}
         onRemoveUser={handleRemoveUser}
         onSelectAccount={handleSelectAccount}
+        themeMode={themeMode}
+        onThemeToggle={() => setStoredThemeMode(themeMode === 'dark' ? 'light' : 'dark')}
         onOpenProxyModal={() => setShowProxyModal(true)}
       />
 

@@ -69,6 +69,93 @@ interface StartPipelineResponse {
   status: string;
 }
 
+const hasOwn = <T extends object>(value: T, key: string): boolean =>
+  Object.prototype.hasOwnProperty.call(value, key);
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value);
+
+const toStringValue = (value: unknown, fallback = ''): string => {
+  if (typeof value === 'string') return value;
+  if (value === null || value === undefined) return fallback;
+  return String(value);
+};
+
+const toNumberValue = (value: unknown): number | undefined => {
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  if (typeof value === 'string') {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : undefined;
+  }
+  return undefined;
+};
+
+const normalizeAttachment = (value: unknown, index: number): MediaAttachment | null => {
+  if (!isRecord(value)) return null;
+
+  const url = toStringValue(value.url ?? value.file_url ?? value.asset_url ?? value.uri);
+  const id =
+    toStringValue(value.id ?? value.attachment_id ?? value.asset_id) ||
+    (url ? `attachment:${url}` : `attachment-${index}`);
+
+  const type = toStringValue(value.type ?? value.media_type ?? value.kind, 'unknown');
+  const name = toStringValue(
+    value.name ?? value.filename ?? value.file_name ?? value.title,
+    `attachment-${index + 1}`
+  );
+
+  const metadata = isRecord(value.metadata)
+    ? (value.metadata as Record<string, unknown>)
+    : undefined;
+  const source = toStringValue(value.source);
+
+  return {
+    id,
+    type,
+    url,
+    mime_type: toStringValue(value.mime_type ?? value.mimeType ?? value.content_type, 'application/octet-stream'),
+    name,
+    created_at: toStringValue(value.created_at ?? value.createdAt, new Date(0).toISOString()),
+    source: source || undefined,
+    size_bytes: toNumberValue(value.size_bytes ?? value.sizeBytes),
+    metadata,
+  };
+};
+
+const normalizeAttachmentList = (value: unknown): MediaAttachment[] | undefined => {
+  if (value === undefined) return undefined;
+  if (value === null) return [];
+  if (!Array.isArray(value)) return [];
+
+  return value
+    .map((attachment, index) => normalizeAttachment(attachment, index))
+    .filter((attachment): attachment is MediaAttachment => Boolean(attachment));
+};
+
+const normalizePipelineRun = (run: unknown): PipelineRun => {
+  if (!isRecord(run)) return run as PipelineRun;
+
+  const normalized: PipelineRun = { ...(run as unknown as PipelineRun) };
+
+  if (hasOwn(run, 'initial_attachments')) {
+    normalized.initial_attachments = normalizeAttachmentList(run.initial_attachments);
+  }
+
+  if (Array.isArray(run.results)) {
+    normalized.results = run.results.map((result) => {
+      if (!isRecord(result)) return result as any;
+      if (!hasOwn(result, 'attachments')) return result as any;
+
+      return {
+        ...result,
+        attachments: normalizeAttachmentList(result.attachments),
+      };
+    });
+  }
+
+  return normalized;
+};
+
 // ==================== Pipeline Runs API ====================
 
 const startPipeline = (
@@ -95,12 +182,12 @@ const startPipeline = (
 const getPipeline = (pipelineId: string) =>
   axios
     .get<PipelineRun>(`${BASE_URL}/pipelines/${pipelineId}`)
-    .then((res) => res.data);
+    .then((res) => normalizePipelineRun(res.data));
 
 const listPipelines = () =>
   axios
     .get<PipelineRun[]>(`${BASE_URL}/pipelines`)
-    .then((res) => res.data || []);
+    .then((res) => (res.data || []).map((run) => normalizePipelineRun(run)));
 
 const continuePipeline = (pipelineId: string) =>
   axios

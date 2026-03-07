@@ -4,69 +4,56 @@
 DONE
 
 ## Wave
-Wave 2C: validation hardening + connector/distributor UX contract alignment
+Wave 3A: notification visibility + theme toggle + asset attachment UX preflight
 
 ## Reasoning Level
 HIGH
 
 ## Scope
-Double-check and harden pipeline editor/runtime behavior and schema-driven clipstyle editing reliability.
+Fix the websocket notification popup layering bug, add user-selectable dark/light mode, and harden frontend readiness for asset-pool/pipeline-attachment flows while preserving schema-driven metadata editing reliability (Vision module 2).
 
-## Re-Audit Mandatory (Orchestrator Edits)
-Double-check the following orchestrator-made edits from this session and classify each as `VALID`, `NEEDS FIX`, or `REVERT` in `docs/results.md`:
-- `src/api/clipstyleSchema.ts`
-- `src/api/clipstyleSchema.test.ts`
-- `src/api/structs/pipeline.ts`
-- `src/components/modals/EditClipPromptModal.tsx`
-- `src/components/clips/sections/MediaEditorSection.tsx`
-- `src/components/pipeline/CheckpointPanel.tsx`
-- `src/components/pipeline/PipelineEditor.tsx`
-- `src/components/pipeline/PipelineEditor.test.tsx`
-- `src/components/pipeline/PipelineFlow.tsx`
-- `src/components/pipeline/PipelineFlow.test.tsx`
-- `src/components/ideas/PipelineRunItem.tsx`
-- `src/components/selectors/modelSettingsHelpers.ts`
-- `src/components/selectors/modelSettingsHelpers.test.ts`
-- `src/components/pipeline/PipelineOutputFormatPanel.tsx`
-- `src/components/pipeline/PipelineManager.tsx`
+## Priority Tasks
+1. WebSocket notification visibility fix (Slack-style popup behavior):
+- investigate why toast/notification popups render behind overlays/opacity layers.
+- ensure notifications render in the top layer (portal + z-index + stacking-context safe behavior).
+- verify behavior while modals, drawers, and loading overlays are open.
+2. Theme mode support:
+- add explicit light/dark theme toggle in a persistent, discoverable location.
+- persist user selection locally and apply on app boot without visual flash.
+- ensure contrast/readability for pipeline cards, modal surfaces, forms, and websocket notifications in both modes.
+3. Asset pool + pipeline attachments UI preflight:
+- verify frontend can render attachment metadata from backend pipeline runs/templates without layout breakage.
+- validate empty/loading/error states for attachment surfaces.
+- verify that attachment-related payload handling remains API-layer driven (`src/api/*`) and does not regress clipstyle metadata rendering.
+4. Clipstyle metadata editing reliability regression sweep (Vision module 2):
+- confirm frontend still renders registry/backend-provided style metadata fields for both clip and media editors.
+- document any schema edge-cases that still require backend/registry normalization.
 
 ## Mandatory Validation Pass
 1. Re-check `docs/results.md` claims against current code/tests.
 2. Run and record:
 - `npm test -- --watchAll=false`
 - `npm run build`
-3. Confirm API usage remains centralized under `src/api/*`.
+3. Provide a short manual QA matrix (desktop + mobile):
+- notifications during overlay states
+- dark/light mode toggle and persistence
+- attachment rendering states
+- clipstyle metadata edit forms
 
-## Priority Tasks
-1. Connector/distributor editor correctness:
-- validate explicit checkpoint type support for `prompt`, `distributor`, and `connector`.
-- verify connector config (`strategy`, `source_checkpoint_id`) round-trips to backend template APIs.
-2. Fan-out/fan-in runtime UX verification:
-- verify run cards/flow views correctly represent:
-  - distributor fan-out counts
-  - connector fan-in source
-- confirm no false connector labeling on non-connector checkpoints.
-3. Idea creation contract verification:
-- validate end-to-end behavior:
-  - distributor terminal pipeline creates multiple clip prompt ideas.
-  - distributor -> connector pipeline creates one clip prompt idea.
-4. Schema fallback de-duplication:
-- verify shared empty clipstyle schema helper is used consistently (no duplicated local fallback shapes).
-- audit for leftover hardcoded style/schema fallbacks and remove or document intentional ones.
-5. Output format/control clarity:
-- validate that pipeline output format default state and behavior are explicit and non-conflicting with model settings.
-- document UX note in `docs/results.md` on precedence expectations.
+## Coordination Notes
+- For UX choices (toggle placement, notification copy priority, attachment affordances), capture open questions for Dorian directly in `docs/results.md` so product feedback can be resolved quickly.
 
 ## Required Docs Updates
 - Update `docs/results.md` with:
-- commands and outcomes
-- manual QA matrix (desktop + mobile)
+- changed files and why
+- command outcomes
+- manual QA evidence
 - unresolved risks/blockers
 - branch + PR link when available
 
 ## Definition of Done
-1. Build and test gates pass.
-2. Connector/distributor UX behavior is validated against backend contracts.
-3. Schema fallback behavior is consistent and de-duplicated.
-4. Results log is current and includes remaining risks.
-5. Task status is switched to `DONE` when complete.
+1. Notifications are always visible above overlays and actionable.
+2. Dark/light mode toggle is implemented and persistent.
+3. Attachment-related UI states are stable and documented.
+4. Schema-driven metadata editing remains reliable.
+5. Build/tests pass and task status is switched to `DONE`.

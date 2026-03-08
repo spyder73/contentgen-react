@@ -130,8 +130,6 @@ const EditClipPromptModal: React.FC<EditClipPromptModalProps> = ({
   const [availableMedia, setAvailableMedia] = useState<AvailableMediaItem[]>([]);
   const [isLoadingMedia, setIsLoadingMedia] = useState(false);
   const [musicMediaId, setMusicMediaId] = useState('');
-  const [musicUrl, setMusicUrl] = useState('');
-  const [isAttachingMusic, setIsAttachingMusic] = useState(false);
 
   useEffect(() => {
     const nextStyle = clip.style?.style || 'standard';
@@ -145,7 +143,6 @@ const EditClipPromptModal: React.FC<EditClipPromptModalProps> = ({
     setStyle(nextStyle);
     setMetadata(nextMetadata);
     setMusicMediaId(extractMusicMediaId(clip));
-    setMusicUrl('');
     setSchemaError(null);
   }, [clip]);
 
@@ -300,45 +297,6 @@ const EditClipPromptModal: React.FC<EditClipPromptModalProps> = ({
       alert(`Failed: ${error.message}`);
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  const handleAttachMusicByUrl = async () => {
-    const trimmedUrl = musicUrl.trim();
-    if (!trimmedUrl) return;
-
-    setIsAttachingMusic(true);
-    try {
-      const parsed = new URL(trimmedUrl);
-      const mediaId = await API.createMediaItem({
-        clip_id: clip.id,
-        type: 'audio',
-        prompt: `Attached music: ${parsed.toString()}`,
-        metadata: {
-          source: 'asset_pool_url',
-          role: 'music_attachment',
-          url: parsed.toString(),
-        },
-      });
-
-      const createdItem: AvailableMediaItem = {
-        id: mediaId,
-        type: 'audio',
-        name: parsed.pathname.split('/').pop() || 'Attached music',
-        url: parsed.toString(),
-        mime_type: 'audio/mpeg',
-      };
-
-      setAvailableMedia((prev) => {
-        if (prev.some((item) => item.id === createdItem.id)) return prev;
-        return [createdItem, ...prev];
-      });
-      setMusicMediaId(mediaId);
-      setMusicUrl('');
-    } catch (error: any) {
-      alert(`Failed to attach music URL: ${error.message}`);
-    } finally {
-      setIsAttachingMusic(false);
     }
   };
 
@@ -508,23 +466,9 @@ const EditClipPromptModal: React.FC<EditClipPromptModalProps> = ({
               Selected: {selectedMusic.name} ({selectedMusic.type})
             </p>
           )}
-          <div className="flex flex-col gap-2 sm:flex-row">
-            <Input
-              value={musicUrl}
-              onChange={(e) => setMusicUrl(e.target.value)}
-              placeholder="Attach music from URL..."
-              className="sm:flex-1"
-            />
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={handleAttachMusicByUrl}
-              disabled={!musicUrl.trim()}
-              loading={isAttachingMusic}
-            >
-              Attach URL
-            </Button>
-          </div>
+          <p className="attachment-meta">
+            Music attachments use the media library audio picker only in this wave.
+          </p>
           <p className="attachment-meta">Save to apply music `media_id` to this clip prompt.</p>
         </div>
 

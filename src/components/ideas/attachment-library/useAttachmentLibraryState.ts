@@ -38,10 +38,13 @@ export const useAttachmentLibraryState = ({
   const [selectedIds, setSelectedIds] = React.useState<string[]>([]);
   const [activeMediaId, setActiveMediaId] = React.useState('');
   const [contextDraft, setContextDraft] = React.useState('');
+  const [renameDraft, setRenameDraft] = React.useState('');
   const [uploadFiles, setUploadFiles] = React.useState<File[]>([]);
   const [loading, setLoading] = React.useState(false);
   const [uploading, setUploading] = React.useState(false);
   const [savingContext, setSavingContext] = React.useState(false);
+  const [renaming, setRenaming] = React.useState(false);
+  const [deleting, setDeleting] = React.useState(false);
   const [statusMessage, setStatusMessage] = React.useState('');
   const [errorMessage, setErrorMessage] = React.useState('');
 
@@ -52,7 +55,7 @@ export const useAttachmentLibraryState = ({
       const libraryItems = await API.listMediaLibrary();
       setItems(mergeLibraryItems(Array.isArray(libraryItems) ? libraryItems : [], generatedAssets));
     } catch (error) {
-      setErrorMessage(toActionableError(error));
+      setErrorMessage(toActionableError(error, 'list'));
       setItems(mergeLibraryItems([], generatedAssets));
     } finally {
       setLoading(false);
@@ -68,6 +71,7 @@ export const useAttachmentLibraryState = ({
     setSelectedIds(initialSelectedMediaIds);
     setActiveMediaId(initialSelectedMediaIds[0] || '');
     setContextDraft('');
+    setRenameDraft('');
     setUploadFiles([]);
     setStatusMessage('');
     setErrorMessage('');
@@ -81,6 +85,7 @@ export const useAttachmentLibraryState = ({
 
   React.useEffect(() => {
     setContextDraft(readMediaContextDraft(activeItem));
+    setRenameDraft(activeItem?.name || '');
   }, [activeItem]);
 
   const filteredItems = React.useMemo(
@@ -117,7 +122,7 @@ export const useAttachmentLibraryState = ({
         });
         uploadedCount += 1;
       } catch (error) {
-        setErrorMessage(toActionableError(error));
+        setErrorMessage(toActionableError(error, 'upload'));
       }
     }
 
@@ -149,9 +154,70 @@ export const useAttachmentLibraryState = ({
       );
       setStatusMessage('Saved file context.');
     } catch (error) {
-      setErrorMessage(toActionableError(error));
+      setErrorMessage(toActionableError(error, 'metadata'));
     } finally {
       setSavingContext(false);
+    }
+  };
+
+  const handleRenameActive = async () => {
+    if (!activeItem || mode === 'select') return;
+    const mediaId = (activeItem.media_id || activeItem.id || '').trim();
+    const nextName = renameDraft.trim();
+    if (!mediaId || !nextName) {
+      setErrorMessage('Enter a file name before renaming.');
+      return;
+    }
+
+    setRenaming(true);
+    setErrorMessage('');
+    setStatusMessage('');
+    try {
+      const renamed = await API.renameMediaLibraryItem(mediaId, nextName);
+      const nextMediaId = renamed.media_id || renamed.id || mediaId;
+      setItems((previous) =>
+        previous.map((item) =>
+          (item.media_id || item.id) === mediaId
+            ? {
+                ...item,
+                ...renamed,
+                media_id: nextMediaId,
+                id: nextMediaId,
+                name: renamed.name || nextName,
+              }
+            : item
+        )
+      );
+      setActiveMediaId(nextMediaId);
+      setRenameDraft(renamed.name || nextName);
+      setStatusMessage('Renamed file successfully.');
+    } catch (error) {
+      setErrorMessage(toActionableError(error, 'rename'));
+    } finally {
+      setRenaming(false);
+    }
+  };
+
+  const handleRemoveActive = async () => {
+    if (!activeItem || mode === 'select') return;
+    const mediaId = (activeItem.media_id || activeItem.id || '').trim();
+    if (!mediaId) return;
+
+    setDeleting(true);
+    setErrorMessage('');
+    setStatusMessage('');
+    try {
+      await API.deleteMediaItem(mediaId);
+      setItems((previous) => previous.filter((item) => (item.media_id || item.id) !== mediaId));
+      setSelectedIds((previous) => previous.filter((id) => id !== mediaId));
+      setActiveMediaId('');
+      setContextDraft('');
+      setRenameDraft('');
+      setStatusMessage('Removed file from library.');
+    } catch (error) {
+      setErrorMessage(toActionableError(error, 'remove'));
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -159,12 +225,15 @@ export const useAttachmentLibraryState = ({
     activeItem,
     activeTab,
     contextDraft,
+    renameDraft,
     errorMessage,
     filteredItems,
     folderCounts,
     folderType,
     loading,
     savingContext,
+    renaming,
+    deleting,
     searchQuery,
     selectedItems,
     selectedIds,
@@ -174,12 +243,15 @@ export const useAttachmentLibraryState = ({
     uploading,
     setActiveTab,
     setContextDraft,
+    setRenameDraft,
     setFolderType,
     setSearchQuery,
     setSourceFilter,
     setUploadFiles,
     handleFileClick,
     handleSaveContext,
+    handleRenameActive,
+    handleRemoveActive,
     handleUpload,
     loadLibrary,
   };

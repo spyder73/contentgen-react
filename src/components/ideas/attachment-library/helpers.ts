@@ -16,6 +16,8 @@ interface HttpErrorRecord {
   message?: string;
 }
 
+type ErrorContext = 'list' | 'upload' | 'rename' | 'metadata' | 'remove';
+
 export const FOLDER_STYLES: Record<FolderType, string> = {
   all: 'border-white/20 text-zinc-200 bg-white/5',
   image: 'border-red-400/40 text-red-300 bg-red-500/10',
@@ -65,7 +67,17 @@ export const inferUploadType = (file: File): string => {
   return 'file';
 };
 
-export const toActionableError = (error: unknown): string => {
+const hasDuplicateNameSignal = (rawText: string): boolean => {
+  const normalized = rawText.toLowerCase();
+  return (
+    normalized.includes('duplicate') ||
+    normalized.includes('already exists') ||
+    normalized.includes('name exists') ||
+    normalized.includes('conflict')
+  );
+};
+
+export const toActionableError = (error: unknown, context: ErrorContext = 'list'): string => {
   const record = error as HttpErrorRecord | undefined;
   const status = record?.response?.status;
   const details =
@@ -79,6 +91,21 @@ export const toActionableError = (error: unknown): string => {
   }
   if (status === 413) {
     return 'This file is too large (HTTP 413). Upload a smaller file or increase backend upload limits.';
+  }
+  if (context === 'rename' && (status === 409 || hasDuplicateNameSignal(details || ''))) {
+    return 'A file with this name already exists. Choose a different name and try again.';
+  }
+  if (context === 'remove' && status === 409) {
+    return 'This file cannot be removed right now due to backend constraints. Try again after dependent jobs finish.';
+  }
+  if (context === 'rename') {
+    return details || 'Failed to rename media item.';
+  }
+  if (context === 'metadata') {
+    return details || 'Failed to save media metadata.';
+  }
+  if (context === 'upload') {
+    return details || 'Failed to upload media file.';
   }
   return details || 'Media library action failed.';
 };

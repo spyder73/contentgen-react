@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import {
+  ChainConfig,
   CheckpointConfig,
   CheckpointRequiredAsset,
   CheckpointType,
@@ -36,6 +37,21 @@ const CheckpointPanel: React.FC<CheckpointPanelProps> = ({
     checkpoint.required_attachments ||
     checkpoint.attachment_requirements ||
     [];
+
+  const chainCount = (() => {
+    const chain = checkpoint.chain as ChainConfig | undefined;
+    if (!chain) return 0;
+    if (typeof chain.count === 'number' && Number.isFinite(chain.count)) return Math.max(0, Math.floor(chain.count));
+    if (Array.isArray(chain.sub_checkpoints)) return chain.sub_checkpoints.length;
+    if (Array.isArray(chain.checkpoints)) return chain.checkpoints.length;
+    if (typeof chain.sub_checkpoints === 'number' && Number.isFinite(chain.sub_checkpoints)) {
+      return Math.max(0, Math.floor(chain.sub_checkpoints));
+    }
+    if (typeof chain.checkpoints === 'number' && Number.isFinite(chain.checkpoints)) {
+      return Math.max(0, Math.floor(chain.checkpoints));
+    }
+    return 0;
+  })();
 
   const handleChange = <K extends keyof CheckpointConfig>(
     field: K,
@@ -75,6 +91,7 @@ const CheckpointPanel: React.FC<CheckpointPanelProps> = ({
           max_children: 8,
         },
         connector: undefined,
+        chain: undefined,
       });
       return;
     }
@@ -90,6 +107,20 @@ const CheckpointPanel: React.FC<CheckpointPanelProps> = ({
           strategy: 'first',
           source_checkpoint_id: fallbackSource,
         },
+        chain: undefined,
+      });
+      return;
+    }
+
+    if (value === 'chain') {
+      onUpdate({
+        ...checkpoint,
+        type: 'chain',
+        distributor: undefined,
+        connector: undefined,
+        chain: checkpoint.chain || {
+          count: 2,
+        },
       });
       return;
     }
@@ -99,6 +130,7 @@ const CheckpointPanel: React.FC<CheckpointPanelProps> = ({
       type: 'prompt',
       distributor: undefined,
       connector: undefined,
+      chain: undefined,
     });
   };
 
@@ -147,6 +179,18 @@ const CheckpointPanel: React.FC<CheckpointPanelProps> = ({
           field === 'source_checkpoint_id'
             ? value || undefined
             : (value as ConnectorStrategy),
+      },
+    });
+  };
+
+  const handleChainCountChange = (value: string) => {
+    const parsed = Number(value);
+    const nextCount = Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : 1;
+    onUpdate({
+      ...checkpoint,
+      chain: {
+        ...(checkpoint.chain || {}),
+        count: nextCount,
       },
     });
   };
@@ -240,6 +284,7 @@ const CheckpointPanel: React.FC<CheckpointPanelProps> = ({
             <option value="prompt">Prompt (single output)</option>
             <option value="distributor">Distributor (fan-out)</option>
             <option value="connector">Connector (fan-in)</option>
+            <option value="chain">Chain (sub-checkpoints)</option>
           </select>
         </div>
 
@@ -332,6 +377,25 @@ const CheckpointPanel: React.FC<CheckpointPanelProps> = ({
             </div>
             <p className="text-[10px] text-zinc-500">
               Connector checkpoints select one result from a distributor fan-out.
+            </p>
+          </div>
+        )}
+
+        {normalizedType === 'chain' && (
+          <div className="space-y-2 rounded border border-emerald-400/35 bg-emerald-500/10 p-2.5">
+            <p className="text-[10px] uppercase tracking-[0.15em] text-emerald-200">Chain Config</p>
+            <div>
+              <label className="block font-medium text-gray-400 mb-1 uppercase tracking-wide">Sub-checkpoint Count</label>
+              <input
+                type="number"
+                min={1}
+                value={chainCount || 1}
+                onChange={(e) => handleChainCountChange(e.target.value)}
+                className="input"
+              />
+            </div>
+            <p className="text-[10px] text-zinc-500">
+              Chain checkpoints represent grouped sequential sub-steps within one visible pipeline node.
             </p>
           </div>
         )}

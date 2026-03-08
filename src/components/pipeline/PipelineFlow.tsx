@@ -31,6 +31,28 @@ const PipelineFlow: React.FC<PipelineFlowProps> = ({
     return arrays.find((item) => Array.isArray(item))?.length || 0;
   };
 
+  const getChainSubCheckpointCount = (checkpoint: CheckpointConfig): number => {
+    const chainRecord = checkpoint.chain as
+      | {
+          count?: unknown;
+          sub_checkpoints?: unknown;
+          checkpoints?: unknown;
+        }
+      | undefined;
+    if (!chainRecord) return 0;
+
+    const numericCandidates = [chainRecord.count, chainRecord.sub_checkpoints, chainRecord.checkpoints];
+    for (const candidate of numericCandidates) {
+      if (typeof candidate === 'number' && Number.isFinite(candidate)) {
+        return Math.max(0, Math.floor(candidate));
+      }
+    }
+
+    if (Array.isArray(chainRecord.sub_checkpoints)) return chainRecord.sub_checkpoints.length;
+    if (Array.isArray(chainRecord.checkpoints)) return chainRecord.checkpoints.length;
+    return 0;
+  };
+
   const getPromptName = (promptId: string): string => {
     const template = promptTemplates.find((t) => t.id === promptId);
     return template?.name || promptId || 'No prompt';
@@ -105,8 +127,12 @@ const PipelineFlow: React.FC<PipelineFlowProps> = ({
           {/* Checkpoint Node */}
           <div
             onClick={() => onCheckpointClick(checkpoint.id)}
-            className={`
+              className={`
               flex items-start gap-2 p-2.5 rounded cursor-pointer transition-all
+              ${(checkpoint.type || 'prompt') === 'chain' && selectedCheckpointId !== checkpoint.id
+                ? 'bg-emerald-500/10 border border-emerald-400/40 hover:border-emerald-300/60'
+                : ''
+              }
               ${selectedCheckpointId === checkpoint.id
                 ? 'bg-white/10 border border-white/35'
                 : 'bg-black/50 border border-white/15 hover:border-white/25 hover:bg-white/5'
@@ -119,6 +145,8 @@ const PipelineFlow: React.FC<PipelineFlowProps> = ({
                 w-8 h-8 border flex items-center justify-center text-xs font-semibold flex-shrink-0
                 ${selectedCheckpointId === checkpoint.id
                   ? 'bg-white text-black border-white'
+                  : (checkpoint.type || 'prompt') === 'chain'
+                  ? 'bg-emerald-200 text-emerald-950 border-emerald-200'
                   : 'bg-black border-white/20 text-gray-300'
                 }
               `}
@@ -131,6 +159,7 @@ const PipelineFlow: React.FC<PipelineFlowProps> = ({
               {(() => {
                 const checkpointType = checkpoint.type || 'prompt';
                 const isConnector = checkpointType === 'connector';
+                const isChain = checkpointType === 'chain';
                 return (
                   <div className="flex items-center gap-1.5 mb-1 flex-wrap">
                     {checkpointType === 'distributor' && (
@@ -141,6 +170,11 @@ const PipelineFlow: React.FC<PipelineFlowProps> = ({
                     {isConnector && (
                       <span className="text-[10px] bg-zinc-800 border border-white/20 text-zinc-200 px-1.5 py-0.5 rounded uppercase tracking-wide">
                         Connector
+                      </span>
+                    )}
+                    {isChain && (
+                      <span className="text-[10px] bg-emerald-300 text-emerald-950 px-1.5 py-0.5 rounded uppercase tracking-wide font-semibold">
+                        Chain
                       </span>
                     )}
                   </div>
@@ -190,6 +224,12 @@ const PipelineFlow: React.FC<PipelineFlowProps> = ({
               {getConnectorSources(checkpoint).length > 0 && (
                 <p className="text-[10px] text-zinc-400 mt-2 uppercase tracking-wide">
                   Fan-in from {getConnectorSources(checkpoint).join(', ')}
+                </p>
+              )}
+
+              {(checkpoint.type || 'prompt') === 'chain' && (
+                <p className="text-[10px] text-emerald-200 mt-2 uppercase tracking-wide">
+                  Sub-checkpoints: {getChainSubCheckpointCount(checkpoint)}
                 </p>
               )}
 

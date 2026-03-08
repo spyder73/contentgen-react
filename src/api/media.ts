@@ -22,6 +22,11 @@ interface RegenerateMediaRequest {
   output_spec?: MediaOutputSpec;
 }
 
+interface RenameMediaItemRequest {
+  name: string;
+  new_name?: string;
+}
+
 export interface MediaLibraryItem {
   id: string;
   media_id: string;
@@ -202,6 +207,50 @@ const uploadMediaLibraryFile = async (
   return normalized;
 };
 
+const renameMediaLibraryItem = async (
+  mediaId: string,
+  nextName: string
+): Promise<MediaLibraryItem> => {
+  const trimmedName = nextName.trim();
+  if (!trimmedName) {
+    throw new Error('Media name is required.');
+  }
+
+  const payload: RenameMediaItemRequest = {
+    name: trimmedName,
+    new_name: trimmedName,
+  };
+
+  let responsePayload: unknown;
+  try {
+    responsePayload = await axios
+      .put(`${BASE_URL}/media/library/${mediaId}/rename`, payload)
+      .then((res) => res.data);
+  } catch (error) {
+    if (!shouldFallbackToLegacyRoute(error)) {
+      throw error;
+    }
+    responsePayload = await axios
+      .put(`${BASE_URL}/media/${mediaId}/rename`, payload)
+      .then((res) => res.data);
+  }
+
+  const normalized = normalizeMediaLibraryUploadResponse(responsePayload);
+  if (normalized) {
+    return {
+      ...normalized,
+      name: normalized.name || trimmedName,
+    };
+  }
+
+  return {
+    id: mediaId,
+    media_id: mediaId,
+    type: 'unknown',
+    name: trimmedName,
+  };
+};
+
 const createImage = (
   clipId: string,
   prompt: string,
@@ -268,6 +317,7 @@ const MediaAPI = {
   createMediaItem,
   listMediaLibrary,
   uploadMediaLibraryFile,
+  renameMediaLibraryItem,
   createImage,
   createAIVideo,
   createAudio,

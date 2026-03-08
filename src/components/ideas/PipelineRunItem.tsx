@@ -10,6 +10,7 @@ import {
 } from './assetPool';
 import AttachmentSurface from './pipeline-run/AttachmentSurface';
 import CheckpointList from './pipeline-run/CheckpointList';
+import PricingSummary from './pipeline-run/PricingSummary';
 import { getRunProgressPercent } from './pipeline-run/helpers';
 import RunHeader from './pipeline-run/RunHeader';
 import RunTerminalFooter from './pipeline-run/RunTerminalFooter';
@@ -136,6 +137,8 @@ const PipelineRunItem: React.FC<Props> = ({
       {isExpanded && (
         <div>
           <div className="p-3 space-y-2">
+            <PricingSummary run={run} />
+
             <AttachmentSurface
               heading="Initial Attachments"
               attachments={run.initial_attachments}

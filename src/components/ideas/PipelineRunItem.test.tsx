@@ -454,4 +454,49 @@ describe('PipelineRunItem connector cues', () => {
     expect(screen.getByText('Attach required assets before continuing.')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Continue' })).toBeDisabled();
   });
+
+  it('renders mixed-provider pricing summaries and estimated markers', () => {
+    const runWithCosts: PipelineRun = {
+      ...run,
+      cost_summary: {
+        estimated: true,
+        currency: 'USD',
+        providers: {
+          runware: {
+            total_cost: 0.12,
+            per_clip_cost: 0.06,
+            clip_count: 2,
+          },
+          openrouter: {
+            total_cost: 0.03,
+            per_clip_cost: 0.015,
+            clip_count: 2,
+            estimated: true,
+          },
+        },
+      },
+    };
+
+    render(
+      <PipelineRunItem
+        run={runWithCosts}
+        template={template}
+        onContinue={() => undefined}
+        onRegenerate={(_checkpoint) => undefined}
+        onInjectPrompt={async () => undefined}
+        onAddAttachment={async () => undefined}
+        onCancel={() => undefined}
+        onRemove={() => undefined}
+      />
+    );
+
+    fireEvent.click(screen.getByText('Expand'));
+
+    expect(screen.getByText('Pricing Summary')).toBeInTheDocument();
+    expect(screen.getByText(/Runware: \$0.12/i)).toBeInTheDocument();
+    expect(screen.getByText(/OpenRouter: \$0.03/i)).toBeInTheDocument();
+    expect(screen.getByText(/Runware: \$0.06/i)).toBeInTheDocument();
+    expect(screen.getByText(/OpenRouter: \$0.015/i)).toBeInTheDocument();
+    expect(screen.getByText(/Estimated values/i)).toBeInTheDocument();
+  });
 });

@@ -6,7 +6,7 @@ Base URL is currently `http://localhost:81` from `src/api/helpers.ts`.
 
 ## Core Modules
 - `clip.ts`: clip CRUD, clip ideas, create-from-pipeline-output.
-- `media.ts`: media CRUD, media-library list/upload, regenerate, metadata edits.
+- `media.ts`: media CRUD, media-library list/upload/rename, regenerate, metadata edits.
 - `pipeline.ts`: pipeline runs + template CRUD + prompt template CRUD + checkpoint injection.
 - `models.ts`: model discovery + constraints retrieval.
 - `external.ts`: users, accounts, schedule.
@@ -60,6 +60,12 @@ Base URL is currently `http://localhost:81` from `src/api/helpers.ts`.
   - `source_run_id`
 - frontend keeps compatibility aliases in payload normalization (`name` + `filename`, `size_bytes` + `size`) to support mixed backend contract versions.
 
+### Requirement-Driven Attach Visibility (Wave 4C4)
+- run attach controls are shown only when selected pipeline checkpoints expose attachment intent:
+  - `allow_attachments = true`, or
+  - non-empty normalized required-asset rules.
+- generate action is blocked when required checkpoint assets are missing; UI renders checkpoint-level missing requirement details and opens attach browser directly from warning CTA.
+
 ### Media Library Explorer Contract (Wave 4B2)
 - `MediaAPI.listMediaLibrary(...)` calls `GET /media/library` and falls back to legacy `GET /media` on `404`/`405`.
 - list responses are normalized into ID-first rows:
@@ -69,6 +75,18 @@ Base URL is currently `http://localhost:81` from `src/api/helpers.ts`.
 - attachment workspace renders actionable inline upload/list errors for:
   - `405`: route/method not enabled for media list/upload
   - `413`: upload payload too large
+
+### Media Library Manage Contract (Wave 4C4)
+- `MediaAPI.renameMediaLibraryItem(mediaId, name)` calls `PUT /media/library/:id/rename` and falls back to legacy `PUT /media/:id/rename` on `404`/`405`.
+- rename payload sends additive compatibility fields:
+```json
+{
+  "name": "new-file-name.ext",
+  "new_name": "new-file-name.ext"
+}
+```
+- duplicate rename conflicts are surfaced as actionable inline UI copy (`409` and duplicate-name backend messages).
+- remove uses `DELETE /media/:id` (no frontend fallback route needed).
 
 ### Checkpoint Prompt Injection Contract (Wave 4B2)
 - `PipelineAPI.injectCheckpointPrompt(runId, checkpointIndex, text, options)` calls:
@@ -93,6 +111,22 @@ Base URL is currently `http://localhost:81` from `src/api/helpers.ts`.
   - `with_prior_output_context`: regenerate with additive prompt plus prior output context
 - response payload (normalized passthrough): `{ status, checkpoint_index, injection_count?, regenerated? }`
 - UI flow uses inject + regenerate while paused and keeps explicit inline errors on failures.
+
+### Checkpoint Type + Chain Semantics (Wave 4C4)
+- checkpoint type union in frontend now includes `chain` in addition to `prompt`, `distributor`, and `connector`.
+- chain config is additive/optional and can include:
+  - `chain.count`
+  - `chain.sub_checkpoints`
+  - `chain.checkpoints`
+- pipeline manager uses those fields for chain card sub-checkpoint count rendering without changing distributor/connector transport contract.
+
+### Run Pricing Display Contract (Wave 4C4)
+- run payloads may include backend `cost_summary` with mixed provider schemas.
+- frontend parser reads provider run/per-clip costs for `runware` and `openrouter` from:
+  - top-level provider keys,
+  - nested provider maps (`providers`, `per_run`, `per_clip`, `provider_costs`/`costs`/`pricing`),
+  - optional `clips[]` aggregates when explicit per-clip fields are missing.
+- estimated status is surfaced when backend flags estimated costs (`estimated`, `is_estimated`, and related aliases).
 
 ### Clip Create From Pipeline Output
 `ClipAPI.createClipPromptFromJson(json, mediaProfile?)`:

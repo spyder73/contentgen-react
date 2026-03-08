@@ -153,4 +153,42 @@ describe('media library API normalization', () => {
       expect.any(FormData)
     );
   });
+
+  it('renames media via /media/library/:id/rename and falls back to legacy route on 405', async () => {
+    mockedAxios.put
+      .mockRejectedValueOnce({ response: { status: 405 } } as any)
+      .mockResolvedValueOnce({
+        data: {
+          media_item: {
+            media_id: 'media-rename-1',
+            type: 'image',
+            name: 'renamed-cover.png',
+          },
+        },
+      } as any);
+
+    const renamed = await MediaAPI.renameMediaLibraryItem('media-rename-1', 'renamed-cover.png');
+
+    expect(renamed).toEqual(
+      expect.objectContaining({
+        media_id: 'media-rename-1',
+        name: 'renamed-cover.png',
+      })
+    );
+    expect(mockedAxios.put).toHaveBeenNthCalledWith(
+      1,
+      expect.stringContaining('/media/library/media-rename-1/rename'),
+      expect.objectContaining({
+        name: 'renamed-cover.png',
+        new_name: 'renamed-cover.png',
+      })
+    );
+    expect(mockedAxios.put).toHaveBeenNthCalledWith(
+      2,
+      expect.stringContaining('/media/media-rename-1/rename'),
+      expect.objectContaining({
+        name: 'renamed-cover.png',
+      })
+    );
+  });
 });

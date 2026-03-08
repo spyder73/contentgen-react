@@ -20,9 +20,12 @@ Key component domains:
 - dynamic model settings modal built from backend constraints fields.
 - provider/model selection with constraints prefetch.
 - pipeline run controls with pause/continue/regenerate flow.
-- attachment workspace with a primary-controls `Attach Files` entrypoint, drag-drop/file-picker intake, and stable `media_id` binding.
-- media explorer grouped by explicit tabs (`image`, `video`, `audio`) with filename/type/`media_id`, lightweight previews, and quick attach actions (start + checkpoint).
+- run attachment browser with primary `Add Files To Run` entrypoint, requirement-aware visibility, and stable `media_id` binding.
+- media upload intake now uses a square black attach tile with centered plus icon and combined click + drag/drop handling.
+- media browse rows/details include lightweight image/video/audio previews plus selected-file preview cues in run attachment summaries.
 - paused checkpoint additive prompt-injection controls with explicit mode selection (`Guidance only` vs `Guidance + prior output context`) and inline error messaging.
+- pipeline manager flow differentiates `chain` checkpoints visually and displays sub-checkpoint counts.
+- run cards show per-run/per-clip pricing summaries from backend `cost_summary`, including estimated-cost labeling.
 - real-time refresh via websocket.
 
 ## UX Debt
@@ -35,17 +38,27 @@ Key component domains:
 - improve clarity with explicit sections and progressive disclosure.
 - avoid full visual rewrite before contract cleanup lands.
 
-## Attachment Interaction Model (Wave 4B2-HF1)
+## Attachment Interaction Model (Wave 4C4)
 1. Primary controls row includes `Attach Files` so upload/attach is first-class on desktop and mobile.
-2. Attachment workspace remains expandable and contains:
-   - media explorer tabs (`image`, `video`, `audio`)
-   - quick attach to start pool
-   - quick attach directly to checkpoint bindings
-   - drag/drop and manual file picker
-3. Media list/upload inline errors are actionable:
+2. Attach browser visibility is requirement-driven:
+   - shown when selected pipeline/checkpoints allow attachments or declare required assets
+   - hidden when selected pipeline has no attachment requirements
+3. Missing required checkpoint assets are highlighted inline with direct `Open Attach Browser` CTA.
+4. Upload tab intake is intentional:
+   - custom square plus tile (no browser-native file-panel styling)
+   - same tile supports click-to-open picker and drag/drop
+   - selected file preview is shown immediately
+5. Browse tab supports preview-first scanning:
+   - row-level preview chips/cards and detail-panel media preview
+   - manage mode keeps rename/context/remove controls
+   - select mode hides edit/remove controls and shows guidance hint
+6. Media list/upload/rename inline errors are actionable:
    - `405`: route/method unavailable
    - `413`: upload size exceeded
-4. Paused checkpoint inject panel now shows active regeneration mode and includes it in inject requests.
+   - duplicate rename conflict: explicit “name already exists” guidance
+7. Music attachment UX is picker-only in this wave:
+   - clip edit modal no longer shows `Attach music from URL`
+   - audio is selected from media-library options only
 
 ## Schema-Driven Form Strategy
 Priority: clipstyle metadata forms.

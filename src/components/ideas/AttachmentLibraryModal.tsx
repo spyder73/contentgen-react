@@ -31,15 +31,20 @@ const AttachmentLibraryModal: React.FC<AttachmentLibraryModalProps> = ({
     activeItem,
     activeTab,
     contextDraft,
+    renameDraft,
     errorMessage,
     filteredItems,
     folderCounts,
     folderType,
+    handleRemoveActive,
     handleFileClick,
+    handleRenameActive,
     handleSaveContext,
     handleUpload,
     loadLibrary,
+    deleting,
     loading,
+    renaming,
     savingContext,
     searchQuery,
     selectedItems,
@@ -47,6 +52,7 @@ const AttachmentLibraryModal: React.FC<AttachmentLibraryModalProps> = ({
     setActiveTab,
     setContextDraft,
     setFolderType,
+    setRenameDraft,
     setSearchQuery,
     setSourceFilter,
     setUploadFiles,
@@ -109,13 +115,19 @@ const AttachmentLibraryModal: React.FC<AttachmentLibraryModalProps> = ({
           activeItem={activeItem}
           mode={mode}
           contextDraft={contextDraft}
+          renameDraft={renameDraft}
           savingContext={savingContext}
+          renaming={renaming}
+          deleting={deleting}
           onFolderTypeChange={setFolderType}
           onSourceFilterChange={setSourceFilter}
           onSearchQueryChange={setSearchQuery}
           onFileClick={handleFileClick}
           onContextDraftChange={setContextDraft}
+          onRenameDraftChange={setRenameDraft}
           onSaveContext={() => void handleSaveContext()}
+          onRename={() => void handleRenameActive()}
+          onRemove={() => void handleRemoveActive()}
         />
       )}
 

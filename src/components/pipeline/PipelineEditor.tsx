@@ -111,6 +111,12 @@ const PipelineEditor: React.FC<PipelineEditorProps> = ({
               strategy: 'first',
             }
           : undefined,
+      chain:
+        newCheckpointType === 'chain'
+          ? {
+              count: 2,
+            }
+          : undefined,
     };
 
     setLocalPipeline((prev) => ({
@@ -290,6 +296,7 @@ const PipelineEditor: React.FC<PipelineEditorProps> = ({
               <option value="prompt">Prompt (single output)</option>
               <option value="distributor">Distributor (fan-out)</option>
               <option value="connector">Connector (fan-in)</option>
+              <option value="chain">Chain (sub-checkpoints)</option>
             </select>
           </div>
 

@@ -18,8 +18,31 @@ export type CheckpointStatus =
   | 'awaiting_confirm'
   | 'skipped';
 
-export type CheckpointType = 'prompt' | 'distributor' | 'connector';
+export type CheckpointType = 'prompt' | 'distributor' | 'connector' | 'chain';
 export type CheckpointInjectionMode = 'guidance_only' | 'with_prior_output_context';
+
+export interface CostSummaryProvider {
+  total_cost?: number;
+  run_cost?: number;
+  per_clip_cost?: number;
+  clip_count?: number;
+  currency?: string;
+  estimated?: boolean;
+  [key: string]: unknown;
+}
+
+export interface CostSummary {
+  estimated?: boolean;
+  currency?: string;
+  total_cost?: number;
+  runware?: CostSummaryProvider;
+  openrouter?: CostSummaryProvider;
+  providers?: Record<string, CostSummaryProvider>;
+  per_run?: Record<string, CostSummaryProvider>;
+  per_clip?: Record<string, CostSummaryProvider>;
+  clips?: Array<Record<string, unknown>>;
+  [key: string]: unknown;
+}
 
 export interface MediaAttachment {
   id: string;
@@ -84,6 +107,7 @@ export interface PipelineRun {
   music_media_id?: string | null;
   provider?: string;
   model?: string;
+  cost_summary?: CostSummary | Record<string, unknown>;
   created_at: string;
   updated_at: string;
 }
@@ -104,6 +128,16 @@ export type ConnectorStrategy = 'first' | 'longest';
 export interface ConnectorConfig {
   strategy: ConnectorStrategy;
   source_checkpoint_id?: string;
+}
+
+export interface ChainConfig {
+  sub_checkpoints?:
+    | Array<{ id?: string; name?: string } | string>
+    | number;
+  checkpoints?:
+    | Array<{ id?: string; name?: string } | string>
+    | number;
+  count?: number;
 }
 
 export interface CheckpointRequiredAsset {
@@ -129,6 +163,7 @@ export interface CheckpointConfig {
   model?: string;
   distributor?: DistributorConfig;
   connector?: ConnectorConfig;
+  chain?: ChainConfig;
   required_assets?: CheckpointRequiredAsset[];
   required_attachments?: CheckpointRequiredAsset[];
   attachment_requirements?: CheckpointRequiredAsset[];

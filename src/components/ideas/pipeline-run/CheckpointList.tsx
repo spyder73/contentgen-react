@@ -59,6 +59,24 @@ const CheckpointList: React.FC<CheckpointListProps> = ({
   onInjectPrompt,
   onAddAttachment,
 }) => {
+  const getChainSubCheckpointCount = (value: unknown): number => {
+    if (!value || typeof value !== 'object') return 0;
+    const chainRecord = value as {
+      count?: unknown;
+      sub_checkpoints?: unknown;
+      checkpoints?: unknown;
+    };
+    const numericCandidates = [chainRecord.count, chainRecord.sub_checkpoints, chainRecord.checkpoints];
+    for (const candidate of numericCandidates) {
+      if (typeof candidate === 'number' && Number.isFinite(candidate)) {
+        return Math.max(0, Math.floor(candidate));
+      }
+    }
+    if (Array.isArray(chainRecord.sub_checkpoints)) return chainRecord.sub_checkpoints.length;
+    if (Array.isArray(chainRecord.checkpoints)) return chainRecord.checkpoints.length;
+    return 0;
+  };
+
   const [selectedCheckpoint, setSelectedCheckpoint] = useState<number | null>(null);
   const [selectedAssetByCheckpoint, setSelectedAssetByCheckpoint] = useState<Record<number, string>>({});
   const [attachLoadingByCheckpoint, setAttachLoadingByCheckpoint] = useState<Record<number, boolean>>({});
@@ -207,6 +225,11 @@ const CheckpointList: React.FC<CheckpointListProps> = ({
                     Connector
                   </span>
                 )}
+                {checkpointType === 'chain' && (
+                  <span className="text-[10px] uppercase tracking-wide bg-emerald-300 text-emerald-950 px-1.5 py-0.5 rounded">
+                    Chain
+                  </span>
+                )}
                 {hasRequiredAssets && (
                   <span
                     className={`text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded border ${
@@ -241,6 +264,11 @@ const CheckpointList: React.FC<CheckpointListProps> = ({
                 {result && fanInSources.length > 0 && (
                   <div className="text-[10px] text-zinc-400 uppercase tracking-wide">
                     Fan-in from {fanInSources.join(', ')}
+                  </div>
+                )}
+                {checkpointType === 'chain' && (
+                  <div className="text-[10px] text-emerald-200 uppercase tracking-wide">
+                    Sub-checkpoints: {getChainSubCheckpointCount(checkpoint.chain)}
                   </div>
                 )}
 

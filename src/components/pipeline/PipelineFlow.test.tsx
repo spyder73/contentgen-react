@@ -46,6 +46,20 @@ const checkpoints: CheckpointConfig[] = [
       source_checkpoint_id: 'split',
     },
   },
+  {
+    id: 'chain-step',
+    name: 'Chain Step',
+    type: 'chain',
+    prompt_template_id: '',
+    input_mapping: {},
+    requires_confirm: false,
+    allow_regenerate: true,
+    allow_attachments: true,
+    chain: {
+      count: 3,
+    },
+    required_assets: [{ id: 'req-image', label: 'Reference', kind: 'image', min_count: 1 }],
+  },
 ];
 
 describe('PipelineFlow distributor and connector cues', () => {
@@ -64,6 +78,9 @@ describe('PipelineFlow distributor and connector cues', () => {
     expect(screen.getByText('Fan-out: delimiter newline | max 3 children')).toBeInTheDocument();
     expect(screen.getByText('Fan-in from split')).toBeInTheDocument();
     expect(screen.getAllByText('Connector')).toHaveLength(1);
+    expect(screen.getAllByText('Chain')).toHaveLength(1);
+    expect(screen.getByText('Sub-checkpoints: 3')).toBeInTheDocument();
+    expect(screen.getByText('Req 1')).toBeInTheDocument();
     expect(screen.queryByText('source: split (fan-in)')).not.toBeInTheDocument();
     expect(screen.getByText('source: split (distributor output)')).toBeInTheDocument();
   });

@@ -3,6 +3,13 @@ import API from '../../api/api';
 import { ClipPrompt } from '../../api/structs';
 import { AvailableMediaItem } from '../../api/clip';
 import {
+  AttachmentProvenanceItem,
+  isGeneratedAttachmentSource,
+  mergeAttachmentProvenance,
+  normalizeAttachmentProvenanceItem,
+  readMetadataAttachmentProvenance,
+} from '../clips/attachmentProvenance';
+import {
   ClipStyleField,
   ClipStyleSchema,
   ClipStyleSummary,
@@ -67,6 +74,17 @@ const extractMusicMediaId = (clip: ClipPrompt): string => {
 
   if (metadataMusicId) return metadataMusicId;
 
+  const metadataProvenance = readMetadataAttachmentProvenance(metadata);
+  const inheritedMusic = metadataProvenance.find((item) => {
+    const type = item.type.toLowerCase();
+    const role = item.role.toLowerCase();
+    return (
+      Boolean(item.media_id) &&
+      (role === 'music' || type.includes('music') || type === 'audio')
+    );
+  });
+  if (inheritedMusic?.media_id) return inheritedMusic.media_id;
+
   const firstAudio = clip.media?.audios?.[0];
   return firstAudio?.id || '';
 };
@@ -78,6 +96,57 @@ const isMusicMedia = (item: AvailableMediaItem): boolean => {
   return Boolean(item.mime_type?.toLowerCase().startsWith('audio/'));
 };
 
+const formatSourceLabel = (source?: string): string => {
+  const normalized = (source || '').trim().toLowerCase();
+  if (!normalized) return 'unknown';
+  if (normalized.includes('generated') || normalized.includes('pipeline') || normalized.includes('checkpoint')) {
+    return 'generated';
+  }
+  if (normalized.includes('media') || normalized.includes('upload') || normalized.includes('manual')) {
+    return 'uploaded';
+  }
+  return normalized;
+};
+
+const toMediaOptionLabel = (item: AvailableMediaItem): string =>
+  `${item.name} (${item.type}${item.source ? ` · ${formatSourceLabel(item.source)}` : ''})`;
+
+const toProvenanceMediaItem = (item: AttachmentProvenanceItem): AvailableMediaItem | null => {
+  const mediaId = item.media_id || item.id;
+  if (!mediaId) return null;
+  return {
+    id: mediaId,
+    media_id: item.media_id || mediaId,
+    type: item.type || 'unknown',
+    name: item.name || mediaId,
+    url: item.url,
+    mime_type: item.mime_type,
+    source: item.source,
+    metadata: {
+      role: item.role,
+      source_run_id: item.source_run_id,
+      source_checkpoint_id: item.source_checkpoint_id,
+      source_checkpoint_name: item.source_checkpoint_name,
+      source_checkpoint_index: item.source_checkpoint_index,
+      inherited_attachment: true,
+    },
+  };
+};
+
+const readReferenceAssets = (metadata: Record<string, unknown>): AttachmentProvenanceItem[] => {
+  if (!Array.isArray(metadata.reference_assets)) return [];
+  return metadata.reference_assets
+    .map((item) => normalizeAttachmentProvenanceItem(item))
+    .filter((item): item is AttachmentProvenanceItem => Boolean(item));
+};
+
+const normalizeReferenceAssetsForSubmit = (value: unknown): AttachmentProvenanceItem[] => {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((item) => normalizeAttachmentProvenanceItem(item))
+    .filter((item): item is AttachmentProvenanceItem => Boolean(item));
+};
+
 const normalizeMetadataForSubmit = (
   metadata: Record<string, unknown>,
   musicMediaId?: string
@@ -86,6 +155,13 @@ const normalizeMetadataForSubmit = (
 
   if (normalized.frontText !== undefined) {
     normalized.frontText = normalizeFrontText(normalized.frontText);
+  }
+
+  const referenceAssets = normalizeReferenceAssetsForSubmit(normalized.reference_assets);
+  if (referenceAssets.length > 0) {
+    normalized.reference_assets = referenceAssets;
+  } else {
+    delete normalized.reference_assets;
   }
 
   if (musicMediaId) {
@@ -130,6 +206,31 @@ const EditClipPromptModal: React.FC<EditClipPromptModalProps> = ({
   const [availableMedia, setAvailableMedia] = useState<AvailableMediaItem[]>([]);
   const [isLoadingMedia, setIsLoadingMedia] = useState(false);
   const [musicMediaId, setMusicMediaId] = useState('');
+
+  const inheritedAttachments = useMemo(() => {
+    const metadataAttachments = readMetadataAttachmentProvenance(clip.metadata || {});
+    const clipAudioAttachments = (clip.media?.audios || [])
+      .map((audio) =>
+        normalizeAttachmentProvenanceItem(
+          {
+            id: audio.id,
+            media_id: audio.id,
+            type: audio.type || 'audio',
+            name: audio.prompt || audio.id,
+            url: audio.file_url,
+            source: 'clip_media',
+            role: 'music',
+          },
+          {
+            source: 'clip_media',
+            role: 'music',
+          }
+        )
+      )
+      .filter((item): item is AttachmentProvenanceItem => Boolean(item));
+
+    return mergeAttachmentProvenance(metadataAttachments, clipAudioAttachments);
+  }, [clip.media?.audios, clip.metadata]);
 
   useEffect(() => {
     const nextStyle = clip.style?.style || 'standard';
@@ -220,16 +321,12 @@ const EditClipPromptModal: React.FC<EditClipPromptModalProps> = ({
       .then((items) => {
         if (cancelled) return;
         const fetched = Array.isArray(items) ? items : [];
-        const clipAudios = (clip.media?.audios || []).map((audio) => ({
-          id: audio.id,
-          type: audio.type,
-          name: audio.prompt || audio.id,
-          url: audio.file_url,
-          mime_type: audio.file_url.endsWith('.mp3') ? 'audio/mpeg' : undefined,
-        }));
+        const inheritedMedia = inheritedAttachments
+          .map((item) => toProvenanceMediaItem(item))
+          .filter((item): item is AvailableMediaItem => Boolean(item));
 
         const deduped = new Map<string, AvailableMediaItem>();
-        [...fetched, ...clipAudios].forEach((item) => {
+        [...fetched, ...inheritedMedia].forEach((item) => {
           if (!item.id) return;
           if (!deduped.has(item.id)) {
             deduped.set(item.id, item);
@@ -252,7 +349,7 @@ const EditClipPromptModal: React.FC<EditClipPromptModalProps> = ({
     return () => {
       cancelled = true;
     };
-  }, [clip.media?.audios, isOpen]);
+  }, [inheritedAttachments, isOpen]);
 
   const styleSchema = styleSchemas[style];
 
@@ -260,24 +357,76 @@ const EditClipPromptModal: React.FC<EditClipPromptModalProps> = ({
     return styleSchema?.metadataFields || [];
   }, [styleSchema]);
 
-  const musicMediaOptions = useMemo(
+  const musicMediaOptions = useMemo(() => {
+    const options = new Map<string, { value: string; label: string }>();
+    availableMedia
+      .filter(isMusicMedia)
+      .forEach((item) => {
+        if (!options.has(item.id)) {
+          options.set(item.id, {
+            value: item.id,
+            label: toMediaOptionLabel(item),
+          });
+        }
+      });
+
+    if (musicMediaId && !options.has(musicMediaId)) {
+      options.set(musicMediaId, {
+        value: musicMediaId,
+        label: `Current selection (${musicMediaId})`,
+      });
+    }
+
+    return Array.from(options.values());
+  }, [availableMedia, musicMediaId]);
+
+  const selectedMusic = useMemo(() => {
+    const existing = availableMedia.find((item) => item.id === musicMediaId);
+    if (existing) return existing;
+    const inherited = inheritedAttachments.find(
+      (item) => (item.media_id || item.id) === musicMediaId
+    );
+    return inherited ? toProvenanceMediaItem(inherited) : null;
+  }, [availableMedia, inheritedAttachments, musicMediaId]);
+
+  const referenceAssetSelections = useMemo(() => readReferenceAssets(metadata), [metadata]);
+
+  const selectedReferenceKeys = useMemo(
     () =>
-      availableMedia
-        .filter(isMusicMedia)
-        .map((item) => ({
-          value: item.id,
-          label: `${item.name} (${item.type})`,
-        })),
-    [availableMedia]
+      new Set(referenceAssetSelections.map((item) => item.media_id || item.id)),
+    [referenceAssetSelections]
   );
 
-  const selectedMusic = useMemo(
-    () => availableMedia.find((item) => item.id === musicMediaId) || null,
-    [availableMedia, musicMediaId]
+  const generatedInheritedAttachments = useMemo(
+    () =>
+      inheritedAttachments.filter(
+        (item) =>
+          isGeneratedAttachmentSource(item.source) ||
+          Boolean(item.source_checkpoint_id)
+      ),
+    [inheritedAttachments]
   );
 
   const handleMetadataChange = (key: string, value: unknown) => {
     setMetadata((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const toggleReferenceAsset = (item: AttachmentProvenanceItem) => {
+    const assetKey = item.media_id || item.id;
+    if (!assetKey) return;
+
+    setMetadata((previous) => {
+      const current = readReferenceAssets(previous);
+      const exists = current.some((entry) => (entry.media_id || entry.id) === assetKey);
+      const next = exists
+        ? current.filter((entry) => (entry.media_id || entry.id) !== assetKey)
+        : [...current, item];
+
+      return {
+        ...previous,
+        reference_assets: next,
+      };
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -356,7 +505,7 @@ const EditClipPromptModal: React.FC<EditClipPromptModalProps> = ({
       const preferMusic = field.key.toLowerCase().includes('music');
       const mediaOptions = (preferMusic ? availableMedia.filter(isMusicMedia) : availableMedia).map((item) => ({
         value: item.id,
-        label: `${item.name} (${item.type})`,
+        label: toMediaOptionLabel(item),
       }));
 
       return (
@@ -435,13 +584,80 @@ const EditClipPromptModal: React.FC<EditClipPromptModalProps> = ({
         />
 
         <div className="space-y-2 pt-3 border-t border-white/10">
+          <p className="text-xs uppercase tracking-[0.15em] text-white font-medium">Inherited Attachments</p>
+          {inheritedAttachments.length === 0 ? (
+            <p className="attachment-meta">
+              No inherited run attachments were found on this clip prompt.
+            </p>
+          ) : (
+            <div className="space-y-2 max-h-44 overflow-auto pr-1">
+              {inheritedAttachments.map((item) => {
+                const itemKey = item.media_id || item.id;
+                const isReferenceSelected = selectedReferenceKeys.has(itemKey);
+                const showReferenceToggle =
+                  Boolean(itemKey) &&
+                  (isGeneratedAttachmentSource(item.source) || Boolean(item.source_checkpoint_id));
+                const originLabel = item.source_checkpoint_name || item.source_checkpoint_id;
+                return (
+                  <div key={`${item.id}-${item.source}-${item.source_checkpoint_index ?? ''}`} className="attachment-item flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="text-xs text-zinc-100 truncate">{item.name}</p>
+                      <p className="attachment-meta">
+                        {item.type} · role:{' '}
+                        {item.role || 'reference'} · source:{' '}
+                        {formatSourceLabel(item.source)}
+                        {originLabel ? ` · from ${originLabel}` : ''}
+                        {item.media_id ? ` · ${item.media_id}` : ''}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      {isMusicMedia({
+                        id: item.media_id || item.id,
+                        type: item.type,
+                        name: item.name,
+                        mime_type: item.mime_type,
+                        source: item.source,
+                      }) && item.media_id && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setMusicMediaId(item.media_id || '')}
+                        >
+                          Use Music
+                        </Button>
+                      )}
+                      {showReferenceToggle && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => toggleReferenceAsset(item)}
+                        >
+                          {isReferenceSelected ? 'Unmark Ref' : 'Use as Ref'}
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+          {generatedInheritedAttachments.length > 0 && (
+            <p className="attachment-meta">
+              Generated pipeline assets can be toggled as `reference_assets` for prompt assembly.
+            </p>
+          )}
+        </div>
+
+        <div className="space-y-2 pt-3 border-t border-white/10">
           <p className="text-xs uppercase tracking-[0.15em] text-white font-medium">Music Attachment</p>
           <div className="flex flex-col gap-2 sm:flex-row">
             <select
               value={musicMediaId}
               onChange={(e) => setMusicMediaId(e.target.value)}
               className="w-full select sm:flex-1"
-              disabled={isLoadingMedia || musicMediaOptions.length === 0}
+              disabled={isLoadingMedia}
             >
               <option value="">
                 {isLoadingMedia ? 'Loading music media...' : 'Select music media...'}
@@ -467,7 +683,7 @@ const EditClipPromptModal: React.FC<EditClipPromptModalProps> = ({
             </p>
           )}
           <p className="attachment-meta">
-            Music attachments use the media library audio picker only in this wave.
+            Audio options include inherited run attachments and media-library audio items.
           </p>
           <p className="attachment-meta">Save to apply music `media_id` to this clip prompt.</p>
         </div>

@@ -130,12 +130,21 @@ export interface ConnectorConfig {
   source_checkpoint_id?: string;
 }
 
+export interface ChainSubCheckpoint {
+  id?: string;
+  type?: 'prompt' | 'distributor' | 'connector';
+  prompt?: string;
+  config_text?: string;
+  output_role?: string;
+  order?: number;
+}
+
 export interface ChainConfig {
   sub_checkpoints?:
-    | Array<{ id?: string; name?: string } | string>
+    | Array<ChainSubCheckpoint | { id?: string; name?: string } | string>
     | number;
   checkpoints?:
-    | Array<{ id?: string; name?: string } | string>
+    | Array<ChainSubCheckpoint | { id?: string; name?: string } | string>
     | number;
   count?: number;
 }

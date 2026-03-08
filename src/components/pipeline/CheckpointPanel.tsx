@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import {
   ChainConfig,
+  ChainSubCheckpoint,
   CheckpointConfig,
   CheckpointRequiredAsset,
   CheckpointType,
@@ -16,6 +17,114 @@ interface CheckpointPanelProps {
   onEditPrompt: (promptId: string) => void;
   onClose: () => void;
 }
+
+type ChainSubCheckpointDraft = Required<
+  Pick<ChainSubCheckpoint, 'id' | 'type' | 'prompt' | 'config_text' | 'output_role' | 'order'>
+>;
+
+const CHAIN_SUB_TYPES: Array<ChainSubCheckpointDraft['type']> = ['prompt', 'distributor', 'connector'];
+
+const toStringValue = (value: unknown): string => {
+  if (typeof value === 'string') return value.trim();
+  if (typeof value === 'number') return String(value);
+  return '';
+};
+
+const toNumberValue = (value: unknown): number | undefined => {
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  if (typeof value === 'string' && value.trim()) {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : undefined;
+  }
+  return undefined;
+};
+
+const createDefaultChainSubCheckpoint = (index: number): ChainSubCheckpointDraft => ({
+  id: `sub-${index + 1}`,
+  type: 'prompt',
+  prompt: '',
+  config_text: '',
+  output_role: `output_${index + 1}`,
+  order: index + 1,
+});
+
+const normalizeChainSubCheckpoint = (
+  item: unknown,
+  index: number
+): ChainSubCheckpointDraft => {
+  if (typeof item === 'string') {
+    return {
+      ...createDefaultChainSubCheckpoint(index),
+      prompt: item,
+    };
+  }
+
+  if (!item || typeof item !== 'object' || Array.isArray(item)) {
+    return createDefaultChainSubCheckpoint(index);
+  }
+
+  const record = item as Record<string, unknown>;
+  const type = toStringValue(record.type).toLowerCase();
+  const normalizedType = CHAIN_SUB_TYPES.includes(type as ChainSubCheckpointDraft['type'])
+    ? (type as ChainSubCheckpointDraft['type'])
+    : 'prompt';
+
+  return {
+    id: toStringValue(record.id) || createDefaultChainSubCheckpoint(index).id,
+    type: normalizedType,
+    prompt:
+      toStringValue(record.prompt ?? record.prompt_text ?? record.name) ||
+      createDefaultChainSubCheckpoint(index).prompt,
+    config_text:
+      toStringValue(record.config_text ?? record.configText ?? record.config) ||
+      createDefaultChainSubCheckpoint(index).config_text,
+    output_role:
+      toStringValue(record.output_role ?? record.outputRole ?? record.role) ||
+      createDefaultChainSubCheckpoint(index).output_role,
+    order:
+      toNumberValue(record.order) && (toNumberValue(record.order) as number) > 0
+        ? Math.floor(toNumberValue(record.order) as number)
+        : index + 1,
+  };
+};
+
+const readChainSubCheckpoints = (chain?: ChainConfig): ChainSubCheckpointDraft[] => {
+  const rawList =
+    (Array.isArray(chain?.sub_checkpoints) ? chain?.sub_checkpoints : undefined) ||
+    (Array.isArray(chain?.checkpoints) ? chain?.checkpoints : undefined) ||
+    [];
+
+  const normalized = rawList
+    .map((item, index) => normalizeChainSubCheckpoint(item, index))
+    .sort((a, b) => a.order - b.order)
+    .map((item, index) => ({
+      ...item,
+      id: item.id || `sub-${index + 1}`,
+      order: index + 1,
+    }));
+
+  if (normalized.length > 0) return normalized;
+
+  const numericCountCandidates = [chain?.count, chain?.sub_checkpoints, chain?.checkpoints];
+  const numericCount = numericCountCandidates
+    .map((candidate) => toNumberValue(candidate))
+    .find((value) => typeof value === 'number' && value > 0);
+
+  const count = numericCount ? Math.max(1, Math.floor(numericCount)) : 1;
+  return Array.from({ length: count }, (_, index) => createDefaultChainSubCheckpoint(index));
+};
+
+const serializeChainSubCheckpoints = (
+  drafts: ChainSubCheckpointDraft[]
+): ChainSubCheckpoint[] =>
+  drafts.map((item, index) => ({
+    id: item.id || `sub-${index + 1}`,
+    type: item.type,
+    prompt: item.prompt,
+    config_text: item.config_text,
+    output_role: item.output_role,
+    order: index + 1,
+  }));
 
 const CheckpointPanel: React.FC<CheckpointPanelProps> = ({
   checkpoint,
@@ -37,21 +146,7 @@ const CheckpointPanel: React.FC<CheckpointPanelProps> = ({
     checkpoint.required_attachments ||
     checkpoint.attachment_requirements ||
     [];
-
-  const chainCount = (() => {
-    const chain = checkpoint.chain as ChainConfig | undefined;
-    if (!chain) return 0;
-    if (typeof chain.count === 'number' && Number.isFinite(chain.count)) return Math.max(0, Math.floor(chain.count));
-    if (Array.isArray(chain.sub_checkpoints)) return chain.sub_checkpoints.length;
-    if (Array.isArray(chain.checkpoints)) return chain.checkpoints.length;
-    if (typeof chain.sub_checkpoints === 'number' && Number.isFinite(chain.sub_checkpoints)) {
-      return Math.max(0, Math.floor(chain.sub_checkpoints));
-    }
-    if (typeof chain.checkpoints === 'number' && Number.isFinite(chain.checkpoints)) {
-      return Math.max(0, Math.floor(chain.checkpoints));
-    }
-    return 0;
-  })();
+  const chainSubCheckpoints = readChainSubCheckpoints(checkpoint.chain);
 
   const handleChange = <K extends keyof CheckpointConfig>(
     field: K,
@@ -113,13 +208,17 @@ const CheckpointPanel: React.FC<CheckpointPanelProps> = ({
     }
 
     if (value === 'chain') {
+      const defaults = readChainSubCheckpoints(checkpoint.chain);
       onUpdate({
         ...checkpoint,
         type: 'chain',
         distributor: undefined,
         connector: undefined,
-        chain: checkpoint.chain || {
-          count: 2,
+        chain: {
+          ...(checkpoint.chain || {}),
+          count: defaults.length,
+          sub_checkpoints: serializeChainSubCheckpoints(defaults),
+          checkpoints: serializeChainSubCheckpoints(defaults),
         },
       });
       return;
@@ -183,16 +282,76 @@ const CheckpointPanel: React.FC<CheckpointPanelProps> = ({
     });
   };
 
-  const handleChainCountChange = (value: string) => {
-    const parsed = Number(value);
-    const nextCount = Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : 1;
+  const updateChainSubCheckpoints = (next: ChainSubCheckpointDraft[]) => {
+    const normalized =
+      next.length > 0
+        ? next.map((item, index) => ({
+            ...item,
+            id: (item.id || `sub-${index + 1}`).trim() || `sub-${index + 1}`,
+            prompt: item.prompt || '',
+            config_text: item.config_text || '',
+            output_role: item.output_role || `output_${index + 1}`,
+            order: index + 1,
+          }))
+        : [createDefaultChainSubCheckpoint(0)];
+    const serialized = serializeChainSubCheckpoints(normalized);
     onUpdate({
       ...checkpoint,
       chain: {
         ...(checkpoint.chain || {}),
-        count: nextCount,
+        count: normalized.length,
+        sub_checkpoints: serialized,
+        checkpoints: serialized,
       },
     });
+  };
+
+  const handleChainSubCheckpointChange = (
+    index: number,
+    field: keyof ChainSubCheckpointDraft,
+    value: string
+  ) => {
+    const next = chainSubCheckpoints.map((item, itemIndex) =>
+      itemIndex === index
+        ? {
+            ...item,
+            [field]: value,
+          }
+        : item
+    );
+    updateChainSubCheckpoints(next);
+  };
+
+  const handleChainSubCheckpointTextChange = (index: number, value: string) => {
+    const next = chainSubCheckpoints.map((item, itemIndex) =>
+      itemIndex === index
+        ? {
+            ...item,
+            prompt: value,
+            config_text: value,
+          }
+        : item
+    );
+    updateChainSubCheckpoints(next);
+  };
+
+  const handleAddChainSubCheckpoint = () => {
+    updateChainSubCheckpoints([
+      ...chainSubCheckpoints,
+      createDefaultChainSubCheckpoint(chainSubCheckpoints.length),
+    ]);
+  };
+
+  const handleMoveChainSubCheckpoint = (fromIndex: number, toIndex: number) => {
+    if (toIndex < 0 || toIndex >= chainSubCheckpoints.length) return;
+    const next = [...chainSubCheckpoints];
+    const [moved] = next.splice(fromIndex, 1);
+    next.splice(toIndex, 0, moved);
+    updateChainSubCheckpoints(next);
+  };
+
+  const handleRemoveChainSubCheckpoint = (index: number) => {
+    updateChainSubCheckpoints(chainSubCheckpoints.filter((_, itemIndex) => itemIndex !== index));
   };
 
   const setRequiredAssets = (next: CheckpointRequiredAsset[]) => {
@@ -382,17 +541,92 @@ const CheckpointPanel: React.FC<CheckpointPanelProps> = ({
         )}
 
         {normalizedType === 'chain' && (
-          <div className="space-y-2 rounded border border-emerald-400/35 bg-emerald-500/10 p-2.5">
-            <p className="text-[10px] uppercase tracking-[0.15em] text-emerald-200">Chain Config</p>
-            <div>
-              <label className="block font-medium text-gray-400 mb-1 uppercase tracking-wide">Sub-checkpoint Count</label>
-              <input
-                type="number"
-                min={1}
-                value={chainCount || 1}
-                onChange={(e) => handleChainCountChange(e.target.value)}
-                className="input"
-              />
+          <div
+            className="space-y-2 rounded border border-emerald-400/35 bg-emerald-500/10 p-2.5"
+            data-testid="chain-sub-checkpoint-editor"
+          >
+            <div className="flex items-center justify-between">
+              <p className="text-[10px] uppercase tracking-[0.15em] text-emerald-200">Chain Sub-Checkpoints</p>
+              <button onClick={handleAddChainSubCheckpoint} className="btn btn-sm btn-ghost">
+                + Add Sub-Checkpoint
+              </button>
+            </div>
+            <p className="text-[10px] text-zinc-400 uppercase tracking-wide">
+              {chainSubCheckpoints.length} configured
+            </p>
+            <div className="space-y-2">
+              {chainSubCheckpoints.map((subCheckpoint, index) => (
+                <div key={`${subCheckpoint.id}-${index}`} className="space-y-2 rounded border border-emerald-300/20 bg-black/30 p-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-[10px] uppercase tracking-wide text-emerald-100">
+                      Sub-checkpoint {index + 1}
+                    </p>
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => handleMoveChainSubCheckpoint(index, index - 1)}
+                        className="btn btn-sm btn-ghost"
+                        disabled={index === 0}
+                      >
+                        Up
+                      </button>
+                      <button
+                        onClick={() => handleMoveChainSubCheckpoint(index, index + 1)}
+                        className="btn btn-sm btn-ghost"
+                        disabled={index === chainSubCheckpoints.length - 1}
+                      >
+                        Down
+                      </button>
+                      <button
+                        onClick={() => handleRemoveChainSubCheckpoint(index)}
+                        className="btn btn-sm btn-ghost"
+                        disabled={chainSubCheckpoints.length <= 1}
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <div>
+                      <label className="block font-medium text-gray-400 mb-1 uppercase tracking-wide">Type</label>
+                      <select
+                        value={subCheckpoint.type}
+                        onChange={(e) =>
+                          handleChainSubCheckpointChange(index, 'type', e.target.value)
+                        }
+                        className="w-full select"
+                      >
+                        <option value="prompt">Prompt</option>
+                        <option value="distributor">Distributor</option>
+                        <option value="connector">Connector</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block font-medium text-gray-400 mb-1 uppercase tracking-wide">Output Role Label</label>
+                      <input
+                        type="text"
+                        value={subCheckpoint.output_role}
+                        onChange={(e) =>
+                          handleChainSubCheckpointChange(index, 'output_role', e.target.value)
+                        }
+                        placeholder={`output_${index + 1}`}
+                        className="input"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block font-medium text-gray-400 mb-1 uppercase tracking-wide">Prompt / Config Text</label>
+                    <textarea
+                      value={subCheckpoint.prompt || subCheckpoint.config_text}
+                      onChange={(e) => handleChainSubCheckpointTextChange(index, e.target.value)}
+                      rows={3}
+                      className="input min-h-[5rem]"
+                      placeholder="Describe this sub-checkpoint prompt/config..."
+                    />
+                  </div>
+                </div>
+              ))}
             </div>
             <p className="text-[10px] text-zinc-500">
               Chain checkpoints represent grouped sequential sub-steps within one visible pipeline node.

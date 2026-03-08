@@ -152,6 +152,7 @@ function App() {
                   chatModel={chatModel}
                   mediaProfile={mediaProfile}
                   openLibrarySignal={openLibrarySignal}
+                  onClipsCreated={refreshClips}
                 />
               </div>
             </div>

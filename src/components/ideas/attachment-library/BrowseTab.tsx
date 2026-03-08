@@ -77,6 +77,19 @@ const renderDetailPreview = (item: MediaLibraryItem) => {
   return <p className="attachment-meta">Preview not supported for this media type.</p>;
 };
 
+const readGeneratedOriginLabel = (item: MediaLibraryItem): string => {
+  const metadata = item.metadata || {};
+  const originName = metadata.source_checkpoint_name;
+  if (typeof originName === 'string' && originName.trim()) return originName.trim();
+  const originId = metadata.source_checkpoint_id;
+  if (typeof originId === 'string' && originId.trim()) return originId.trim();
+  const originIndex = metadata.source_checkpoint_index;
+  if (typeof originIndex === 'number' && Number.isFinite(originIndex)) {
+    return `checkpoint ${originIndex + 1}`;
+  }
+  return '';
+};
+
 const BrowseTab: React.FC<BrowseTabProps> = ({
   loading,
   folderType,
@@ -179,10 +192,20 @@ const BrowseTab: React.FC<BrowseTabProps> = ({
                   <div className="flex items-start gap-2">
                     {renderRowPreview(item)}
                     <div className="min-w-0 flex-1">
-                      <p className="text-xs text-zinc-100 truncate">{item.name || mediaId}</p>
-                      <p className="attachment-meta mt-1">
-                        {item.type || 'unknown'} · {inferSourceBucket(item.source)} · {mediaId}
-                      </p>
+                      {(() => {
+                        const originLabel = inferSourceBucket(item.source) === 'generated'
+                          ? readGeneratedOriginLabel(item)
+                          : '';
+                        return (
+                          <>
+                            <p className="text-xs text-zinc-100 truncate">{item.name || mediaId}</p>
+                            <p className="attachment-meta mt-1">
+                              {item.type || 'unknown'} · {inferSourceBucket(item.source)} · {mediaId}
+                              {originLabel ? ` · ${originLabel}` : ''}
+                            </p>
+                          </>
+                        );
+                      })()}
                     </div>
                     {mode === 'select' && (
                       <span className="attachment-meta">{selected ? 'Selected' : 'Tap to select'}</span>
@@ -205,6 +228,9 @@ const BrowseTab: React.FC<BrowseTabProps> = ({
               <p className="attachment-meta">Media ID: {activeItem.media_id || activeItem.id}</p>
               <p className="attachment-meta">Type: {activeItem.type || 'unknown'}</p>
               <p className="attachment-meta">Source: {activeItem.source || 'unknown'}</p>
+              {readGeneratedOriginLabel(activeItem) && (
+                <p className="attachment-meta">Generated from: {readGeneratedOriginLabel(activeItem)}</p>
+              )}
 
               {mode === 'manage' ? (
                 <>

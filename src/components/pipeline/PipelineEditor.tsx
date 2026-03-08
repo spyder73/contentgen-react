@@ -115,6 +115,24 @@ const PipelineEditor: React.FC<PipelineEditorProps> = ({
         newCheckpointType === 'chain'
           ? {
               count: 2,
+              sub_checkpoints: [
+                {
+                  id: 'sub-1',
+                  type: 'prompt',
+                  prompt: '',
+                  config_text: '',
+                  output_role: 'output_1',
+                  order: 1,
+                },
+                {
+                  id: 'sub-2',
+                  type: 'prompt',
+                  prompt: '',
+                  config_text: '',
+                  output_role: 'output_2',
+                  order: 2,
+                },
+              ],
             }
           : undefined,
     };

@@ -9,6 +9,13 @@ import { MediaProfile } from '../../api/structs/media-spec';
 import { extractClipPromptJsonList } from './ideaOutput';
 import { PipelineInputAttachment, PipelineRun } from '../../api/structs/pipeline';
 import { AssetPoolItem, pipelineAttachmentToPoolItem } from './assetPool';
+import {
+  AttachmentProvenanceItem,
+  collectRunAttachmentProvenance,
+  isGeneratedAttachmentSource,
+  mergeAttachmentProvenance,
+  readMetadataAttachmentProvenance,
+} from '../clips/attachmentProvenance';
 
 interface IdeaGeneratorPanelProps {
   chatProvider: string;
@@ -16,7 +23,61 @@ interface IdeaGeneratorPanelProps {
   mediaProfile: MediaProfile;
   openLibrarySignal?: number;
   onIdeasCreated: () => void;
+  onClipsCreated?: () => void;
 }
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value);
+
+const toStringValue = (value: unknown): string => {
+  if (typeof value === 'string') return value.trim();
+  if (typeof value === 'number') return String(value);
+  return '';
+};
+
+const enrichClipPromptJsonForRun = (
+  rawPromptJson: string,
+  run: PipelineRun,
+  runProvenance: AttachmentProvenanceItem[]
+): string => {
+  try {
+    const parsed = JSON.parse(rawPromptJson) as unknown;
+    if (!isRecord(parsed)) return rawPromptJson;
+
+    const metadata = isRecord(parsed.metadata) ? { ...parsed.metadata } : {};
+    const existing = readMetadataAttachmentProvenance(metadata);
+    const merged = mergeAttachmentProvenance(existing, runProvenance);
+    const generated = merged.filter(
+      (item) =>
+        isGeneratedAttachmentSource(item.source) ||
+        Boolean(item.source_checkpoint_id)
+    );
+
+    metadata.attachment_provenance = merged;
+    metadata.inherited_attachments = merged;
+    metadata.generated_reference_assets = generated;
+    metadata.pipeline_run_id = toStringValue(metadata.pipeline_run_id) || run.id;
+
+    if (!Array.isArray(metadata.reference_assets) || metadata.reference_assets.length === 0) {
+      metadata.reference_assets = generated;
+    }
+
+    const runMusicMediaId = toStringValue(run.music_media_id);
+    const requestMusicMediaId = toStringValue(parsed.music_media_id);
+    const resolvedMusicMediaId = requestMusicMediaId || runMusicMediaId;
+    if (resolvedMusicMediaId) {
+      metadata.music_media_id = resolvedMusicMediaId;
+    }
+
+    return JSON.stringify({
+      ...parsed,
+      music_media_id: resolvedMusicMediaId || undefined,
+      metadata,
+    });
+  } catch {
+    return rawPromptJson;
+  }
+};
 
 const IdeaGeneratorPanel: React.FC<IdeaGeneratorPanelProps> = ({
   chatProvider,
@@ -24,9 +85,11 @@ const IdeaGeneratorPanel: React.FC<IdeaGeneratorPanelProps> = ({
   mediaProfile,
   openLibrarySignal = 0,
   onIdeasCreated,
+  onClipsCreated,
 }) => {
   const [templates, setTemplates] = useState<PipelineTemplate[]>([]);
   const [generatedAssets, setGeneratedAssets] = useState<AssetPoolItem[]>([]);
+  const [workspaceResetSignal, setWorkspaceResetSignal] = useState(0);
   const processingRef = useRef<Set<string>>(new Set());
   const {
     runs,
@@ -83,34 +146,68 @@ const IdeaGeneratorPanel: React.FC<IdeaGeneratorPanelProps> = ({
 
   const handleCompleted = useCallback(
     async (runId: string) => {
+      const clearRunWorkspace = () => {
+        removeRun(runId);
+        setWorkspaceResetSignal((value) => value + 1);
+      };
+
       try {
         const { ready, output } = await PipelineAPI.getPipelineOutput(runId);
         if (!ready || !output) {
-          removeRun(runId);
+          clearRunWorkspace();
           return;
         }
 
         const run = runs.find((r) => r.id === runId);
         if (!run) return;
+        const template = templates.find((item) => item.id === run.pipeline_template_id);
+        const runProvenance = collectRunAttachmentProvenance(run, template);
         upsertGeneratedAssets(collectGeneratedFromRun(run));
 
         const clipPromptList = extractClipPromptJsonList(output);
-        if (clipPromptList.length <= 1) {
-          await ClipAPI.createIdea(run.initial_input, clipPromptList[0] || output);
-        } else {
-          await ClipAPI.createIdeas(run.initial_input, clipPromptList);
+        const candidatePrompts = clipPromptList.length > 0 ? clipPromptList : [output];
+        let createdCount = 0;
+
+        for (const promptJson of candidatePrompts) {
+          try {
+            await ClipAPI.createClipPromptFromJson(
+              enrichClipPromptJsonForRun(promptJson, run, runProvenance),
+              mediaProfile
+            );
+            createdCount += 1;
+          } catch (error) {
+            console.error('Failed to create clip prompt from run output:', error);
+          }
         }
 
-        onIdeasCreated();
-        removeRun(runId);
+        if (createdCount > 0) {
+          onClipsCreated?.();
+        } else if (clipPromptList.length <= 1) {
+          await ClipAPI.createIdea(run.initial_input, clipPromptList[0] || output);
+          onIdeasCreated();
+        } else {
+          await ClipAPI.createIdeas(run.initial_input, clipPromptList);
+          onIdeasCreated();
+        }
+
+        clearRunWorkspace();
       } catch (err) {
-        console.error('Failed to create ideas:', err);
-        removeRun(runId);
+        console.error('Failed to transition completed run output:', err);
+        clearRunWorkspace();
       } finally {
         processingRef.current.delete(runId);
       }
     },
-    [collectGeneratedFromRun, onIdeasCreated, removeRun, runs, upsertGeneratedAssets]
+    [
+      collectGeneratedFromRun,
+      mediaProfile,
+      onClipsCreated,
+      onIdeasCreated,
+      removeRun,
+      runs,
+      templates,
+      upsertGeneratedAssets,
+    ]
   );
 
   // Handle completed runs
@@ -160,6 +257,7 @@ const IdeaGeneratorPanel: React.FC<IdeaGeneratorPanelProps> = ({
         onStart={handleStart}
         generatedAssets={generatedAssets}
         openLibrarySignal={openLibrarySignal}
+        workspaceResetSignal={workspaceResetSignal}
       />
 
       {/* Pipeline Runs */}

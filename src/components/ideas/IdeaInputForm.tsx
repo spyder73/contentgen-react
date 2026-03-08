@@ -26,6 +26,7 @@ interface Props {
   generatedAssets?: AssetPoolItem[];
   disabled?: boolean;
   openLibrarySignal?: number;
+  workspaceResetSignal?: number;
 }
 
 const IdeaInputForm: React.FC<Props> = ({
@@ -34,6 +35,7 @@ const IdeaInputForm: React.FC<Props> = ({
   generatedAssets = [],
   disabled,
   openLibrarySignal = 0,
+  workspaceResetSignal = 0,
 }) => {
   const [input, setInput] = React.useState('');
   const [templateId, setTemplateId] = React.useState(templates[0]?.id || '');
@@ -44,6 +46,7 @@ const IdeaInputForm: React.FC<Props> = ({
   const [isLibraryModalOpen, setIsLibraryModalOpen] = React.useState(false);
   const [libraryModalMode, setLibraryModalMode] = React.useState<'manage' | 'select'>('select');
   const lastLibrarySignalRef = React.useRef(openLibrarySignal);
+  const lastWorkspaceResetSignalRef = React.useRef(workspaceResetSignal);
 
   React.useEffect(() => {
     if (templates.length > 0 && !templateId) {
@@ -57,6 +60,14 @@ const IdeaInputForm: React.FC<Props> = ({
     setLibraryModalMode('manage');
     setIsLibraryModalOpen(true);
   }, [openLibrarySignal]);
+
+  React.useEffect(() => {
+    if (workspaceResetSignal === lastWorkspaceResetSignalRef.current) return;
+    lastWorkspaceResetSignalRef.current = workspaceResetSignal;
+    setSelectedRunMedia([]);
+    setIsLibraryModalOpen(false);
+    setLibraryModalMode('select');
+  }, [workspaceResetSignal]);
 
   const templateOptions = React.useMemo(
     () => templates.map((template) => ({ value: template.id, label: template.name })),
@@ -133,22 +144,36 @@ const IdeaInputForm: React.FC<Props> = ({
 
   const runAttachments = React.useMemo<PipelineInputAttachment[]>(
     () =>
-      selectedRunMedia.map((item) => ({
-        type: toAttachmentType(item),
-        source: 'media',
-        state: 'selected',
-        media_id: item.media_id || item.id,
-        name: item.name || item.media_id || item.id,
-        filename: item.name || item.media_id || item.id,
-        mime_type: item.mime_type,
-        url: item.url,
-        size_bytes: item.size_bytes,
-        size: item.size_bytes,
-        metadata: {
-          ...(item.metadata || {}),
-          library_source: item.source,
-        },
-      })),
+      selectedRunMedia.map((item) => {
+        const metadata = item.metadata || {};
+        const hasRealGeneratedMediaId =
+          metadata.generated_has_real_media_id === undefined
+            ? true
+            : Boolean(metadata.generated_has_real_media_id);
+        const isGeneratedSource = (item.source || '').toLowerCase().includes('generated');
+        const rawMediaId = (item.media_id || item.id || '').trim();
+        const mediaIdForPayload =
+          rawMediaId && (!isGeneratedSource || hasRealGeneratedMediaId)
+            ? rawMediaId
+            : undefined;
+
+        return {
+          type: toAttachmentType(item),
+          source: isGeneratedSource ? 'generated' : 'media',
+          state: 'selected',
+          media_id: mediaIdForPayload,
+          name: item.name || item.media_id || item.id,
+          filename: item.name || item.media_id || item.id,
+          mime_type: item.mime_type,
+          url: item.url,
+          size_bytes: item.size_bytes,
+          size: item.size_bytes,
+          metadata: {
+            ...metadata,
+            library_source: item.source,
+          },
+        };
+      }),
     [selectedRunMedia, toAttachmentType]
   );
 

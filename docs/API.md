@@ -120,6 +120,20 @@ Base URL is currently `http://localhost:81` from `src/api/helpers.ts`.
   - `chain.checkpoints`
 - pipeline manager uses those fields for chain card sub-checkpoint count rendering without changing distributor/connector transport contract.
 
+### Chain Sub-Checkpoint Editor Contract (Wave 4D1)
+- chain checkpoint editor now serializes explicit sub-checkpoint rows in additive form:
+  - `chain.count`
+  - `chain.sub_checkpoints[]`
+  - compatibility mirror `chain.checkpoints[]`
+- each sub-checkpoint row supports:
+  - `id`
+  - `type` (`prompt` | `distributor` | `connector`)
+  - `prompt`
+  - `config_text`
+  - `output_role`
+  - `order`
+- frontend guarantees stable ordering on save by normalizing `order` sequentially (`1..N`) after UI reordering.
+
 ### Run Pricing Display Contract (Wave 4C4)
 - run payloads may include backend `cost_summary` with mixed provider schemas.
 - frontend parser reads provider run/per-clip costs for `runware` and `openrouter` from:
@@ -133,6 +147,58 @@ Base URL is currently `http://localhost:81` from `src/api/helpers.ts`.
 - parses pipeline output JSON.
 - injects fallback `outputSpec` from run-level `mediaProfile` into each media prompt where missing.
 - calls `POST /clips`.
+
+### Run-Complete Clip Transition + Provenance (Wave 4D1)
+- when a run reaches `completed`, frontend now prefers creating clip prompts directly from run output instead of storing run output as ideas.
+- each generated clip prompt payload is enriched with additive metadata for continuity:
+  - `metadata.attachment_provenance[]`
+  - `metadata.inherited_attachments[]`
+  - `metadata.generated_reference_assets[]`
+  - `metadata.pipeline_run_id`
+- attachment provenance rows are additive and can include:
+```json
+{
+  "id": "stable-id-or-url",
+  "media_id": "optional-media-id",
+  "type": "image|video|audio|...",
+  "name": "asset-name",
+  "url": "https://...",
+  "mime_type": "image/png",
+  "source": "media|generated|...",
+  "role": "reference|audio|music",
+  "source_run_id": "run-id",
+  "source_checkpoint_id": "optional-checkpoint-id",
+  "source_checkpoint_name": "optional-checkpoint-name",
+  "source_checkpoint_index": 1
+}
+```
+- if run payload includes `music_media_id`, frontend forwards it into clip creation request and metadata (`music_media_id`) when missing from output JSON.
+
+### Clip Prompt Provenance + Reference Asset Editing (Wave 4D1)
+- clip edit modal reads additive provenance metadata keys:
+  - `attachment_provenance`
+  - `inherited_attachments`
+  - `reference_assets`
+  - `generated_reference_assets`
+- generated inherited assets can be toggled into `metadata.reference_assets[]` from UI for prompt assembly.
+- save normalization keeps `reference_assets` as a clean additive array and does not mutate unrelated metadata keys.
+
+### Music Binding Visibility Contract (Wave 4D1)
+- music selector options in clip edit modal are now merged from:
+  - `GET /clips/available-media`
+  - inherited attachment provenance metadata
+  - existing clip audio rows
+- if selected `music_media_id` is missing from media API list, frontend keeps a fallback option (`Current selection (...)`) so selection remains visible and removable.
+
+### Generated Asset Reuse In Attach Browser (Wave 4D1)
+- generated pool assets without a backend-native `media_id` are now retained in frontend media-library merge as synthetic IDs for selection continuity.
+- payload safety:
+  - if generated asset is synthetic-only, frontend omits `media_id` in `initial_attachments[]` and sends `url` + metadata instead.
+- origin labeling metadata is carried on generated rows:
+  - `source_run_id`
+  - `source_checkpoint_id`
+  - `source_checkpoint_name`
+  - `source_checkpoint_index`
 
 ### Media Settings Conversion
 UI settings allow `dimensions` enum values.

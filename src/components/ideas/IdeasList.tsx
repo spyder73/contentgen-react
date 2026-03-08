@@ -12,6 +12,7 @@ interface IdeasListProps {
   chatModel: string;
   mediaProfile: MediaProfile;
   openLibrarySignal?: number;
+  onClipsCreated?: () => void;
 }
 
 const IdeasList: React.FC<IdeasListProps> = ({
@@ -20,6 +21,7 @@ const IdeasList: React.FC<IdeasListProps> = ({
   chatModel,
   mediaProfile,
   openLibrarySignal = 0,
+  onClipsCreated,
 }) => {
   const [ideas, setIdeas] = useState<Idea[]>([]);
 
@@ -77,6 +79,7 @@ const IdeasList: React.FC<IdeasListProps> = ({
               mediaProfile={mediaProfile}
               openLibrarySignal={openLibrarySignal}
               onIdeasCreated={fetchIdeas}
+              onClipsCreated={onClipsCreated}
             />
           </div>
 

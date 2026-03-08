@@ -112,18 +112,27 @@ export const toActionableError = (error: unknown, context: ErrorContext = 'list'
 
 const normalizeGeneratedAsset = (asset: AssetPoolItem): MediaLibraryItem | null => {
   const mediaId = (asset.media_id || '').trim();
-  if (!mediaId) return null;
+  const fallbackId = mediaId || (asset.id || '').trim() || (asset.url || '').trim();
+  if (!fallbackId) return null;
 
   return {
-    id: mediaId,
-    media_id: mediaId,
+    id: fallbackId,
+    media_id: fallbackId,
     type: asset.type || asset.kind || 'unknown',
-    name: asset.name || mediaId,
+    name: asset.name || fallbackId,
     url: asset.url,
     mime_type: asset.mime_type,
     source: 'generated',
     size_bytes: asset.size_bytes,
-    metadata: asset.metadata,
+    metadata: {
+      ...(asset.metadata || {}),
+      generated_asset_pool_id: asset.id,
+      generated_has_real_media_id: Boolean(mediaId),
+      source_run_id: asset.run_id,
+      source_checkpoint_id: asset.checkpoint_id,
+      source_checkpoint_name: asset.checkpoint_name,
+      source_checkpoint_index: asset.checkpoint_index,
+    },
   };
 };
 

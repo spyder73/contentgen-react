@@ -1,5 +1,5 @@
 import React from 'react';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import PipelineEditor from './PipelineEditor';
 import { CheckpointConfig, PipelineTemplate } from '../../api/structs';
 
@@ -158,5 +158,75 @@ describe('PipelineEditor checkpoint UX', () => {
         strategy: 'first',
       },
     });
+  });
+
+  it('edits and serializes chain sub-checkpoints with ordering and role labels', async () => {
+    const onSave = jest.fn<Promise<void>, [PipelineTemplate]>(async () => undefined);
+
+    render(
+      <PipelineEditor
+        pipeline={buildPipeline()}
+        promptTemplates={[]}
+        onSave={onSave}
+        onEditPrompt={() => undefined}
+        onCheckpointAdd={() => undefined}
+        onCheckpointRemove={() => undefined}
+        onCheckpointUpdate={() => undefined}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: '+ Add Checkpoint' }));
+    fireEvent.change(screen.getByPlaceholderText('Checkpoint ID (e.g., first-draft)'), {
+      target: { value: 'chain-step' },
+    });
+    fireEvent.change(screen.getByPlaceholderText('Checkpoint Name'), {
+      target: { value: 'Chain Step' },
+    });
+    fireEvent.change(screen.getByDisplayValue('Prompt (single output)'), {
+      target: { value: 'chain' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Add Checkpoint' }));
+
+    const chainEditor = await screen.findByTestId('chain-sub-checkpoint-editor');
+    const roleInputs = within(chainEditor).getAllByPlaceholderText(/output_/i);
+    fireEvent.change(roleInputs[0], { target: { value: 'hook_frame' } });
+    fireEvent.change(roleInputs[1], { target: { value: 'cta_frame' } });
+
+    const textareas = within(chainEditor).getAllByPlaceholderText(
+      'Describe this sub-checkpoint prompt/config...'
+    );
+    fireEvent.change(textareas[0], {
+      target: { value: 'Create hook scene with strong opening frame.' },
+    });
+
+    fireEvent.click(within(chainEditor).getByRole('button', { name: '+ Add Sub-Checkpoint' }));
+    const downButtons = within(chainEditor).getAllByRole('button', { name: 'Down' });
+    fireEvent.click(downButtons[0]);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+    await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
+
+    const savedPipeline = onSave.mock.calls[0][0];
+    const savedChain = savedPipeline.checkpoints[0].chain;
+    const rawSubCheckpoints = savedChain?.sub_checkpoints;
+    const savedSubCheckpoints = Array.isArray(rawSubCheckpoints)
+      ? rawSubCheckpoints
+      : [];
+    expect(savedChain?.count).toBe(3);
+    expect(savedSubCheckpoints).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          output_role: 'hook_frame',
+        }),
+        expect.objectContaining({
+          output_role: 'cta_frame',
+        }),
+      ])
+    );
+    expect(savedSubCheckpoints[0]).toEqual(
+      expect.objectContaining({
+        order: 1,
+      })
+    );
   });
 });

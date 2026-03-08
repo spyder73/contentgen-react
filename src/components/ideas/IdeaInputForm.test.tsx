@@ -113,6 +113,52 @@ describe('IdeaInputForm modal attachment flow', () => {
     );
   });
 
+  it('keeps generated artifacts selectable even without native media_id', async () => {
+    const onStart = jest.fn<Promise<void>, any[]>(async () => undefined);
+    mockedApi.listMediaLibrary.mockResolvedValue([]);
+
+    render(
+      <IdeaInputForm
+        templates={templates}
+        onStart={onStart}
+        generatedAssets={[
+          {
+            id: 'generated:asset-1',
+            type: 'image',
+            kind: 'image',
+            source: 'generated',
+            name: 'Generated Chain Frame',
+            url: 'https://cdn.example.com/generated-chain-frame.png',
+            checkpoint_name: 'Chain Draft',
+          },
+        ]}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add Files To Run' }));
+    await screen.findByText('Select Files For Next Run');
+    await waitForElementToBeRemoved(() => screen.queryByText('Loading library files...'));
+    fireEvent.click(screen.getByRole('button', { name: /Generated Chain Frame/i }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add Selected (1)' }));
+
+    fireEvent.change(screen.getByPlaceholderText('Describe your video idea...'), {
+      target: { value: 'Use the generated frame as reference.' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Generate' }));
+
+    await waitFor(() => expect(onStart).toHaveBeenCalledTimes(1));
+    const submittedAttachments = onStart.mock.calls[0][3];
+    expect(submittedAttachments).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          source: 'generated',
+          url: 'https://cdn.example.com/generated-chain-frame.png',
+          media_id: undefined,
+        }),
+      ])
+    );
+  });
+
   it('opens upload-manage modal when top-header signal changes', async () => {
     const { rerender } = render(
       <IdeaInputForm templates={templates} onStart={async () => undefined} openLibrarySignal={0} />

@@ -60,6 +60,45 @@ Key component domains:
    - clip edit modal no longer shows `Attach music from URL`
    - audio is selected from media-library options only
 
+## Run-To-Clip Continuity (Wave 4D1)
+1. Completed pipeline runs now transition directly into clip-prompt creation flow.
+2. Run workspace state is reset on completion:
+   - completed run cards are removed from active run surface
+   - run attachment selection modal state is closed/reset
+3. Clip panel is refreshed immediately after successful clip-prompt creation from run output.
+
+## Clip Prompt Provenance Panel (Wave 4D1)
+1. `EditClipPromptModal` now shows `Inherited Attachments` section with:
+   - attachment name/type
+   - role label (`reference`/`audio`/`music`)
+   - source label (`uploaded`/`generated`/other)
+   - origin checkpoint label when available
+2. Inherited audio entries can be applied to music binding via inline `Use Music`.
+3. Generated inherited entries can be toggled into clip `reference_assets` via `Use as Ref`/`Unmark Ref`.
+
+## Music Binding UX (Wave 4D1)
+1. Music selector options now merge:
+   - media-library audio options
+   - inherited provenance audio
+   - existing clip audio rows
+2. Auto-bound music from run metadata remains visible even if missing from current media API list.
+3. Missing-option fallback row (`Current selection (...)`) keeps binding deterministic and editable.
+
+## Generated Artifact Reuse Labeling (Wave 4D1)
+1. Attach browser now keeps generated artifacts visible even when they only have synthetic IDs.
+2. Browse rows/details show generated origin context:
+   - source checkpoint name/id (when available)
+3. Generated synthetic assets stay selectable for new runs; payload generation omits fake `media_id` and uses URL/metadata fallback.
+
+## Chain Sub-Checkpoint MVP Editor (Wave 4D1)
+1. Chain checkpoints now expose editable sub-checkpoint rows inside checkpoint panel.
+2. Supported per-sub-checkpoint fields:
+   - type
+   - prompt/config text
+   - output role label
+   - ordering (Up/Down)
+3. Add/remove flow is inline and save serialization keeps ordered `sub_checkpoints` and compatibility `checkpoints` mirrors.
+
 ## Schema-Driven Form Strategy
 Priority: clipstyle metadata forms.
 

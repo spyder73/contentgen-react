@@ -1,106 +1,129 @@
 import React from 'react';
 import { PipelineOutputFormat } from '../../api/structs';
+import PipelineOutputSettingsModal from './PipelineOutputSettingsModal';
+import { DEFAULT_OUTPUT_FORMAT, toStringValue } from './utils';
 
 interface PipelineOutputFormatPanelProps {
   value?: PipelineOutputFormat;
   onChange: (next: PipelineOutputFormat) => void;
+  requiresSeedCompatibleImageModel?: boolean;
 }
 
-const DEFAULT_FORMAT: PipelineOutputFormat = {
-  enabled: false,
-  aspect_ratio: '9:16',
-  image_long_edge: 1920,
-  video_long_edge: 1920,
-};
-
-const RATIO_OPTIONS = ['9:16', '4:5', '1:1', '16:9', '3:4', '4:3'];
+type ModalType = 'image' | 'video' | 'audio' | null;
 
 const PipelineOutputFormatPanel: React.FC<PipelineOutputFormatPanelProps> = ({
   value,
   onChange,
+  requiresSeedCompatibleImageModel = false,
 }) => {
-  const current = value || DEFAULT_FORMAT;
+  const [settingsModal, setSettingsModal] = React.useState<ModalType>(null);
+  const current = { ...DEFAULT_OUTPUT_FORMAT, ...value };
 
-  const setField = <K extends keyof PipelineOutputFormat>(
-    field: K,
-    raw: PipelineOutputFormat[K]
-  ) => {
-    onChange({ ...current, [field]: raw });
-  };
-
-  const parseNumber = (value: string): number | undefined => {
-    const parsed = Number(value);
-    if (!Number.isFinite(parsed) || parsed <= 0) {
-      return undefined;
+  const setModalityDefaults = (
+    prefix: 'image' | 'video' | 'audio',
+    payload: {
+      provider?: string;
+      model?: string;
+      settings?: Record<string, unknown>;
     }
-    return parsed;
+  ) => {
+    const providerKey = `${prefix}_provider` as const;
+    const modelKey = `${prefix}_model` as const;
+    const settingsKey = `${prefix}_settings` as const;
+
+    onChange({
+      ...current,
+      [providerKey]: payload.provider,
+      [modelKey]: payload.model,
+      [settingsKey]: payload.settings,
+    });
   };
 
   return (
-    <div className="mt-3 rounded-lg border border-gray-700 p-3 bg-gray-900/50">
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-xs font-medium text-gray-300">Pipeline Output Format</p>
-          <p className="text-xs text-gray-500">Keep image/video prompts on one aspect ratio</p>
-          <p className="text-[10px] text-gray-600 mt-0.5">
-            Enabled: pipeline format overrides model width/height defaults. Disabled: model settings apply.
-          </p>
-        </div>
-        <label className="text-xs text-gray-300 flex items-center gap-2">
-          <input
-            type="checkbox"
-            checked={!!current.enabled}
-            onChange={(e) => setField('enabled', e.target.checked)}
-            className="w-4 h-4 rounded bg-gray-700 border-gray-600"
-          />
-          Enabled
-        </label>
+    <div className="space-y-4 rounded-lg border border-white/10 bg-black/35 p-4">
+      <div className="space-y-1">
+        <h3 className="text-sm font-semibold uppercase tracking-[0.15em] text-white">
+          Final Clip Generation Settings
+        </h3>
+        <p className="text-xs text-gray-500">
+          Template-level defaults stamped into final clip prompt rows only. Generator checkpoints use their own checkpoint config.
+        </p>
       </div>
 
-      {current.enabled && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-3">
-          <div>
-            <label className="block text-xs text-gray-400 mb-1">Aspect Ratio</label>
-            <select
-              value={current.aspect_ratio || DEFAULT_FORMAT.aspect_ratio}
-              onChange={(e) => setField('aspect_ratio', e.target.value)}
-              className="w-full bg-gray-800 text-white px-2 py-1.5 rounded border border-gray-700 text-sm"
-            >
-              {RATIO_OPTIONS.map((ratio) => (
-                <option key={ratio} value={ratio}>
-                  {ratio}
-                </option>
-              ))}
-            </select>
+      <div className="grid gap-4 xl:grid-cols-3">
+        <section className="min-w-0 space-y-2">
+          <label className="block text-xs uppercase tracking-wide text-gray-400">Image Defaults</label>
+          <div className="rounded border border-white/10 bg-black/40 px-3 py-3 text-xs text-gray-400">
+            <div>Provider: {toStringValue(current.image_provider) || 'none'}</div>
+            <div className="mt-1 truncate">Model: {toStringValue(current.image_model) || 'none'}</div>
           </div>
+          <button onClick={() => setSettingsModal('image')} className="btn btn-xs btn-ghost">
+            Image Settings
+          </button>
+        </section>
 
-          <div>
-            <label className="block text-xs text-gray-400 mb-1">Image Long Edge</label>
-            <input
-              type="number"
-              min={128}
-              max={4096}
-              step={1}
-              value={current.image_long_edge || ''}
-              onChange={(e) => setField('image_long_edge', parseNumber(e.target.value))}
-              className="w-full bg-gray-800 text-white px-2 py-1.5 rounded border border-gray-700 text-sm"
-            />
+        <section className="min-w-0 space-y-2">
+          <label className="block text-xs uppercase tracking-wide text-gray-400">Video Defaults</label>
+          <div className="rounded border border-white/10 bg-black/40 px-3 py-3 text-xs text-gray-400">
+            <div>Provider: {toStringValue(current.video_provider) || 'none'}</div>
+            <div className="mt-1 truncate">Model: {toStringValue(current.video_model) || 'none'}</div>
           </div>
+          <button onClick={() => setSettingsModal('video')} className="btn btn-xs btn-ghost">
+            Video Settings
+          </button>
+        </section>
 
-          <div>
-            <label className="block text-xs text-gray-400 mb-1">Video Long Edge</label>
-            <input
-              type="number"
-              min={128}
-              max={4096}
-              step={1}
-              value={current.video_long_edge || ''}
-              onChange={(e) => setField('video_long_edge', parseNumber(e.target.value))}
-              className="w-full bg-gray-800 text-white px-2 py-1.5 rounded border border-gray-700 text-sm"
-            />
+        <section className="min-w-0 space-y-2">
+          <label className="block text-xs uppercase tracking-wide text-gray-400">Audio Defaults</label>
+          <div className="rounded border border-white/10 bg-black/40 px-3 py-3 text-xs text-gray-400">
+            <div>Provider: {toStringValue(current.audio_provider) || 'none'}</div>
+            <div className="mt-1 truncate">Model: {toStringValue(current.audio_model) || 'none'}</div>
           </div>
-        </div>
-      )}
+          <button onClick={() => setSettingsModal('audio')} className="btn btn-xs btn-ghost">
+            Audio Settings
+          </button>
+        </section>
+      </div>
+
+      <PipelineOutputSettingsModal
+        isOpen={settingsModal === 'image'}
+        onClose={() => setSettingsModal(null)}
+        modality="image"
+        provider={toStringValue(current.image_provider)}
+        model={toStringValue(current.image_model)}
+        settings={current.image_settings || {}}
+        requireSeedImageSupport={requiresSeedCompatibleImageModel}
+        onApply={(payload) => {
+          setModalityDefaults('image', payload);
+          setSettingsModal(null);
+        }}
+      />
+
+      <PipelineOutputSettingsModal
+        isOpen={settingsModal === 'video'}
+        onClose={() => setSettingsModal(null)}
+        modality="video"
+        provider={toStringValue(current.video_provider)}
+        model={toStringValue(current.video_model)}
+        settings={current.video_settings || {}}
+        onApply={(payload) => {
+          setModalityDefaults('video', payload);
+          setSettingsModal(null);
+        }}
+      />
+
+      <PipelineOutputSettingsModal
+        isOpen={settingsModal === 'audio'}
+        onClose={() => setSettingsModal(null)}
+        modality="audio"
+        provider={toStringValue(current.audio_provider)}
+        model={toStringValue(current.audio_model)}
+        settings={current.audio_settings || {}}
+        onApply={(payload) => {
+          setModalityDefaults('audio', payload);
+          setSettingsModal(null);
+        }}
+      />
     </div>
   );
 };

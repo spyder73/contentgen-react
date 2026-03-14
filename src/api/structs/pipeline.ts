@@ -1,6 +1,6 @@
 // ==================== Pipeline Run Types ====================
 
-import { MediaProfile } from './media-spec';
+import { MediaOutputSpec } from './media-spec';
 
 export type PipelineRunStatus = 
   | 'pending' 
@@ -15,13 +15,14 @@ export type CheckpointStatus =
   | 'running' 
   | 'completed' 
   | 'failed' 
+  | 'awaiting_asset'
   | 'awaiting_confirm'
   | 'skipped';
 
-export type CheckpointType = 'prompt' | 'distributor' | 'connector' | 'chain';
+export type CheckpointType = 'prompt' | 'distributor' | 'connector' | 'generator';
 export type CheckpointInjectionMode = 'guidance_only' | 'with_prior_output_context';
 
-export interface CostSummaryProvider {
+export interface CostProviderTotal {
   total_cost?: number;
   run_cost?: number;
   per_clip_cost?: number;
@@ -35,11 +36,9 @@ export interface CostSummary {
   estimated?: boolean;
   currency?: string;
   total_cost?: number;
-  runware?: CostSummaryProvider;
-  openrouter?: CostSummaryProvider;
-  providers?: Record<string, CostSummaryProvider>;
-  per_run?: Record<string, CostSummaryProvider>;
-  per_clip?: Record<string, CostSummaryProvider>;
+  providers?: Record<string, CostProviderTotal>;
+  per_run?: Record<string, CostProviderTotal>;
+  per_clip?: Record<string, CostProviderTotal>;
   clips?: Array<Record<string, unknown>>;
   [key: string]: unknown;
 }
@@ -47,6 +46,9 @@ export interface CostSummary {
 export interface MediaAttachment {
   id: string;
   media_id?: string;
+  role?: string;
+  scene_id?: string;
+  frame_order?: number;
   type: string;
   url: string;
   mime_type: string;
@@ -55,15 +57,21 @@ export interface MediaAttachment {
   created_at: string;
   source?: string;
   size_bytes?: number;
+  size?: number;
   metadata?: Record<string, unknown>;
   checkpoint_id?: string;
   checkpoint_index?: number;
   source_checkpoint_id?: string;
   source_run_id?: string;
+  generated_from_checkpoint_id?: string;
+  generated_from_field?: string;
 }
 
 export interface PipelineInputAttachment {
   type: string;
+  role?: string;
+  scene_id?: string;
+  frame_order?: number;
   source?: string;
   state?: string;
   url?: string;
@@ -78,6 +86,8 @@ export interface PipelineInputAttachment {
   checkpoint_index?: number;
   source_checkpoint_id?: string;
   source_run_id?: string;
+  generated_from_checkpoint_id?: string;
+  generated_from_field?: string;
 }
 
 export interface CheckpointResult {
@@ -103,10 +113,10 @@ export interface PipelineRun {
   status: PipelineRunStatus;
   results: CheckpointResult[];
   auto_mode: boolean;
-  media_profile?: MediaProfile;
   music_media_id?: string | null;
   provider?: string;
   model?: string;
+  cost?: Record<string, unknown>;
   cost_summary?: CostSummary | Record<string, unknown>;
   created_at: string;
   updated_at: string;
@@ -118,45 +128,40 @@ export interface InputMapping {
   [placeholder: string]: string;
 }
 
-export interface DistributorConfig {
-  delimiter: 'newline' | 'json_array' | 'json_objects' | string;
-  max_children: number;
+export interface PromptCheckpointConfig {
+  provider?: string;
+  model?: string;
 }
 
-export type ConnectorStrategy = 'first' | 'longest';
+export interface DistributorConfig {
+  provider?: string;
+  model?: string;
+  delimiter: 'newline' | 'json_array' | 'json_objects' | string;
+  max_children: number;
+  prompt_decorator?: string;
+}
+
+export type ConnectorStrategy = 'collect_all';
 
 export interface ConnectorConfig {
   strategy: ConnectorStrategy;
   source_checkpoint_id?: string;
 }
 
-export interface ChainSubCheckpoint {
-  id?: string;
-  type?: 'prompt' | 'distributor' | 'connector';
-  prompt?: string;
-  config_text?: string;
-  output_role?: string;
-  order?: number;
-}
-
-export interface ChainConfig {
-  sub_checkpoints?:
-    | Array<ChainSubCheckpoint | { id?: string; name?: string } | string>
-    | number;
-  checkpoints?:
-    | Array<ChainSubCheckpoint | { id?: string; name?: string } | string>
-    | number;
-  count?: number;
+export interface GeneratorConfig {
+  media_type: string;
+  role?: string;
+  mode?: 'text_to_image' | 'image_to_image' | string;
+  provider?: string;
+  model?: string;
 }
 
 export interface CheckpointRequiredAsset {
-  id?: string;
-  label?: string;
-  kind?: string;
+  key?: string;
+  type?: string;
   source?: string;
-  min_count?: number;
-  max_count?: number;
-  required?: boolean;
+  checkpoint_id?: string;
+  media_id?: string;
 }
 
 export interface CheckpointConfig {
@@ -168,21 +173,24 @@ export interface CheckpointConfig {
   requires_confirm: boolean;
   allow_regenerate: boolean;
   allow_attachments: boolean;
-  provider?: string;
-  model?: string;
+  output_spec?: Partial<MediaOutputSpec>;
+  promptGate?: PromptCheckpointConfig;
   distributor?: DistributorConfig;
   connector?: ConnectorConfig;
-  chain?: ChainConfig;
+  generator?: GeneratorConfig;
   required_assets?: CheckpointRequiredAsset[];
-  required_attachments?: CheckpointRequiredAsset[];
-  attachment_requirements?: CheckpointRequiredAsset[];
 }
 
 export interface PipelineOutputFormat {
-  enabled: boolean;
-  aspect_ratio?: string;
-  image_long_edge?: number;
-  video_long_edge?: number;
+  image_provider?: string;
+  image_model?: string;
+  video_provider?: string;
+  video_model?: string;
+  audio_provider?: string;
+  audio_model?: string;
+  image_settings?: Partial<MediaOutputSpec>;
+  video_settings?: Partial<MediaOutputSpec>;
+  audio_settings?: Partial<MediaOutputSpec>;
 }
 
 export interface PipelineTemplate {

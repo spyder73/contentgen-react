@@ -52,6 +52,12 @@ Base URL is currently `http://localhost:81` from `src/api/helpers.ts`.
 }
 ```
 
+#### Start-Time Required Assets (Wave 4E4)
+- start-time blocking is driven only by `required_assets[].source === "initial"`.
+- checkpoint requirements with `source === "user"` or `source === "checkpoint:<id>"` do not block run start.
+- the referenced-video pipeline now starts from text-only input by default; character seed replacement happens at the paused checkpoint instead of a dedicated start-form seed picker.
+- optional `initial_attachments[]` still flow through the run attachment picker when a template exposes attachment intent.
+
 ### Attachment Pool and Checkpoint Binding Mapping
 - asset pool entries are normalized into stable attachment payload rows in `PipelineAPI.startPipeline(...)`.
 - checkpoint-bound selections are emitted as additive attachment rows with `checkpoint_id`/`checkpoint_index`.
@@ -60,11 +66,27 @@ Base URL is currently `http://localhost:81` from `src/api/helpers.ts`.
   - `source_run_id`
 - frontend keeps compatibility aliases in payload normalization (`name` + `filename`, `size_bytes` + `size`) to support mixed backend contract versions.
 
-### Requirement-Driven Attach Visibility (Wave 4C4)
+### Requirement-Driven Attach Visibility (Wave 4E4)
 - run attach controls are shown only when selected pipeline checkpoints expose attachment intent:
   - `allow_attachments = true`, or
   - non-empty normalized required-asset rules.
-- generate action is blocked when required checkpoint assets are missing; UI renders checkpoint-level missing requirement details and opens attach browser directly from warning CTA.
+- generate action is blocked only when start-time requirements (`source === "initial"`) are missing; UI renders checkpoint-level missing requirement details and opens attach browser directly from warning CTA.
+- required-asset parsing preserves backend source semantics (`initial`, `user`, `checkpoint:<id>`) instead of collapsing them into generic media buckets.
+
+### Paused Required-Asset Flow (Wave 4E4)
+- paused checkpoints now distinguish:
+  - `result.status === "awaiting_confirm"` for confirm/review flow
+  - `result.status === "awaiting_asset"` for attach-and-continue flow
+- when a checkpoint is asset-gated, the run-detail card:
+  - shows backend missing-asset error text when present
+  - exposes asset-pool attach UI even if `allow_attachments = false`
+  - keeps `POST /pipelines/:id/attachments` and `POST /pipelines/:id/continue` as separate explicit actions
+- frontend does not optimistically advance checkpoint state after attach; the run must refresh after continue succeeds.
+
+### Connector Scene Reference Debug View (Wave 4E4)
+- connector checkpoint output is parsed when possible.
+- if parsed output includes `scene_references`, run detail renders ordered scene rows with resolved reference info instead of raw JSON.
+- malformed or non-scene-reference connector output falls back to the raw JSON/debug view.
 
 ### Media Library Explorer Contract (Wave 4B2)
 - `MediaAPI.listMediaLibrary(...)` calls `GET /media/library` and falls back to legacy `GET /media` on `404`/`405`.
@@ -75,6 +97,22 @@ Base URL is currently `http://localhost:81` from `src/api/helpers.ts`.
 - attachment workspace renders actionable inline upload/list errors for:
   - `405`: route/method not enabled for media list/upload
   - `413`: upload payload too large
+
+### Media Preview URL Resolution (Wave 4E4)
+- library rows and detail preview now resolve media preview candidates deterministically from backend fields (top-level + metadata aliases):
+  - image-first keys: `preview_url`, `preview_image_url`, `thumbnail_url`, `thumb_url`, `image_url`
+  - video-first keys: `preview_video_url`, `playback_url`, `stream_url`, `video_url`, `video_file_url`
+  - audio-first keys: `preview_audio_url`, `audio_url`, `audio_file_url`
+  - media URL fallback keys: `url`, `file_url`, `asset_url`, `uri`, `media_url`, `source_url`, `download_url`
+- frontend retries alternate preview candidates on element decode/load failure before showing unavailable state.
+- for video files with no playable candidate (or browser decode failure), UI renders explicit unavailable copy instead of broken media chrome.
+- relative media paths now resolve against backend `BASE_URL` while absolute URLs remain unchanged.
+
+### Output URL Stability (Wave 4E4 follow-up)
+- output gallery now normalizes `file_urls[]` before carousel/video navigation:
+  - trims and dedupes repeated URLs
+  - removes transient placeholder rows (`waiting`, `pending`, `rendering`, `failed`, etc.)
+  - clamps active index when output list shrinks during rerender/retry states
 
 ### Media Library Manage Contract (Wave 4C4)
 - `MediaAPI.renameMediaLibraryItem(mediaId, name)` calls `PUT /media/library/:id/rename` and falls back to legacy `PUT /media/:id/rename` on `404`/`405`.
@@ -112,27 +150,59 @@ Base URL is currently `http://localhost:81` from `src/api/helpers.ts`.
 - response payload (normalized passthrough): `{ status, checkpoint_index, injection_count?, regenerated? }`
 - UI flow uses inject + regenerate while paused and keeps explicit inline errors on failures.
 
-### Checkpoint Type + Chain Semantics (Wave 4C4)
-- checkpoint type union in frontend now includes `chain` in addition to `prompt`, `distributor`, and `connector`.
-- chain config is additive/optional and can include:
-  - `chain.count`
-  - `chain.sub_checkpoints`
-  - `chain.checkpoints`
-- pipeline manager uses those fields for chain card sub-checkpoint count rendering without changing distributor/connector transport contract.
+### Checkpoint Type + Generator Semantics (Wave 4E2)
+- checkpoint type union in frontend: `prompt`, `distributor`, `connector`, `generator`.
+- generator checkpoint config is serialized under `checkpoint.generator` with:
+  - `media_type`
+  - `generator`
+  - `role`
+  - `source`
+  - `state`
 
-### Chain Sub-Checkpoint Editor Contract (Wave 4D1)
-- chain checkpoint editor now serializes explicit sub-checkpoint rows in additive form:
-  - `chain.count`
-  - `chain.sub_checkpoints[]`
-  - compatibility mirror `chain.checkpoints[]`
-- each sub-checkpoint row supports:
-  - `id`
-  - `type` (`prompt` | `distributor` | `connector`)
-  - `prompt`
-  - `config_text`
-  - `output_role`
-  - `order`
-- frontend guarantees stable ordering on save by normalizing `order` sequentially (`1..N`) after UI reordering.
+### Generator Image Mode Mapping (Wave 4E4-hotfix-2)
+- for `generator` checkpoints where `generator.media_type = "image"`, editor mode is explicit:
+  - `Image-to-Image Generator` => seed/reference mode
+  - `Text-to-Image Generator` => no-seed mode
+- payload remains backward-compatible (no new field); mode is expressed via existing `generator.role`:
+  - img2img mode persists as seed/reference roles (default `reference_image`)
+  - text2img mode persists as `generated_image`
+- seed-compatibility model filtering is enabled only for img2img mode and uses registry constraints (`capabilities.supports_seed_image`) via existing model constraints API.
+
+### Checkpoint Provider/Model Payload Normalization (Wave 4E5)
+- template create/update payloads normalize checkpoint overrides before API write:
+  - trims `checkpoint.id`, `name`, `prompt_template_id`, `provider`, `model`
+  - removes empty string overrides (sends `provider`/`model` only when non-empty)
+  - normalizes `input_mapping` to non-empty trimmed key/value pairs only
+  - normalizes `required_assets[]` to non-empty rows only
+- type-scoped config write rules:
+  - `distributor` checkpoints write only normalized `checkpoint.distributor`
+  - `connector` checkpoints write only normalized `checkpoint.connector`
+  - `generator` checkpoints write normalized `checkpoint.generator` without mirroring model IDs into `generator.generator`
+  - model IDs are canonicalized to `checkpoint.model`; if `generator.generator` matches the model ID it is stripped from outbound payload
+
+### Generator Prompt Source Validation (Wave 4E5)
+- generator checkpoints now treat prompt sourcing as explicit mapping:
+  - allowed source values are `initial_input` and `checkpoint:<prior_checkpoint_id>[.field]`
+  - mappings to non-prior checkpoints or unknown source prefixes are blocked at save-time
+- manual prompt-entry path is restricted to confirmable generators:
+  - if `requires_confirm=false`, at least one valid prompt source mapping is required
+  - if `requires_confirm=true`, empty mapping is allowed and manual prompt guidance can be provided during checkpoint confirmation
+
+### Pipeline Template Save Error Surface (Wave 4E5)
+- pipeline editor save path now renders inline actionable error copy when template update fails.
+- validation failures (generator prompt source rules) are surfaced before API write and keep unsaved state visible.
+
+### Pipeline Default Model Serialization (Wave 4E4-hotfix)
+- `output_format` defaults are now normalized on template create/update:
+  - trims `image_provider`, `image_model`, `video_provider`, `video_model`, `audio_provider`, `audio_model`
+  - empty strings are removed before API write
+- these defaults apply only to final clip prompt rows; generator checkpoints use their own checkpoint config.
+
+### Edit Media Modal Provider/Model Mapping (Wave 4E4-hotfix)
+- edit-media save path (`PUT /media/:id`) now supports explicit provider/model override selection in UI:
+  - sends `output_spec` with selected provider/model when set
+  - sends `output_spec: undefined` when cleared to inherit clip/pipeline defaults
+- metadata replacement contract (`PUT /media/:id/metadata/replace`) is unchanged.
 
 ### Run Pricing Display Contract (Wave 4C4)
 - run payloads may include backend `cost_summary` with mixed provider schemas.
@@ -141,16 +211,22 @@ Base URL is currently `http://localhost:81` from `src/api/helpers.ts`.
   - nested provider maps (`providers`, `per_run`, `per_clip`, `provider_costs`/`costs`/`pricing`),
   - optional `clips[]` aggregates when explicit per-clip fields are missing.
 - estimated status is surfaced when backend flags estimated costs (`estimated`, `is_estimated`, and related aliases).
+- fallback: if `cost_summary` is absent and run payload includes `cost.total_usd`, frontend renders a simple total USD line.
 
 ### Clip Create From Pipeline Output
 `ClipAPI.createClipPromptFromJson(json, mediaProfile?)`:
 - parses pipeline output JSON.
 - injects fallback `outputSpec` from run-level `mediaProfile` into each media prompt where missing.
+- normalizes prompt-level reference contract before `POST /clips`:
+  - ensures `imagePrompts[*].metadata.reference_image_url` and `aiVideoPrompts[*].metadata.reference_image_url` are set when references are present
+  - strips legacy `outputSpec.referenceImages`/`output_spec.reference_images` from prompt rows
+  - uses `metadata.reference_assets[]` fallback when prompt rows do not already include a reference URL
 - calls `POST /clips`.
 
-### Run-Complete Clip Transition + Provenance (Wave 4D1)
-- when a run reaches `completed`, frontend now prefers creating clip prompts directly from run output instead of storing run output as ideas.
-- each generated clip prompt payload is enriched with additive metadata for continuity:
+### Run-Complete Clip Assembly Staging + Provenance (Wave 4D2)
+- when a run reaches `completed`, frontend loads and stages clip-prompt output for explicit user-triggered assembly.
+- automatic clip creation on run completion is disabled in this wave.
+- staged clip prompt payloads are still enriched with additive continuity metadata:
   - `metadata.attachment_provenance[]`
   - `metadata.inherited_attachments[]`
   - `metadata.generated_reference_assets[]`
@@ -173,6 +249,80 @@ Base URL is currently `http://localhost:81` from `src/api/helpers.ts`.
 }
 ```
 - if run payload includes `music_media_id`, frontend forwards it into clip creation request and metadata (`music_media_id`) when missing from output JSON.
+
+### Scene Reference Mapping Contract (Wave 4D2)
+- staged prompts may include scene rows from additive scene metadata keys:
+  - `metadata.scene_reference_mapping[]`
+  - `metadata.scene_reference_bindings[]`
+  - `metadata.scene_references[]`
+  - `metadata.scene_reference_map[]`
+  - fallback scene lists: `scenes[]`, `scene_list[]`, `scene_prompts[]` (top-level or inside metadata)
+- frontend normalizes scene rows to ordered bindings with required/optional state:
+  - `scene_id`
+  - `order`
+  - `required_reference`
+- scene rows render selected reference previews inline when selected assets include image URLs.
+- frontend scene-reference overrides serialize back into metadata on assembly:
+```json
+{
+  "scene_id": "scene-a",
+  "order": 1,
+  "required_reference": true,
+  "status": "resolved",
+  "reference_media_id": "library-image-1",
+  "reference_id": "library-image-1",
+  "reference_name": "Library Hero",
+  "reference_type": "image",
+  "reference_url": "https://...",
+  "reference_source": "media",
+  "source_checkpoint_id": "draft",
+  "source_checkpoint_name": "Draft",
+  "source_checkpoint_index": 0
+}
+```
+- metadata writeback keys on save:
+  - `metadata.scene_reference_mapping[]`
+  - `metadata.scene_reference_bindings[]`
+- top-level additive reference index is preserved:
+  - existing `metadata.reference_assets[]` are retained
+  - manually bound scene selections are merged into `reference_assets[]` (deduped)
+
+### Prompt-Level Reference + Music Serialization (Wave 4E3)
+- assembly writes scene-selected references into prompt-row metadata:
+  - `imagePrompts[*].metadata.reference_image_url`: first ordered resolved scene reference
+  - `aiVideoPrompts[*].metadata.reference_image_url`: per-row ordered scene reference
+- compatibility aliases are also normalized when present:
+  - `image_prompts[*].metadata.reference_image_url`
+  - `ai_video_prompts[*].metadata.reference_image_url`
+- legacy prompt-level `outputSpec.referenceImages` is removed during assembly/create normalization.
+- selected pre-assembly music binding is serialized to:
+  - top-level `music_media_id`
+  - `metadata.music_media_id`
+- music selection UI uses the same media browser modal used for attachments (library + upload).
+
+### Explicit Assembly Validation + Blocking (Wave 4D2)
+- assemble action entrypoint is explicit user click (`Assemble Clip Prompt`) per staged prompt.
+- required scene rows with unresolved bindings block assemble in frontend.
+- backend validation responses can additionally enforce blocking.
+- frontend consumes additive validation fields when present:
+  - `missing_required_references[]`
+  - `missing_required_scene_references[]`
+  - `missing_references[]`
+  - `unresolved_scenes[]`
+  - `unresolved_count`
+- when backend flags missing required references, frontend:
+  - clears impacted scene selection(s),
+  - renders per-scene actionable errors,
+  - keeps assemble action blocked until reassigned.
+
+### Mid-Run Required-Reference Block Prompt (Wave 4E1)
+- paused-run `Continue`/`Regenerate` actions now parse backend required-reference block responses.
+- supported additive response cues include:
+  - `missing_required_references[]`
+  - `missing_required_scene_references[]`
+  - `missing_references[]`
+  - `unresolved_scenes[]`
+- when detected, frontend shows explicit inline attach prompt in checkpoint panel and blocks continue until recovery attach succeeds.
 
 ### Clip Prompt Provenance + Reference Asset Editing (Wave 4D1)
 - clip edit modal reads additive provenance metadata keys:

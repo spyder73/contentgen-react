@@ -8,6 +8,7 @@ import { ConstraintFieldInput } from './modelSettingsFields';
 import {
   getVisibleFields,
   buildDefaultSettings,
+  settingsToOutputSpec,
   validateSettings,
 } from './modelSettingsHelpers';
 
@@ -99,7 +100,7 @@ const ModelSettingsModal: React.FC<ModelSettingsModalProps> = ({
   );
 
   const handleSave = () => {
-    onSettingsChange(localSettings);
+    onSettingsChange(settingsToOutputSpec(localSettings));
     onClose();
   };
 
@@ -114,7 +115,7 @@ const ModelSettingsModal: React.FC<ModelSettingsModalProps> = ({
   const title = `${MODALITY_LABELS[modality] || modality} Settings`;
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={title}>
+    <Modal isOpen={isOpen} onClose={onClose} title={title} size="xl">
       <div className="space-y-4">
         {/* Model info */}
         <div className="text-xs text-slate-500 bg-black/50 border border-white/10 rounded p-2 uppercase tracking-wide">
@@ -137,7 +138,7 @@ const ModelSettingsModal: React.FC<ModelSettingsModalProps> = ({
 
         {/* Fields */}
         {!isLoading && !error && visibleFields.length > 0 && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
             {visibleFields.map(({ key, field }) => (
               <ConstraintFieldInput
                 key={key}

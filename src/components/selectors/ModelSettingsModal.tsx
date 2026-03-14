@@ -8,6 +8,7 @@ import { ConstraintFieldInput } from './modelSettingsFields';
 import {
   getVisibleFields,
   buildDefaultSettings,
+  outputSpecToSettings,
   settingsToOutputSpec,
   validateSettings,
 } from './modelSettingsHelpers';
@@ -84,7 +85,7 @@ const ModelSettingsModal: React.FC<ModelSettingsModalProps> = ({
     }
 
     const defaults = buildDefaultSettings(constraints);
-    const merged = { ...defaults, ...settings };
+    const merged = { ...defaults, ...outputSpecToSettings(settings, constraints) };
     const validated = validateSettings(merged, constraints);
     setLocalSettings(validated);
   }, [constraints, isOpen, settings]);

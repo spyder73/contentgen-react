@@ -1,13 +1,18 @@
 import axios from 'axios';
 import { BASE_URL } from './helpers';
 import { ClipMetadata } from './structs';
-import { MediaOutputSpec, MediaProfile, MediaPrompt } from './structs/media-spec';
+import { MediaPrompt } from './structs/media-spec';
+import {
+  normalizePromptReferenceImageUrls,
+  readTopLevelReferenceImageUrls,
+} from './referenceImagePayload';
 import {
   ClipStyleSchema,
   ClipStyleSummary,
   normalizeClipStyleList,
   normalizeClipStyleSchema,
 } from './clipstyleSchema';
+import { isRecord, toStringValue } from './typeHelpers';
 
 // ==================== Request Types ====================
 
@@ -49,28 +54,6 @@ export interface AvailableMediaItem {
 }
 
 // ==================== Helpers ====================
-
-const withDefaultOutputSpec = (
-  prompts: MediaPrompt[] | undefined,
-  fallback?: MediaOutputSpec
-): MediaPrompt[] | undefined => {
-  if (!prompts?.length) return prompts;
-  if (!fallback) return prompts;
-
-  return prompts.map((p) => {
-    const mergedSpec = p.outputSpec ? { ...fallback, ...p.outputSpec } : { ...fallback };
-    return { ...p, outputSpec: mergedSpec };
-  });
-};
-
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null && !Array.isArray(value);
-
-const toStringValue = (value: unknown, fallback = ''): string => {
-  if (typeof value === 'string') return value;
-  if (value === undefined || value === null) return fallback;
-  return String(value);
-};
 
 const normalizeAvailableMediaItem = (value: unknown, index: number): AvailableMediaItem | null => {
   if (!isRecord(value)) {
@@ -141,6 +124,23 @@ const normalizeAvailableMediaList = (payload: unknown): AvailableMediaItem[] => 
     .filter((item): item is AvailableMediaItem => Boolean(item));
 };
 
+const normalizeCreateClipPromptRequest = (
+  request: NewClipPromptRequest
+): NewClipPromptRequest => {
+  const topLevelReferenceImageUrls = readTopLevelReferenceImageUrls(request.metadata);
+  return {
+    ...request,
+    imagePrompts: normalizePromptReferenceImageUrls(
+      request.imagePrompts,
+      topLevelReferenceImageUrls
+    ),
+    aiVideoPrompts: normalizePromptReferenceImageUrls(
+      request.aiVideoPrompts,
+      topLevelReferenceImageUrls
+    ),
+  };
+};
+
 // ==================== Clip API ====================
 
 const getClipPrompt = (clipId: string) =>
@@ -150,23 +150,18 @@ const getClipPrompts = () =>
   axios.get(`${BASE_URL}/clips`).then((res) => res.data.clip_prompts || []);
 
 const createClipPrompt = (request: NewClipPromptRequest) =>
-  axios.post(`${BASE_URL}/clips`, request).then((res) => res.data.clip_prompt_id);
+  axios
+    .post(`${BASE_URL}/clips`, normalizeCreateClipPromptRequest(request))
+    .then((res) => res.data.clip_prompt_id);
 
 /**
- * Parses a clip prompt JSON and optionally hydrates missing/partial per-item outputSpec
- * from run-level mediaProfile defaults.
+ * Parses a clip prompt JSON and normalizes reference-image metadata.
  */
-const createClipPromptFromJson = (
-  json: string,
-  mediaProfile?: MediaProfile
-) => {
+const createClipPromptFromJson = (json: string) => {
   const parsed = JSON.parse(json) as NewClipPromptRequest;
 
   return createClipPrompt({
     ...parsed,
-    imagePrompts: withDefaultOutputSpec(parsed.imagePrompts, mediaProfile?.image),
-    aiVideoPrompts: withDefaultOutputSpec(parsed.aiVideoPrompts, mediaProfile?.video),
-    audioPrompts: withDefaultOutputSpec(parsed.audioPrompts, mediaProfile?.audio),
   });
 };
 

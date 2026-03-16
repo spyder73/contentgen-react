@@ -11,32 +11,10 @@ import {
   PipelineTemplate,
   PromptCheckpointConfig,
 } from './structs';
+import { cleanString, isRecord, toNumberValue, toStringValue } from './typeHelpers';
 
 const hasOwn = <T extends object>(value: T, key: string): boolean =>
   Object.prototype.hasOwnProperty.call(value, key);
-
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null && !Array.isArray(value);
-
-const toStringValue = (value: unknown, fallback = ''): string => {
-  if (typeof value === 'string') return value;
-  if (value === null || value === undefined) return fallback;
-  return String(value);
-};
-
-const toNumberValue = (value: unknown): number | undefined => {
-  if (typeof value === 'number' && Number.isFinite(value)) return value;
-  if (typeof value === 'string' && value.trim()) {
-    const parsed = Number(value);
-    return Number.isFinite(parsed) ? parsed : undefined;
-  }
-  return undefined;
-};
-
-const cleanString = (value: unknown): string | undefined => {
-  const cleaned = toStringValue(value).trim();
-  return cleaned || undefined;
-};
 
 const normalizePositiveInteger = (value: unknown): number | undefined => {
   const parsed = toNumberValue(value);

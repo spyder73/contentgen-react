@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { constructMediaUrl } from '../../api/helpers';
-import { getFileType } from '../../api/structs/clip';
+import { getFileType, isTransientOutputUrl } from '../../api/structs/clip';
 import { ImageGallery, ImageComparison, VideoGallery } from './output';
 import ClipPlayer from './ClipPlayer';
 
@@ -16,66 +16,96 @@ const OutputGallery: React.FC<OutputGalleryProps> = ({
   originalImages = [],
 }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
+  const stableUrls = useMemo(() => {
+    const seen = new Set<string>();
+    return (fileUrls || [])
+      .map((url) => (url || '').trim())
+      .filter((url) => {
+        if (!url) return false;
+        if (isTransientOutputUrl(url)) return false;
+        if (seen.has(url)) return false;
+        seen.add(url);
+        return true;
+      });
+  }, [fileUrls]);
 
-  // Early return if no files
-  if (!fileUrls || fileUrls.length === 0) {
+  const inferredPrimaryType =
+    stableUrls.map((url) => getFileType(url)).find((type) => type !== 'unknown') || 'unknown';
+  const primaryType = inferredPrimaryType;
+  const normalizedUrls =
+    primaryType === 'unknown'
+      ? stableUrls
+      : stableUrls.filter((url) => {
+          const type = getFileType(url);
+          return type === primaryType || type === 'unknown';
+        });
+  const safeUrls = normalizedUrls.length > 0 ? normalizedUrls : stableUrls;
+
+  useEffect(() => {
+    setCurrentIndex((previous) => {
+      if (safeUrls.length === 0) return 0;
+      return Math.max(0, Math.min(previous, safeUrls.length - 1));
+    });
+  }, [safeUrls.length]);
+
+  if (safeUrls.length === 0) {
     return null;
   }
-
-  const primaryType = getFileType(fileUrls[0]);
 
   const showComparison =
     primaryType === 'image' &&
     originalImages.length > 0 &&
-    fileUrls.length === originalImages.length;
+    safeUrls.length === originalImages.length;
+
+  const renderSurface = (title: string, content: React.ReactNode) => (
+    <div className="mt-4 overflow-hidden rounded-xl border border-white/15 bg-gradient-to-br from-slate-900/80 via-slate-900/55 to-slate-800/70">
+      <div className="flex items-center justify-between border-b border-white/10 px-3 py-2.5">
+        <p className="text-[11px] uppercase tracking-[0.14em] text-zinc-300">{title}</p>
+        <span className="text-[10px] uppercase tracking-[0.14em] text-zinc-500">{clipStyle}</span>
+      </div>
+      <div className="p-3">{content}</div>
+    </div>
+  );
 
   // Single video - use ClipPlayer
-  if (primaryType === 'video' && fileUrls.length === 1) {
-    return (
-      <div className="mt-4 p-4 bg-slate-800/50 rounded-lg">
-        <p className="text-slate-400 text-sm font-medium mb-2">Rendered Video</p>
-        <ClipPlayer clipUrl={constructMediaUrl(fileUrls[0])} />
-      </div>
-    );
+  if (primaryType === 'video' && safeUrls.length === 1) {
+    return renderSurface('Rendered Video', <ClipPlayer clipUrl={constructMediaUrl(safeUrls[0])} />);
   }
 
   // Multiple videos
   if (primaryType === 'video') {
-    return (
-      <div className="mt-4 p-4 bg-slate-800/50 rounded-lg">
-        <VideoGallery
-          urls={fileUrls}
-          currentIndex={currentIndex}
-          setCurrentIndex={setCurrentIndex}
-        />
-      </div>
+    return renderSurface(
+      'Rendered Videos',
+      <VideoGallery
+        urls={safeUrls}
+        currentIndex={currentIndex}
+        setCurrentIndex={setCurrentIndex}
+      />
     );
   }
 
   // Images with comparison mode
   if (showComparison) {
-    return (
-      <div className="mt-4 p-4 bg-slate-800/50 rounded-lg">
-        <ImageComparison
-          originalImages={originalImages}
-          outputUrls={fileUrls}
-          currentIndex={currentIndex}
-          setCurrentIndex={setCurrentIndex}
-        />
-      </div>
+    return renderSurface(
+      'Output Comparison',
+      <ImageComparison
+        originalImages={originalImages}
+        outputUrls={safeUrls}
+        currentIndex={currentIndex}
+        setCurrentIndex={setCurrentIndex}
+      />
     );
   }
 
   // Images gallery (no comparison)
   if (primaryType === 'image') {
-    return (
-      <div className="mt-4 p-4 bg-slate-800/50 rounded-lg">
-        <ImageGallery
-          urls={fileUrls}
-          currentIndex={currentIndex}
-          setCurrentIndex={setCurrentIndex}
-        />
-      </div>
+    return renderSurface(
+      'Output Gallery',
+      <ImageGallery
+        urls={safeUrls}
+        currentIndex={currentIndex}
+        setCurrentIndex={setCurrentIndex}
+      />
     );
   }
 

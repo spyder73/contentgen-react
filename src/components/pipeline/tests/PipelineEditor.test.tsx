@@ -158,6 +158,45 @@ describe('PipelineEditor', () => {
     });
   });
 
+  it('clears generator output_spec when the media type changes', async () => {
+    const onSave = renderEditor(
+      buildPipeline([
+        {
+          id: 'generator-step',
+          name: 'Generator Step',
+          type: 'generator',
+          prompt_template_id: '',
+          input_mapping: {},
+          requires_confirm: false,
+          allow_regenerate: true,
+          allow_attachments: false,
+          output_spec: {
+            width: 768,
+            height: 1344,
+            steps: 30,
+            cfg_scale: 7.5,
+          },
+          generator: {
+            media_type: 'image',
+            mode: 'text_to_image',
+            provider: 'runware',
+            model: 'runware:400@1',
+            role: 'seed_image',
+          },
+        },
+      ])
+    );
+
+    fireEvent.click(screen.getByText('Generator Step'));
+    fireEvent.change(screen.getByDisplayValue('Image'), {
+      target: { value: 'video' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
+    expect(onSave.mock.calls[0][0].checkpoints[0].output_spec).toBeUndefined();
+  });
+
   it('writes prompt selector changes to promptGate instead of root-level fields', async () => {
     const onSave = renderEditor(
       buildPipeline([

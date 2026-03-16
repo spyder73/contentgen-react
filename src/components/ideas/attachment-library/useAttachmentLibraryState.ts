@@ -30,11 +30,14 @@ export const useAttachmentLibraryState = ({
   generatedAssets,
   initialSelectedMediaIds,
 }: UseAttachmentLibraryStateProps) => {
+  const wasOpenRef = React.useRef(false);
+  const lastModeRef = React.useRef<AttachmentLibraryMode>(mode);
   const [activeTab, setActiveTab] = React.useState<AttachmentLibraryTab>('browse');
   const [folderType, setFolderType] = React.useState<FolderType>('all');
   const [sourceFilter, setSourceFilter] = React.useState<SourceFilter>('all');
   const [searchQuery, setSearchQuery] = React.useState('');
-  const [items, setItems] = React.useState<MediaLibraryItem[]>([]);
+  const [libraryItems, setLibraryItems] = React.useState<MediaLibraryItem[]>([]);
+  const [dismissedMediaIds, setDismissedMediaIds] = React.useState<string[]>([]);
   const [selectedIds, setSelectedIds] = React.useState<string[]>([]);
   const [activeMediaId, setActiveMediaId] = React.useState('');
   const [contextDraft, setContextDraft] = React.useState('');
@@ -52,18 +55,26 @@ export const useAttachmentLibraryState = ({
     setLoading(true);
     setErrorMessage('');
     try {
-      const libraryItems = await API.listMediaLibrary();
-      setItems(mergeLibraryItems(Array.isArray(libraryItems) ? libraryItems : [], generatedAssets));
+      const nextLibraryItems = await API.listMediaLibrary();
+      setLibraryItems(Array.isArray(nextLibraryItems) ? nextLibraryItems : []);
     } catch (error) {
       setErrorMessage(toActionableError(error, 'list'));
-      setItems(mergeLibraryItems([], generatedAssets));
+      setLibraryItems([]);
     } finally {
       setLoading(false);
     }
-  }, [generatedAssets]);
+  }, []);
 
   React.useEffect(() => {
-    if (!isOpen) return;
+    const justOpened = isOpen && !wasOpenRef.current;
+    const modeChangedWhileOpen = isOpen && lastModeRef.current !== mode;
+    if (!isOpen) {
+      wasOpenRef.current = false;
+      lastModeRef.current = mode;
+      return;
+    }
+    if (!justOpened && !modeChangedWhileOpen) return;
+
     setActiveTab(mode === 'manage' ? 'upload' : 'browse');
     setFolderType('all');
     setSourceFilter('all');
@@ -73,10 +84,22 @@ export const useAttachmentLibraryState = ({
     setContextDraft('');
     setRenameDraft('');
     setUploadFiles([]);
+    setLibraryItems([]);
+    setDismissedMediaIds([]);
     setStatusMessage('');
     setErrorMessage('');
     void loadLibrary();
+    wasOpenRef.current = true;
+    lastModeRef.current = mode;
   }, [initialSelectedMediaIds, isOpen, loadLibrary, mode]);
+
+  const items = React.useMemo(
+    () =>
+      mergeLibraryItems(libraryItems, generatedAssets).filter(
+        (item) => !dismissedMediaIds.includes(item.media_id || item.id)
+      ),
+    [dismissedMediaIds, generatedAssets, libraryItems]
+  );
 
   const activeItem = React.useMemo(
     () => items.find((item) => (item.media_id || item.id) === activeMediaId) || null,
@@ -145,13 +168,16 @@ export const useAttachmentLibraryState = ({
     setStatusMessage('');
     try {
       await API.editMediaMetadata(mediaId, 'user_context', contextDraft.trim());
-      setItems((previous) =>
-        previous.map((item) =>
-          (item.media_id || item.id) === mediaId
-            ? { ...item, metadata: { ...(item.metadata || {}), user_context: contextDraft.trim() } }
-            : item
-        )
-      );
+      setLibraryItems((previous) => {
+        const nextMetadata = { ...(activeItem.metadata || {}), user_context: contextDraft.trim() };
+        const matchIndex = previous.findIndex((item) => (item.media_id || item.id) === mediaId);
+        if (matchIndex >= 0) {
+          return previous.map((item, index) =>
+            index === matchIndex ? { ...item, metadata: nextMetadata } : item
+          );
+        }
+        return [{ ...activeItem, metadata: nextMetadata }, ...previous];
+      });
       setStatusMessage('Saved file context.');
     } catch (error) {
       setErrorMessage(toActionableError(error, 'metadata'));
@@ -175,19 +201,20 @@ export const useAttachmentLibraryState = ({
     try {
       const renamed = await API.renameMediaLibraryItem(mediaId, nextName);
       const nextMediaId = renamed.media_id || renamed.id || mediaId;
-      setItems((previous) =>
-        previous.map((item) =>
-          (item.media_id || item.id) === mediaId
-            ? {
-                ...item,
-                ...renamed,
-                media_id: nextMediaId,
-                id: nextMediaId,
-                name: renamed.name || nextName,
-              }
-            : item
-        )
-      );
+      setLibraryItems((previous) => {
+        const nextItem = {
+          ...activeItem,
+          ...renamed,
+          media_id: nextMediaId,
+          id: nextMediaId,
+          name: renamed.name || nextName,
+        };
+        const matchIndex = previous.findIndex((item) => (item.media_id || item.id) === mediaId);
+        if (matchIndex >= 0) {
+          return previous.map((item, index) => (index === matchIndex ? nextItem : item));
+        }
+        return [nextItem, ...previous];
+      });
       setActiveMediaId(nextMediaId);
       setRenameDraft(renamed.name || nextName);
       setStatusMessage('Renamed file successfully.');
@@ -208,7 +235,10 @@ export const useAttachmentLibraryState = ({
     setStatusMessage('');
     try {
       await API.deleteMediaItem(mediaId);
-      setItems((previous) => previous.filter((item) => (item.media_id || item.id) !== mediaId));
+      setLibraryItems((previous) => previous.filter((item) => (item.media_id || item.id) !== mediaId));
+      setDismissedMediaIds((previous) =>
+        previous.includes(mediaId) ? previous : [...previous, mediaId]
+      );
       setSelectedIds((previous) => previous.filter((id) => id !== mediaId));
       setActiveMediaId('');
       setContextDraft('');

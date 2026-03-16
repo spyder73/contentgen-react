@@ -90,12 +90,13 @@ const ImageProviderSelector: React.FC<ImageProviderSelectorProps> = ({
 
   return (
     <>
-      <div className="flex gap-2 items-center">
+      <div className="grid grid-cols-1 sm:grid-cols-[minmax(0,9rem)_minmax(0,1fr)_auto] gap-2 items-center min-w-0">
         <Select
           options={IMAGE_PROVIDERS}
           value={provider}
           onChange={(e) => onProviderChange(e.target.value as ImageProvider)}
           selectSize="sm"
+          className="w-full min-w-0"
         />
 
         {providerRequiresModel(provider) && (
@@ -106,6 +107,8 @@ const ImageProviderSelector: React.FC<ImageProviderSelectorProps> = ({
             placeholder="Select model"
             searchable
             loading={loading}
+            className="w-full min-w-0"
+            buttonClassName="w-full min-w-0"
           />
         )}
 

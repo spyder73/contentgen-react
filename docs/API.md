@@ -52,12 +52,6 @@ Base URL is currently `http://localhost:81` from `src/api/helpers.ts`.
 }
 ```
 
-#### Start-Time Required Assets (Wave 4E4)
-- start-time blocking is driven only by `required_assets[].source === "initial"`.
-- checkpoint requirements with `source === "user"` or `source === "checkpoint:<id>"` do not block run start.
-- the referenced-video pipeline now starts from text-only input by default; character seed replacement happens at the paused checkpoint instead of a dedicated start-form seed picker.
-- optional `initial_attachments[]` still flow through the run attachment picker when a template exposes attachment intent.
-
 ### Attachment Pool and Checkpoint Binding Mapping
 - asset pool entries are normalized into stable attachment payload rows in `PipelineAPI.startPipeline(...)`.
 - checkpoint-bound selections are emitted as additive attachment rows with `checkpoint_id`/`checkpoint_index`.

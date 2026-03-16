@@ -5,7 +5,9 @@ import { MediaItem } from '../../api/structs/media';
 import { MediaOutputSpec } from '../../api/structs/media-spec';
 import { ClipStyleField } from '../../api/clipstyleSchema';
 import { Modal } from '../modals';
+import CheckpointProviderSelector from '../selectors/CheckpointProviderSelector';
 import { Button, Input, TextArea } from '../ui';
+import { useToast } from '../../hooks/useToast';
 
 interface EditMediaModalProps {
   isOpen: boolean;
@@ -104,6 +106,27 @@ const normalizeMetadataForSubmit = (
   return next;
 };
 
+const toSelectorModality = (type: MediaItem['type']): 'image' | 'video' | 'audio' => {
+  if (type === 'ai_video') return 'video';
+  if (type === 'audio') return 'audio';
+  return 'image';
+};
+
+const buildOutputSpecForSubmit = (
+  baseSpec: MediaOutputSpec | undefined,
+  provider: string,
+  model: string
+): MediaOutputSpec | undefined => {
+  const normalizedProvider = toStringValue(provider);
+  const normalizedModel = toStringValue(model);
+  if (!normalizedProvider && !normalizedModel) return undefined;
+  return {
+    ...(baseSpec || {}),
+    provider: normalizedProvider,
+    model: normalizedModel,
+  };
+};
+
 const inferField = (key: string, value: unknown): ClipStyleField => {
   if (key.toLowerCase().includes('position')) {
     return {
@@ -153,10 +176,22 @@ const EditMediaModal: React.FC<EditMediaModalProps> = ({
   metadataFields = [],
   onSuccess,
 }) => {
+  const toast = useToast();
+  const resolvedOutputSpec = useMemo(
+    () => item.output_spec ?? outputSpec,
+    [item.output_spec, outputSpec]
+  );
+  const selectorModality = useMemo(() => toSelectorModality(item.type), [item.type]);
   const [prompt, setPrompt] = useState(item.prompt);
   const [metadata, setMetadata] = useState<Record<string, unknown>>(() => buildInitialMetadata(item));
   const [replacementMediaId, setReplacementMediaId] = useState<string>(() =>
     extractReplacementMediaId(buildInitialMetadata(item))
+  );
+  const [selectedProvider, setSelectedProvider] = useState<string>(
+    toStringValue(resolvedOutputSpec?.provider)
+  );
+  const [selectedModel, setSelectedModel] = useState<string>(
+    toStringValue(resolvedOutputSpec?.model)
   );
   const [availableMedia, setAvailableMedia] = useState<AvailableMediaItem[]>([]);
   const [isLoadingMediaCatalog, setIsLoadingMediaCatalog] = useState(false);
@@ -168,6 +203,11 @@ const EditMediaModal: React.FC<EditMediaModalProps> = ({
     setMetadata(nextMetadata);
     setReplacementMediaId(extractReplacementMediaId(nextMetadata));
   }, [item]);
+
+  useEffect(() => {
+    setSelectedProvider(toStringValue(resolvedOutputSpec?.provider));
+    setSelectedModel(toStringValue(resolvedOutputSpec?.model));
+  }, [resolvedOutputSpec?.provider, resolvedOutputSpec?.model, item.id]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -218,15 +258,20 @@ const EditMediaModal: React.FC<EditMediaModalProps> = ({
   const handleSubmit = async () => {
     setIsSubmitting(true);
     try {
+      const outputSpecForSubmit = buildOutputSpecForSubmit(
+        resolvedOutputSpec,
+        selectedProvider,
+        selectedModel
+      );
       await API.editMediaItem(item.id, {
         new_prompt_string: prompt,
-        output_spec: outputSpec,
+        output_spec: outputSpecForSubmit,
       });
 
       await API.replaceMediaMetadata(item.id, normalizeMetadataForSubmit(metadata, replacementMediaId));
       onSuccess();
     } catch (error: any) {
-      alert(`Failed: ${error.message}`);
+      toast({ text: `Failed: ${error.message}`, level: 'error' });
     } finally {
       setIsSubmitting(false);
     }
@@ -299,7 +344,7 @@ const EditMediaModal: React.FC<EditMediaModalProps> = ({
     );
   };
 
-  const spec = item.output_spec ?? outputSpec;
+  const spec = buildOutputSpecForSubmit(resolvedOutputSpec, selectedProvider, selectedModel);
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Edit Media">
@@ -311,6 +356,22 @@ const EditMediaModal: React.FC<EditMediaModalProps> = ({
           rows={4}
         />
 
+        <div className="space-y-2 pt-2 border-t border-white/10">
+          <p className="text-xs uppercase tracking-[0.15em] text-zinc-300 font-medium">Provider / Model</p>
+          <CheckpointProviderSelector
+            provider={selectedProvider}
+            model={selectedModel}
+            modality={selectorModality}
+            allowInherit
+            inheritLabel="Use clip defaults"
+            onProviderChange={(provider) => setSelectedProvider(provider)}
+            onModelChange={(model) => setSelectedModel(model)}
+          />
+          <p className="attachment-meta">
+            Leave blank to inherit current clip/pipeline defaults for this media type.
+          </p>
+        </div>
+
         {resolvedMetadataFields.length > 0 && (
           <div className="space-y-3 pt-2 border-t border-white/10">
             <p className="text-xs uppercase tracking-[0.15em] text-zinc-300 font-medium">Style Metadata</p>
@@ -320,8 +381,12 @@ const EditMediaModal: React.FC<EditMediaModalProps> = ({
 
         <div className="space-y-2 pt-2 border-t border-white/10">
           <p className="text-xs uppercase tracking-[0.15em] text-zinc-300 font-medium">Replace Media Reference</p>
+          <label htmlFor="replacement-media-select" className="block text-xs uppercase tracking-wide text-zinc-400">
+            Replacement Asset
+          </label>
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
             <select
+              id="replacement-media-select"
               value={replacementMediaId}
               onChange={(e) => setReplacementMediaId(e.target.value)}
               className="w-full select sm:flex-1"

@@ -1,4 +1,5 @@
 import { PipelineRun, PipelineTemplate } from '../../api/structs';
+import { isRecord, toNumberValue, toStringValue } from '../../api/typeHelpers';
 
 export interface AttachmentProvenanceItem {
   id: string;
@@ -15,23 +16,6 @@ export interface AttachmentProvenanceItem {
   source_checkpoint_index?: number;
 }
 
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null && !Array.isArray(value);
-
-const toStringValue = (value: unknown): string => {
-  if (typeof value === 'string') return value.trim();
-  if (typeof value === 'number') return String(value);
-  return '';
-};
-
-const toNumberValue = (value: unknown): number | undefined => {
-  if (typeof value === 'number' && Number.isFinite(value)) return value;
-  if (typeof value === 'string' && value.trim()) {
-    const parsed = Number(value);
-    return Number.isFinite(parsed) ? parsed : undefined;
-  }
-  return undefined;
-};
 
 const isMusicLikeType = (type: string, mimeType?: string): boolean => {
   const normalizedType = type.toLowerCase();

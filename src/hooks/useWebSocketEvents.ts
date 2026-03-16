@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 import { useWebSocket } from './useWebSocket';
 import { ToastMessage } from '../toast';
+import { isRecord, toStringValue } from '../api/typeHelpers';
 
 // All known backend webhook events
 export type WebSocketEventType =
@@ -12,16 +13,17 @@ export type WebSocketEventType =
   | 'UpdateImagePromptFileURL'
   | 'UpdateAIVideoPromptFileURL'
   | 'run_update'
+  | 'PipelineStarted'
+  | 'CheckpointStarted'
+  | 'CheckpointCompleted'
+  | 'CheckpointFailed'
+  | 'PipelinePaused'
+  | 'PipelineCompleted'
+  | 'PipelineCancelled'
+  | 'DistributorCompleted'
+  | 'GeneratorProgress'
   | string;
 
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null && !Array.isArray(value);
-
-const toStringValue = (value: unknown): string => {
-  if (typeof value === 'string') return value.trim();
-  if (typeof value === 'number') return String(value);
-  return '';
-};
 
 const getEventPayload = (value: unknown): Record<string, unknown> => {
   if (!isRecord(value)) return {};
@@ -110,6 +112,45 @@ export const buildRunUpdateToast = (rawEvent: unknown): ToastMessage | null => {
   return null;
 };
 
+interface EventRefreshTargets {
+  refreshIdeas: boolean;
+  refreshClips: boolean;
+}
+
+const PIPELINE_LIFECYCLE_EVENTS = new Set<string>([
+  'PipelineStarted',
+  'CheckpointStarted',
+  'CheckpointCompleted',
+  'CheckpointFailed',
+  'PipelinePaused',
+  'PipelineCompleted',
+  'PipelineCancelled',
+  'DistributorCompleted',
+  'GeneratorProgress',
+]);
+
+export const getEventRefreshTargets = (eventType: string): EventRefreshTargets => {
+  if (eventType === 'AddPromptIdea' || eventType === 'EditPromptIdea' || eventType === 'DeletePromptIdea') {
+    return { refreshIdeas: true, refreshClips: false };
+  }
+
+  if (
+    eventType === 'UpdateClipPrompt' ||
+    eventType === 'UpdateClipPromptFileURL' ||
+    eventType === 'UpdateImagePromptFileURL' ||
+    eventType === 'UpdateAIVideoPromptFileURL' ||
+    eventType === 'run_update'
+  ) {
+    return { refreshIdeas: false, refreshClips: true };
+  }
+
+  if (PIPELINE_LIFECYCLE_EVENTS.has(eventType)) {
+    return { refreshIdeas: false, refreshClips: false };
+  }
+
+  return { refreshIdeas: false, refreshClips: false };
+};
+
 interface UseWebSocketEventsOptions {
   onRefreshIdeas: () => void;
   onRefreshClips: () => void;
@@ -118,43 +159,41 @@ interface UseWebSocketEventsOptions {
 
 export function useWebSocketEvents({ onRefreshIdeas, onRefreshClips, onToast }: UseWebSocketEventsOptions) {
   const handleEvent = useCallback((eventType: WebSocketEventType, data: any) => {
+    const targets = getEventRefreshTargets(eventType);
+    if (targets.refreshIdeas) {
+      onRefreshIdeas();
+    }
+    if (targets.refreshClips) {
+      onRefreshClips();
+    }
+
     switch (eventType) {
-      // Idea events - only refresh ideas list
       case 'AddPromptIdea':
       case 'EditPromptIdea':
       case 'DeletePromptIdea':
         console.log('Idea updated');
-        onRefreshIdeas();
         break;
 
-      // Clip events - only refresh clips list
       case 'UpdateClipPrompt':
         console.log('Clip updated');
-        onRefreshClips();
         break;
 
       case 'UpdateClipPromptFileURL':
         console.log('Clip rendered');
-        onRefreshClips();
         onToast?.({ text: 'Clip rendered!', level: 'success' });
         break;
 
-      // Image events - only refresh clips
       case 'UpdateImagePromptFileURL':
         console.log('Image generated');
-        onRefreshClips();
         onToast?.({ text: 'Image generated', level: 'success' });
         break;
 
-      // Video events - only refresh clips
       case 'UpdateAIVideoPromptFileURL':
         console.log('AI Video generated');
-        onRefreshClips();
         onToast?.({ text: 'Video generated', level: 'success' });
         break;
 
       case 'run_update': {
-        onRefreshClips();
         const toast = buildRunUpdateToast(data);
         if (toast) {
           onToast?.(toast);
@@ -162,11 +201,24 @@ export function useWebSocketEvents({ onRefreshIdeas, onRefreshClips, onToast }: 
         break;
       }
 
+      case 'PipelineCompleted':
+        onToast?.({ text: 'Pipeline completed.', level: 'success' });
+        break;
+
+      case 'PipelinePaused':
+        onToast?.({ text: 'Pipeline paused for review.', level: 'info' });
+        break;
+
+      case 'CheckpointFailed':
+        onToast?.({ text: 'A checkpoint failed.', level: 'warning' });
+        break;
+
+      case 'PipelineCancelled':
+        onToast?.({ text: 'Pipeline cancelled.', level: 'warning' });
+        break;
+
       default:
         console.log('Unknown event:', eventType);
-        // For unknown events, refresh both to be safe
-        onRefreshIdeas();
-        onRefreshClips();
     }
   }, [onRefreshIdeas, onRefreshClips, onToast]);
 

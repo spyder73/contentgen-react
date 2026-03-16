@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { PipelineRun } from '../api/structs';
 import PipelineAPI from '../api/pipeline';
-import { MediaProfile } from '../api/structs/media-spec';
 import { CheckpointInjectionMode, MediaAttachment, PipelineInputAttachment } from '../api/structs/pipeline';
 
 const STORAGE_KEY = 'active_pipeline_runs';
@@ -105,9 +104,6 @@ export function usePipelineRuns() {
         autoMode: boolean;
         initialAttachments?: PipelineInputAttachment[];
         musicMediaId?: string | null;
-        provider: string;
-        model: string;
-        mediaProfile?: MediaProfile;
       }
     ): Promise<PipelineRun> => {
       const response = await PipelineAPI.startPipeline(templateId, input, options);

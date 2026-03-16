@@ -4,17 +4,8 @@ import {
   GeneratorConfig,
   PipelineOutputFormat,
 } from '../../api/structs';
-
-// ── Primitives ──────────────────────────────────────────
-
-export const toStringValue = (value: unknown): string => {
-  if (typeof value === 'string') return value.trim();
-  if (typeof value === 'number') return String(value);
-  return '';
-};
-
-export const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null;
+import { isRecord, toStringValue } from '../../api/typeHelpers';
+export { isRecord, toStringValue };
 
 export const checkpointType = (c: CheckpointConfig): CheckpointType =>
   c.type || 'prompt';

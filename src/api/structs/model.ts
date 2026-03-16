@@ -34,9 +34,9 @@ export interface ModelConstraintsRawResponse {
   model_id: string;
   known_model: boolean;
   constraints: {
-    image?: { fields: Record<string, ConstraintField> };
-    video?: { fields: Record<string, ConstraintField> };
-    audio?: { fields: Record<string, ConstraintField> };
+    image?: { fields: Record<string, ConstraintField>; capabilities?: Record<string, unknown> };
+    video?: { fields: Record<string, ConstraintField>; capabilities?: Record<string, unknown> };
+    audio?: { fields: Record<string, ConstraintField>; capabilities?: Record<string, unknown> };
   };
 }
 
@@ -44,6 +44,7 @@ export interface ModelConstraintsRawResponse {
 export interface ModelConstraintsResponse {
   model_id: string;
   fields?: Record<string, ConstraintField>;
+  capabilities?: Record<string, unknown>;
   defaults?: Record<string, unknown>;
   [key: string]: unknown;
 }

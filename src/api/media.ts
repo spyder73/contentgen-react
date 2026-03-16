@@ -2,6 +2,7 @@ import axios from 'axios';
 import { BASE_URL } from './helpers';
 import { MediaType } from './structs';
 import { MediaOutputSpec } from './structs/media-spec';
+import { isRecord, toNumberValue, toStringValue } from './typeHelpers';
 
 // ==================== Request Types ====================
 
@@ -33,6 +34,12 @@ export interface MediaLibraryItem {
   type: string;
   name: string;
   url?: string;
+  preview_url?: string;
+  preview_video_url?: string;
+  preview_audio_url?: string;
+  thumbnail_url?: string;
+  poster_url?: string;
+  playback_url?: string;
   mime_type?: string;
   source?: string;
   size_bytes?: number;
@@ -53,23 +60,6 @@ interface HttpErrorWithStatus {
   };
 }
 
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null && !Array.isArray(value);
-
-const toStringValue = (value: unknown, fallback = ''): string => {
-  if (typeof value === 'string') return value;
-  if (value === undefined || value === null) return fallback;
-  return String(value);
-};
-
-const toNumberValue = (value: unknown): number | undefined => {
-  if (typeof value === 'number' && Number.isFinite(value)) return value;
-  if (typeof value === 'string' && value.trim()) {
-    const parsed = Number(value);
-    return Number.isFinite(parsed) ? parsed : undefined;
-  }
-  return undefined;
-};
 
 const normalizeMediaLibraryItem = (value: unknown, index: number): MediaLibraryItem | null => {
   if (!isRecord(value)) {
@@ -85,18 +75,46 @@ const normalizeMediaLibraryItem = (value: unknown, index: number): MediaLibraryI
     return null;
   }
 
-  const url = toStringValue(value.url ?? value.file_url ?? value.asset_url ?? value.uri);
-  const mediaId = toStringValue(value.media_id ?? value.id ?? value.asset_id, url || `media-${index + 1}`);
+  const mediaUrl = toStringValue(
+    value.url ??
+      value.file_url ??
+      value.asset_url ??
+      value.uri ??
+      value.media_url ??
+      value.source_url ??
+      value.download_url ??
+      value.stream_url ??
+      value.playback_url
+  );
+  const mediaId = toStringValue(value.media_id ?? value.id ?? value.asset_id, mediaUrl || `media-${index + 1}`);
   if (!mediaId) return null;
 
   const metadata = isRecord(value.metadata) ? value.metadata : undefined;
+  const previewUrl = toStringValue(
+    value.preview_url ??
+      value.preview_image_url ??
+      value.thumbnail_url ??
+      value.thumb_url ??
+      value.image_url
+  );
+  const previewVideoUrl = toStringValue(value.preview_video_url ?? value.video_url ?? value.video_file_url);
+  const previewAudioUrl = toStringValue(value.preview_audio_url ?? value.audio_url ?? value.audio_file_url);
+  const thumbnailUrl = toStringValue(value.thumbnail_url ?? value.thumb_url);
+  const posterUrl = toStringValue(value.poster_url ?? value.poster_image_url);
+  const playbackUrl = toStringValue(value.playback_url ?? value.stream_url);
 
   return {
     id: mediaId,
     media_id: mediaId,
     type: toStringValue(value.type ?? value.media_type ?? value.kind, 'unknown'),
     name: toStringValue(value.name ?? value.file_name ?? value.filename ?? value.title, mediaId),
-    url: url || undefined,
+    url: mediaUrl || undefined,
+    preview_url: previewUrl || undefined,
+    preview_video_url: previewVideoUrl || undefined,
+    preview_audio_url: previewAudioUrl || undefined,
+    thumbnail_url: thumbnailUrl || undefined,
+    poster_url: posterUrl || undefined,
+    playback_url: playbackUrl || undefined,
     mime_type: toStringValue(value.mime_type ?? value.mimeType ?? value.content_type) || undefined,
     source: toStringValue(value.source ?? value.origin) || undefined,
     size_bytes: toNumberValue(value.size_bytes ?? value.sizeBytes ?? value.size),

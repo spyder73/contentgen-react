@@ -1,20 +1,16 @@
 import React, { useState } from 'react';
-import { PipelineManagerProps } from './types';
 import { PipelineTemplate, PromptTemplate } from '../../api/structs';
+import { PipelineManagerProps } from './types';
 import { usePipelines } from '../../hooks/usePipelines';
 import { usePromptTemplates } from '../../hooks/usePromptTemplates';
+import { useToast } from '../../hooks/useToast';
 import PipelineList from './PipelineList';
 import PipelineEditor from './PipelineEditor';
 import PromptTemplateEditor from './PromptTemplateEditor';
-
-const DEFAULT_OUTPUT_FORMAT = {
-  enabled: false,
-  aspect_ratio: '9:16',
-  image_long_edge: 1920,
-  video_long_edge: 1920,
-};
+import { DEFAULT_OUTPUT_FORMAT } from './utils';
 
 const PipelineManager: React.FC<PipelineManagerProps> = ({ isOpen, onClose }) => {
+  const toast = useToast();
   const {
     pipelines,
     isLoading: pipelinesLoading,
@@ -54,7 +50,7 @@ const PipelineManager: React.FC<PipelineManagerProps> = ({ isOpen, onClose }) =>
       setNewPipelineId('');
       setNewPipelineName('');
     } catch (err: any) {
-      alert(`Failed to create: ${err.message}`);
+      toast({ text: `Failed to create: ${err.message}`, level: 'error' });
     }
   };
 
@@ -74,13 +70,12 @@ const PipelineManager: React.FC<PipelineManagerProps> = ({ isOpen, onClose }) =>
         setSelectedPipelineId(null);
       }
     } catch (err: any) {
-      alert(`Failed to delete: ${err.message}`);
+      toast({ text: `Failed to delete: ${err.message}`, level: 'error' });
     }
   };
 
   const handleEditPrompt = (promptId: string) => {
     if (!promptId) {
-      // Create new prompt
       setIsCreatingPrompt(true);
       setEditingPrompt(null);
     } else {
@@ -114,35 +109,17 @@ const PipelineManager: React.FC<PipelineManagerProps> = ({ isOpen, onClose }) =>
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-3 border-b border-white/10 bg-black/70">
           <div>
-            <h2 className="text-base font-semibold uppercase tracking-[0.2em] text-white">Pipeline Manager</h2>
-            <p className="text-xs text-gray-400 mt-1">
-              Build and run generation flows.
-            </p>
+            <h2 className="text-base font-semibold uppercase tracking-[0.2em] text-white">
+              Pipeline Manager
+            </h2>
           </div>
           <div className="flex items-center gap-2">
-            <button
-              onClick={() => {
-                setIsCreatingPrompt(true);
-                setEditingPrompt(null);
-              }}
-              className="btn btn-sm btn-ghost"
-            >
-              New Prompt
-            </button>
-            <button
-              onClick={() => setShowCreatePipeline((value) => !value)}
-              className="btn btn-sm btn-ghost"
-            >
-              New Pipeline
-            </button>
-            <button
-              onClick={onClose}
-              className="btn btn-sm btn-ghost"
-            >
+            <button onClick={onClose} className="btn btn-sm btn-ghost">
               Close
             </button>
           </div>
         </div>
+
         {showCreatePipeline && (
           <div className="grid grid-cols-1 md:grid-cols-[1fr_1fr_auto] gap-2 px-5 py-3 border-b border-white/10 bg-black/50">
             <input
@@ -157,15 +134,22 @@ const PipelineManager: React.FC<PipelineManagerProps> = ({ isOpen, onClose }) =>
               placeholder="Pipeline Name"
               className="input"
             />
-            <button className="btn btn-primary" onClick={handleCreatePipeline}>
-              Create
-            </button>
+            <div className="flex gap-2">
+              <button onClick={handleCreatePipeline} className="btn btn-primary btn-sm">
+                Create
+              </button>
+              <button
+                onClick={() => setShowCreatePipeline(false)}
+                className="btn btn-secondary btn-sm"
+              >
+                Cancel
+              </button>
+            </div>
           </div>
         )}
 
         {/* Body */}
         <div className="flex flex-1 overflow-hidden">
-          {/* Sidebar - Pipeline List */}
           <div className="w-64 border-r border-white/10 bg-black/35">
             <PipelineList
               pipelines={pipelines}
@@ -177,7 +161,6 @@ const PipelineManager: React.FC<PipelineManagerProps> = ({ isOpen, onClose }) =>
             />
           </div>
 
-          {/* Main Content */}
           <div className="flex-1 overflow-hidden bg-black">
             {selectedPipeline ? (
               <PipelineEditor
@@ -185,26 +168,11 @@ const PipelineManager: React.FC<PipelineManagerProps> = ({ isOpen, onClose }) =>
                 pipeline={selectedPipeline}
                 promptTemplates={promptTemplates}
                 onSave={handleSavePipeline}
-                onCheckpointAdd={() => {}}
-                onCheckpointRemove={() => {}}
-                onCheckpointUpdate={() => {}}
                 onEditPrompt={handleEditPrompt}
               />
             ) : (
-              <div className="flex items-center justify-center h-full text-gray-500">
-                <div className="text-center">
-                  <p className="text-base uppercase tracking-wide text-zinc-300">Select a pipeline</p>
-                  <p className="text-sm mt-2 text-gray-600">
-                    or{' '}
-                    <button
-                      onClick={() => setShowCreatePipeline(true)}
-                      className="text-zinc-300 hover:text-white underline"
-                    >
-                      create a new pipeline
-                    </button>{' '}
-                    to get started
-                  </p>
-                </div>
+              <div className="flex items-center justify-center h-full text-gray-500 text-sm">
+                Select a pipeline to edit
               </div>
             )}
           </div>

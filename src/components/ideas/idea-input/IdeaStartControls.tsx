@@ -40,7 +40,7 @@ const IdeaStartControls: React.FC<IdeaStartControlsProps> = ({
       disabled={disabled}
     />
 
-    <div className="flex items-center gap-3">
+    <div className="flex flex-wrap items-center gap-3">
       <Select
         value={templateId}
         onChange={(event) => onTemplateChange(event.target.value)}
@@ -68,7 +68,6 @@ const IdeaStartControls: React.FC<IdeaStartControlsProps> = ({
       >
         {autoMode ? 'Auto' : 'Manual'}
       </button>
-
       <Button type="submit" disabled={submitDisabled} loading={loading}>
         Generate
       </Button>

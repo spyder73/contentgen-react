@@ -1,29 +1,6 @@
 import axios from 'axios';
 import { Account, ScheduleResponse, User, UsersResponse } from './structs/user';
-
-type UnknownRecord = Record<string, unknown>;
-
-const isRecord = (value: unknown): value is UnknownRecord =>
-  typeof value === 'object' && value !== null && !Array.isArray(value);
-
-const toStringValue = (value: unknown): string => {
-  if (typeof value === 'string') return value.trim();
-  if (typeof value === 'number') return String(value);
-  return '';
-};
-
-const toNumberValue = (value: unknown): number | null => {
-  if (typeof value === 'number' && Number.isFinite(value)) {
-    return value;
-  }
-  if (typeof value === 'string') {
-    const trimmed = value.trim();
-    if (!trimmed) return null;
-    const parsed = Number(trimmed);
-    return Number.isFinite(parsed) ? parsed : null;
-  }
-  return null;
-};
+import { isRecord, toNumberValue, toStringValue } from './typeHelpers';
 
 const toStringArray = (value: unknown): string[] => {
   if (!Array.isArray(value)) return [];
@@ -37,7 +14,7 @@ const toNumberRecord = (value: unknown): Record<string, number> | undefined => {
 
   const entries = Object.entries(value).reduce<Record<string, number>>((result, [key, rawValue]) => {
     const numberValue = toNumberValue(rawValue);
-    if (numberValue !== null) {
+    if (numberValue !== undefined) {
       result[key] = numberValue;
     }
     return result;
@@ -46,13 +23,13 @@ const toNumberRecord = (value: unknown): Record<string, number> | undefined => {
   return Object.keys(entries).length > 0 ? entries : undefined;
 };
 
-export const unwrapPayload = (raw: unknown): UnknownRecord => {
+export const unwrapPayload = (raw: unknown): Record<string, unknown> => {
   if (!isRecord(raw)) return {};
   if (isRecord(raw.data)) return raw.data;
   return raw;
 };
 
-const extractMessageFromPayload = (payload: UnknownRecord): string =>
+const extractMessageFromPayload = (payload: Record<string, unknown>): string =>
   toStringValue(payload.error) ||
   toStringValue(payload.message) ||
   toStringValue(payload.detail) ||
@@ -132,7 +109,7 @@ export const normalizeUser = (raw: unknown): User | null => {
   const payload = unwrapPayload(raw);
   const id = toNumberValue(payload.id);
   const username = toStringValue(payload.username);
-  if (id === null || !username) return null;
+  if (id === undefined || !username) return null;
 
   const accounts = Array.isArray(payload.accounts)
     ? payload.accounts

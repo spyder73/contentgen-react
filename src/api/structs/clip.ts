@@ -35,13 +35,32 @@ export interface Idea {
 
 export type OutputFileType = 'video' | 'image' | 'audio' | 'unknown';
 
+const normalizeOutputUrl = (url: string): string => {
+  const trimmed = (url || '').trim();
+  if (!trimmed) return '';
+  const withoutQuery = trimmed.split('?')[0]?.split('#')[0] || '';
+  return withoutQuery.toLowerCase();
+};
+
+export const isTransientOutputUrl = (url: string): boolean => {
+  const trimmed = (url || '').trim().toLowerCase();
+  if (!trimmed) return true;
+  return /^(waiting|pending|rendering|processing|queued|failed|error)([:_\- ]|$)/i.test(trimmed);
+};
+
 export const getFileType = (url: string): OutputFileType => {
-  const ext = url.split('.').pop()?.toLowerCase() || '';
-  
-  if (['mp4', 'webm', 'mov', 'avi'].includes(ext)) return 'video';
-  if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext)) return 'image';
-  if (['mp3', 'wav', 'ogg', 'm4a'].includes(ext)) return 'audio';
-  
+  const normalized = normalizeOutputUrl(url);
+  if (!normalized || isTransientOutputUrl(normalized)) return 'unknown';
+
+  if (/\.(mp4|webm|mov|avi|m4v|ogv|m3u8)$/.test(normalized)) return 'video';
+  if (/\.(jpg|jpeg|png|gif|webp|bmp|avif)$/.test(normalized)) return 'image';
+  if (/\.(mp3|wav|ogg|m4a|aac|flac)$/.test(normalized)) return 'audio';
+
+  const fallback = normalized.toLowerCase();
+  if (fallback.includes('/video') || fallback.includes('video/')) return 'video';
+  if (fallback.includes('/image') || fallback.includes('image/')) return 'image';
+  if (fallback.includes('/audio') || fallback.includes('audio/')) return 'audio';
+
   return 'unknown';
 };
 

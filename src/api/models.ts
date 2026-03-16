@@ -111,6 +111,10 @@ const getModelConstraints = async (
   const result: ModelConstraintsResponse = {
     model_id: raw.model_id,
     fields: modalityBlock?.fields ?? {},
+    capabilities:
+      typeof modalityBlock?.capabilities === 'object' && modalityBlock.capabilities !== null
+        ? (modalityBlock.capabilities as Record<string, unknown>)
+        : {},
   };
 
   constraintsCache.set(cacheKey, result);

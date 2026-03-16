@@ -1,5 +1,10 @@
 import React from 'react';
 import { CheckpointConfig, PromptTemplate } from '../../api/structs';
+import {
+  checkpointType,
+  normalizeGeneratorMediaType,
+  resolveCheckpointDisplay,
+} from './utils';
 
 interface PipelineFlowProps {
   checkpoints: CheckpointConfig[];
@@ -18,92 +23,9 @@ const PipelineFlow: React.FC<PipelineFlowProps> = ({
   onCheckpointRemove,
   onReorder,
 }) => {
-  const getRequiredAssetCount = (checkpoint: CheckpointConfig): number => {
-    const arrays = [
-      checkpoint.required_assets,
-      checkpoint.required_attachments,
-      checkpoint.attachment_requirements,
-      (checkpoint as any).requiredAssets,
-      (checkpoint as any).requiredAttachments,
-      (checkpoint as any).attachmentRequirements,
-    ];
-
-    return arrays.find((item) => Array.isArray(item))?.length || 0;
-  };
-
-  const getChainSubCheckpointCount = (checkpoint: CheckpointConfig): number => {
-    const chainRecord = checkpoint.chain as
-      | {
-          count?: unknown;
-          sub_checkpoints?: unknown;
-          checkpoints?: unknown;
-        }
-      | undefined;
-    if (!chainRecord) return 0;
-
-    const numericCandidates = [chainRecord.count, chainRecord.sub_checkpoints, chainRecord.checkpoints];
-    for (const candidate of numericCandidates) {
-      if (typeof candidate === 'number' && Number.isFinite(candidate)) {
-        return Math.max(0, Math.floor(candidate));
-      }
-    }
-
-    if (Array.isArray(chainRecord.sub_checkpoints)) return chainRecord.sub_checkpoints.length;
-    if (Array.isArray(chainRecord.checkpoints)) return chainRecord.checkpoints.length;
-    return 0;
-  };
-
   const getPromptName = (promptId: string): string => {
     const template = promptTemplates.find((t) => t.id === promptId);
     return template?.name || promptId || 'No prompt';
-  };
-
-  const distributorById = checkpoints.reduce<Record<string, CheckpointConfig>>((acc, checkpoint) => {
-    if ((checkpoint.type || 'prompt') === 'distributor') {
-      acc[checkpoint.id] = checkpoint;
-    }
-    return acc;
-  }, {});
-
-  const getInputSources = (checkpoint: CheckpointConfig): string[] => {
-    return Object.entries(checkpoint.input_mapping || {}).map(([key, value]) => {
-      if (value === 'initial_input') return `${key}: user input`;
-      if (value.startsWith('checkpoint:')) {
-        const sourceId = value.replace('checkpoint:', '');
-        const source = distributorById[sourceId];
-        if (source) {
-          return `${key}: ${sourceId} (distributor output)`;
-        }
-        return `${key}: ${sourceId}`;
-      }
-      return `${key}: ${value}`;
-    });
-  };
-
-  const getConnectorSources = (checkpoint: CheckpointConfig): string[] => {
-    const checkpointType = checkpoint.type || 'prompt';
-    if (checkpointType === 'connector') {
-      const configuredSource = checkpoint.connector?.source_checkpoint_id;
-      if (configuredSource && distributorById[configuredSource]) {
-        return [configuredSource];
-      }
-
-      const allDistributorIds = previousDistributors(checkpoint.id);
-      if (allDistributorIds.length > 0) {
-        return [allDistributorIds[allDistributorIds.length - 1]];
-      }
-      return [];
-    }
-    return [];
-  };
-
-  const previousDistributors = (checkpointId: string): string[] => {
-    const current = checkpoints.findIndex((item) => item.id === checkpointId);
-    if (current <= 0) return [];
-    return checkpoints
-      .slice(0, current)
-      .filter((item) => (item.type || 'prompt') === 'distributor')
-      .map((item) => item.id);
   };
 
   return (
@@ -122,181 +44,134 @@ const PipelineFlow: React.FC<PipelineFlowProps> = ({
       )}
 
       {/* Checkpoints */}
-      {checkpoints.map((checkpoint, index) => (
-        <div key={checkpoint.id}>
-          {/* Checkpoint Node */}
-          <div
-            onClick={() => onCheckpointClick(checkpoint.id)}
-              className={`
-              flex items-start gap-2 p-2.5 rounded cursor-pointer transition-all
-              ${(checkpoint.type || 'prompt') === 'chain' && selectedCheckpointId !== checkpoint.id
-                ? 'bg-emerald-500/10 border border-emerald-400/40 hover:border-emerald-300/60'
-                : ''
-              }
-              ${selectedCheckpointId === checkpoint.id
-                ? 'bg-white/10 border border-white/35'
-                : 'bg-black/50 border border-white/15 hover:border-white/25 hover:bg-white/5'
-              }
-            `}
-          >
-            {/* Step Number */}
+      {checkpoints.map((checkpoint, index) => {
+        const resolved = resolveCheckpointDisplay(checkpoints, index);
+        const type = checkpointType(checkpoint);
+
+        return (
+          <div key={checkpoint.id}>
+            {/* Checkpoint Node */}
             <div
+              onClick={() => onCheckpointClick(checkpoint.id)}
               className={`
-                w-8 h-8 border flex items-center justify-center text-xs font-semibold flex-shrink-0
+                flex items-start gap-2 p-2.5 rounded cursor-pointer transition-all
+                ${type === 'generator' && selectedCheckpointId !== checkpoint.id
+                  ? 'bg-sky-500/10 border border-sky-400/40 hover:border-sky-300/60'
+                  : ''
+                }
                 ${selectedCheckpointId === checkpoint.id
-                  ? 'bg-white text-black border-white'
-                  : (checkpoint.type || 'prompt') === 'chain'
-                  ? 'bg-emerald-200 text-emerald-950 border-emerald-200'
-                  : 'bg-black border-white/20 text-gray-300'
+                  ? 'bg-white/10 border border-white/35'
+                  : 'bg-black/50 border border-white/15 hover:border-white/25 hover:bg-white/5'
                 }
               `}
             >
-              {index + 1}
-            </div>
-
-            {/* Content */}
-            <div className="flex-1 min-w-0">
-              {(() => {
-                const checkpointType = checkpoint.type || 'prompt';
-                const isConnector = checkpointType === 'connector';
-                const isChain = checkpointType === 'chain';
-                return (
-                  <div className="flex items-center gap-1.5 mb-1 flex-wrap">
-                    {checkpointType === 'distributor' && (
-                      <span className="text-[10px] bg-white text-black px-1.5 py-0.5 rounded uppercase tracking-wide font-semibold">
-                        Distributor
-                      </span>
-                    )}
-                    {isConnector && (
-                      <span className="text-[10px] bg-zinc-800 border border-white/20 text-zinc-200 px-1.5 py-0.5 rounded uppercase tracking-wide">
-                        Connector
-                      </span>
-                    )}
-                    {isChain && (
-                      <span className="text-[10px] bg-emerald-300 text-emerald-950 px-1.5 py-0.5 rounded uppercase tracking-wide font-semibold">
-                        Chain
-                      </span>
-                    )}
-                  </div>
-                );
-              })()}
-              <div className="flex items-center justify-between">
-                <h4 className="font-medium text-white truncate text-xs uppercase tracking-wide">
-                  {checkpoint.name}
-                </h4>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onCheckpointRemove(checkpoint.id);
-                  }}
-                  className="text-gray-500 hover:text-white p-1 rounded border border-transparent hover:border-white/20 transition-colors text-[10px]"
-                  title="Remove checkpoint"
-                >
-                  Remove
-                </button>
+              {/* Step number badge */}
+              <div
+                className={`
+                  w-8 h-8 border flex items-center justify-center text-xs font-semibold flex-shrink-0
+                  ${selectedCheckpointId === checkpoint.id
+                    ? 'bg-white text-black border-white'
+                    : type === 'generator'
+                    ? 'bg-sky-200 text-sky-950 border-sky-200'
+                    : 'bg-black border-white/20 text-gray-300'
+                  }
+                `}
+              >
+                {index + 1}
               </div>
 
-              <p className="text-[10px] text-gray-500 truncate mt-0.5 uppercase tracking-wide">
-                {getPromptName(checkpoint.prompt_template_id)}
-              </p>
-
-              {/* Input Sources */}
-              {getInputSources(checkpoint).length > 0 && (
-                <div className="flex flex-wrap gap-1 mt-2">
-                  {getInputSources(checkpoint).map((source, i) => (
-                    <span
-                      key={i}
-                      className="text-[10px] bg-white/5 border border-white/10 text-gray-400 px-2 py-0.5 rounded"
-                    >
-                      {source}
+              {/* Content */}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium text-white truncate">
+                    {checkpoint.name}
+                  </span>
+                  {type !== 'prompt' && (
+                    <span className="text-[10px] uppercase tracking-wide px-1.5 py-0.5 border border-white/20 text-gray-400">
+                      {type === 'distributor' ? 'Distributor' : type === 'connector' ? 'Connector' : 'Generator'}
                     </span>
-                  ))}
+                  )}
                 </div>
-              )}
 
-              {(checkpoint.type || 'prompt') === 'distributor' && (
-                <p className="text-[10px] text-zinc-400 mt-2 uppercase tracking-wide">
-                  Fan-out: delimiter {checkpoint.distributor?.delimiter || 'newline'} | max{' '}
-                  {checkpoint.distributor?.max_children || 8} children
-                </p>
-              )}
+                {/* Prompt template */}
+                {checkpoint.prompt_template_id && (
+                  <div className="text-xs text-gray-500 mt-0.5 truncate">
+                    prompt: {getPromptName(checkpoint.prompt_template_id)}
+                  </div>
+                )}
 
-              {getConnectorSources(checkpoint).length > 0 && (
-                <p className="text-[10px] text-zinc-400 mt-2 uppercase tracking-wide">
-                  Fan-in from {getConnectorSources(checkpoint).join(', ')}
-                </p>
-              )}
+                {/* Input sources */}
+                {resolved.inputSources.length > 0 && (
+                  <div className="mt-1 space-y-0.5">
+                    {resolved.inputSources.map((source, i) => (
+                      <div key={i} className="text-[11px] text-gray-500">
+                        {source}
+                      </div>
+                    ))}
+                  </div>
+                )}
 
-              {(checkpoint.type || 'prompt') === 'chain' && (
-                <p className="text-[10px] text-emerald-200 mt-2 uppercase tracking-wide">
-                  Sub-checkpoints: {getChainSubCheckpointCount(checkpoint)}
-                </p>
-              )}
+                {/* Distributor fan-out info */}
+                {type === 'distributor' && checkpoint.distributor && (
+                  <div className="text-[11px] text-amber-400/80 mt-1">
+                    Fan-out: delimiter {checkpoint.distributor.delimiter} | max {checkpoint.distributor.max_children} children
+                  </div>
+                )}
 
-              {/* Badges */}
-              <div className="flex gap-1 mt-2">
-                {checkpoint.requires_confirm && (
-                  <span className="text-[10px] bg-white/5 border border-white/10 text-zinc-300 px-2 py-0.5 rounded uppercase tracking-wide">
-                    Confirm
-                  </span>
+                {/* Connector fan-in info */}
+                {type === 'connector' && resolved.connectorSources.length > 0 && (
+                  <div className="text-[11px] text-emerald-400/80 mt-1">
+                    Fan-in from {resolved.connectorSources.join(', ')}
+                  </div>
                 )}
-                {checkpoint.allow_regenerate && (
-                  <span className="text-[10px] bg-white/5 border border-white/10 text-zinc-300 px-2 py-0.5 rounded uppercase tracking-wide">
-                    Regen
-                  </span>
+
+                {/* Generator output info */}
+                {type === 'generator' && checkpoint.generator?.media_type && (
+                  <div className="text-[11px] text-sky-400/80 mt-1">
+                    Output: {normalizeGeneratorMediaType(checkpoint.generator.media_type)}
+                  </div>
                 )}
-                {checkpoint.allow_attachments && (
-                  <span className="text-[10px] bg-white/5 border border-white/10 text-zinc-300 px-2 py-0.5 rounded uppercase tracking-wide">
-                    Files
-                  </span>
+
+                {/* Required assets */}
+                {resolved.requiredAssetCount > 0 && (
+                  <div className="text-[11px] text-purple-400/70 mt-1">
+                    Req {resolved.requiredAssetCount}
+                  </div>
                 )}
-                {getRequiredAssetCount(checkpoint) > 0 && (
-                  <span className="text-[10px] bg-amber-500/10 border border-amber-400/30 text-amber-200 px-2 py-0.5 rounded uppercase tracking-wide">
-                    Req {getRequiredAssetCount(checkpoint)}
-                  </span>
-                )}
+
+                {/* Flags */}
+                <div className="flex gap-2 mt-1">
+                  {checkpoint.requires_confirm && (
+                    <span className="text-[10px] text-yellow-500/70">⏸ Confirm</span>
+                  )}
+                  {checkpoint.allow_regenerate && (
+                    <span className="text-[10px] text-blue-400/70">🔄 Regen</span>
+                  )}
+                  {checkpoint.allow_attachments && (
+                    <span className="text-[10px] text-green-400/70">📎 Attach</span>
+                  )}
+                </div>
               </div>
+
+              {/* Remove button */}
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onCheckpointRemove(checkpoint.id);
+                }}
+                className="text-zinc-500 hover:text-red-400 text-xs px-1.5 py-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+              >
+                ✕
+              </button>
             </div>
 
-            {/* Reorder Handles */}
-            <div className="flex flex-col gap-1 flex-shrink-0">
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (index > 0) onReorder(index, index - 1);
-                }}
-                disabled={index === 0}
-                className={`text-xs px-1.5 py-0.5 rounded ${
-                  index === 0
-                    ? 'text-gray-600 cursor-not-allowed'
-                    : 'text-gray-400 hover:text-white hover:bg-white/10'
-                }`}
-              >
-                Up
-              </button>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (index < checkpoints.length - 1) onReorder(index, index + 1);
-                }}
-                disabled={index === checkpoints.length - 1}
-                className={`text-xs px-1.5 py-0.5 rounded ${
-                  index === checkpoints.length - 1
-                    ? 'text-gray-600 cursor-not-allowed'
-                    : 'text-gray-400 hover:text-white hover:bg-white/10'
-                }`}
-              >
-                Down
-              </button>
-            </div>
+            {/* Connector to next */}
+            {index < checkpoints.length - 1 && (
+              <div className="ml-5 w-0.5 h-4 bg-gray-600" />
+            )}
           </div>
-
-          {/* Connector to next */}
-          {index < checkpoints.length - 1 && (
-            <div className="ml-5 w-0.5 h-4 bg-gray-600" />
-          )}
-        </div>
-      ))}
+        );
+      })}
 
       {/* End Node */}
       {checkpoints.length > 0 && (
@@ -306,7 +181,7 @@ const PipelineFlow: React.FC<PipelineFlowProps> = ({
             <div className="w-8 h-8 border border-white/25 bg-black/60 flex items-center justify-center text-zinc-300 text-xs font-semibold">
               OUT
             </div>
-            <span className="text-xs uppercase tracking-wide text-gray-400">Output</span>
+            <span className="text-xs uppercase tracking-wide text-gray-400">Pipeline Output</span>
           </div>
         </>
       )}

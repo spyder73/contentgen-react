@@ -7,7 +7,13 @@ interface PricingSummaryProps {
 }
 
 const providerLabel = (provider: string): string =>
-  provider === 'openrouter' ? 'OpenRouter' : provider === 'runware' ? 'Runware' : provider;
+  provider === 'openrouter'
+    ? 'OpenRouter'
+    : provider === 'runware'
+    ? 'Runware'
+    : provider === 'total'
+    ? 'Total'
+    : provider;
 
 const PricingSummary: React.FC<PricingSummaryProps> = ({ run }) => {
   const summary = React.useMemo(() => parsePricingSummary(run), [run]);

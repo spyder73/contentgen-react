@@ -9,6 +9,8 @@ import {
   SOURCE_OPTIONS,
   SourceFilter,
 } from './helpers';
+import { BrowseTabPreview } from './BrowseTabPreview';
+import { readGeneratedOriginLabel } from './browseTabUtils';
 
 interface BrowseTabProps {
   loading: boolean;
@@ -35,60 +37,6 @@ interface BrowseTabProps {
   onRename: () => void;
   onRemove: () => void;
 }
-
-const renderRowPreview = (item: MediaLibraryItem) => {
-  const folder = inferFolderFromType(item.type, item.mime_type);
-  const url = (item.url || '').trim();
-  if (!url) {
-    return (
-      <div className="w-11 h-11 rounded border border-white/20 bg-black/50 flex items-center justify-center text-[10px] text-zinc-400 uppercase">
-        {folder}
-      </div>
-    );
-  }
-  if (folder === 'image') {
-    return <img src={url} alt={item.name || item.media_id || item.id} className="w-11 h-11 rounded object-cover border border-white/20" loading="lazy" />;
-  }
-  if (folder === 'video') {
-    return <video src={url} className="w-11 h-11 rounded object-cover border border-white/20" muted playsInline preload="metadata" />;
-  }
-  return (
-    <div className="w-11 h-11 rounded border border-amber-300/30 bg-amber-500/10 flex items-center justify-center text-[10px] text-amber-200 uppercase">
-      Audio
-    </div>
-  );
-};
-
-const renderDetailPreview = (item: MediaLibraryItem) => {
-  const folder = inferFolderFromType(item.type, item.mime_type);
-  const url = (item.url || '').trim();
-  if (!url) {
-    return <p className="attachment-meta">No preview URL available for this file.</p>;
-  }
-  if (folder === 'image') {
-    return <img src={url} alt={item.name || item.media_id || item.id} className="w-full max-h-44 object-contain rounded border border-white/15 bg-black/40" loading="lazy" />;
-  }
-  if (folder === 'video') {
-    return <video src={url} className="w-full max-h-44 rounded border border-white/15 bg-black/40" controls playsInline preload="metadata" />;
-  }
-  if (folder === 'audio') {
-    return <audio src={url} className="w-full" controls preload="metadata" />;
-  }
-  return <p className="attachment-meta">Preview not supported for this media type.</p>;
-};
-
-const readGeneratedOriginLabel = (item: MediaLibraryItem): string => {
-  const metadata = item.metadata || {};
-  const originName = metadata.source_checkpoint_name;
-  if (typeof originName === 'string' && originName.trim()) return originName.trim();
-  const originId = metadata.source_checkpoint_id;
-  if (typeof originId === 'string' && originId.trim()) return originId.trim();
-  const originIndex = metadata.source_checkpoint_index;
-  if (typeof originIndex === 'number' && Number.isFinite(originIndex)) {
-    return `checkpoint ${originIndex + 1}`;
-  }
-  return '';
-};
 
 const BrowseTab: React.FC<BrowseTabProps> = ({
   loading,
@@ -172,13 +120,13 @@ const BrowseTab: React.FC<BrowseTabProps> = ({
               const mediaId = item.media_id || item.id;
               const selected = selectedIds.includes(mediaId);
               const folder = inferFolderFromType(item.type, item.mime_type);
+              const originLabel = inferSourceBucket(item.source) === 'generated' ? readGeneratedOriginLabel(item) : '';
+
               return (
                 <button
                   key={mediaId}
                   type="button"
-                  className={`w-full text-left attachment-item transition ${
-                    selected ? 'ring-1 ring-white/45 bg-white/10' : ''
-                  } ${
+                  className={`w-full text-left attachment-item transition ${selected ? 'ring-1 ring-white/45 bg-white/10' : ''} ${
                     folder === 'image'
                       ? 'border-red-400/35'
                       : folder === 'video'
@@ -190,22 +138,13 @@ const BrowseTab: React.FC<BrowseTabProps> = ({
                   onClick={() => onFileClick(mediaId)}
                 >
                   <div className="flex items-start gap-2">
-                    {renderRowPreview(item)}
+                    <BrowseTabPreview item={item} mode="row" />
                     <div className="min-w-0 flex-1">
-                      {(() => {
-                        const originLabel = inferSourceBucket(item.source) === 'generated'
-                          ? readGeneratedOriginLabel(item)
-                          : '';
-                        return (
-                          <>
-                            <p className="text-xs text-zinc-100 truncate">{item.name || mediaId}</p>
-                            <p className="attachment-meta mt-1">
-                              {item.type || 'unknown'} · {inferSourceBucket(item.source)} · {mediaId}
-                              {originLabel ? ` · ${originLabel}` : ''}
-                            </p>
-                          </>
-                        );
-                      })()}
+                      <p className="text-xs text-zinc-100 truncate">{item.name || mediaId}</p>
+                      <p className="attachment-meta mt-1">
+                        {item.type || 'unknown'} · {inferSourceBucket(item.source)} · {mediaId}
+                        {originLabel ? ` · ${originLabel}` : ''}
+                      </p>
                     </div>
                     {mode === 'select' && (
                       <span className="attachment-meta">{selected ? 'Selected' : 'Tap to select'}</span>
@@ -223,7 +162,7 @@ const BrowseTab: React.FC<BrowseTabProps> = ({
             <p className="attachment-meta">Select a file to view metadata and preview.</p>
           ) : (
             <>
-              {renderDetailPreview(activeItem)}
+              <BrowseTabPreview item={activeItem} mode="detail" />
               <p className="text-xs text-zinc-200">{activeItem.name || activeItem.media_id || activeItem.id}</p>
               <p className="attachment-meta">Media ID: {activeItem.media_id || activeItem.id}</p>
               <p className="attachment-meta">Type: {activeItem.type || 'unknown'}</p>

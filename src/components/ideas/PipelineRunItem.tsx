@@ -18,8 +18,8 @@ import RunTerminalFooter from './pipeline-run/RunTerminalFooter';
 interface Props {
   run: PipelineRun;
   template: PipelineTemplate;
-  onContinue: () => void;
-  onRegenerate: (checkpoint: number) => void;
+  onContinue: () => Promise<void> | void;
+  onRegenerate: (checkpoint: number) => Promise<void> | void;
   onInjectPrompt: (
     checkpoint: number,
     text: string,
@@ -117,6 +117,7 @@ const PipelineRunItem: React.FC<Props> = ({
     <div className="pipeline-run-item bg-black/50 border border-white/15 overflow-hidden">
       <RunHeader
         run={run}
+        template={template}
         templateName={template.name}
         checkpointCount={template.checkpoints.length}
         isExpanded={isExpanded}

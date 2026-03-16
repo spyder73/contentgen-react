@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { PromptTemplateEditorProps } from './types';
 import { PromptTemplate } from '../../api/structs';
+import { useToast } from '../../hooks/useToast';
 
 const PromptTemplateEditor: React.FC<PromptTemplateEditorProps> = ({
   template,
@@ -8,6 +9,7 @@ const PromptTemplateEditor: React.FC<PromptTemplateEditorProps> = ({
   onSave,
   onClose,
 }) => {
+  const toast = useToast();
   const [form, setForm] = useState({
     id: '',
     name: '',
@@ -31,7 +33,7 @@ const PromptTemplateEditor: React.FC<PromptTemplateEditorProps> = ({
 
   const handleSave = async () => {
     if (!form.id || !form.name || !form.content) {
-      alert('ID, Name, and Content are required');
+      toast({ text: 'ID, Name, and Content are required', level: 'warning' });
       return;
     }
 
@@ -45,7 +47,7 @@ const PromptTemplateEditor: React.FC<PromptTemplateEditorProps> = ({
       } as PromptTemplate);
       onClose();
     } catch (err: any) {
-      alert(`Failed to save: ${err.message}`);
+      toast({ text: `Failed to save: ${err.message}`, level: 'error' });
     } finally {
       setIsSaving(false);
     }

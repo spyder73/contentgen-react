@@ -1,4 +1,5 @@
 import { MediaType } from './structs';
+import { isRecord } from './typeHelpers';
 
 export type ClipStyleFieldType =
   | 'text'
@@ -52,9 +53,6 @@ export const createEmptyClipStyleSchema = (
     audio: [],
   },
 });
-
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null;
 
 const toStringOrEmpty = (value: unknown): string =>
   typeof value === 'string' ? value : '';

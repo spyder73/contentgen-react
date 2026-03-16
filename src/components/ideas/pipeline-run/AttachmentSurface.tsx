@@ -1,6 +1,7 @@
 import React from 'react';
 import { PipelineRun } from '../../../api/structs';
 import { formatMetadataValue } from './helpers';
+import { constructMediaUrl } from '../../../api/helpers';
 
 interface AttachmentSurfaceProps {
   heading: string;
@@ -20,6 +21,55 @@ const AttachmentSurface: React.FC<AttachmentSurfaceProps> = ({
   errorText,
 }) => {
   const hasAttachments = Array.isArray(attachments) && attachments.length > 0;
+
+  const renderPreview = (attachment: NonNullable<AttachmentSurfaceProps['attachments']>[number]) => {
+    const normalizedType = String(attachment.type || '').toLowerCase();
+    const mimeType = String(attachment.mime_type || '').toLowerCase();
+    const url = attachment.url ? constructMediaUrl(attachment.url) : '';
+    const isImage = normalizedType.includes('image') || mimeType.startsWith('image/');
+    const isVideo = normalizedType.includes('video') || mimeType.startsWith('video/');
+    const isAudio = normalizedType.includes('audio') || mimeType.startsWith('audio/');
+
+    if (!url) {
+      return <p className="attachment-meta mt-1">No URL provided.</p>;
+    }
+
+    if (isImage) {
+      return (
+        <img
+          src={url}
+          alt={attachment.name || attachment.id}
+          className="w-full max-h-44 object-contain rounded border border-white/15 bg-black/40 mt-2"
+          loading="lazy"
+        />
+      );
+    }
+
+    if (isVideo) {
+      return (
+        <video
+          src={url}
+          className="w-full max-h-44 rounded border border-white/15 bg-black/40 mt-2"
+          controls
+          playsInline
+          preload="metadata"
+        />
+      );
+    }
+
+    if (isAudio) {
+      return (
+        <audio
+          src={url}
+          className="w-full mt-2"
+          controls
+          preload="metadata"
+        />
+      );
+    }
+
+    return null;
+  };
 
   return (
     <div className="attachment-surface space-y-2">
@@ -48,7 +98,7 @@ const AttachmentSurface: React.FC<AttachmentSurfaceProps> = ({
                 </p>
                 {attachment.url ? (
                   <a
-                    href={attachment.url}
+                    href={constructMediaUrl(attachment.url)}
                     target="_blank"
                     rel="noreferrer"
                     className="attachment-meta underline mt-1 inline-block"
@@ -58,6 +108,7 @@ const AttachmentSurface: React.FC<AttachmentSurfaceProps> = ({
                 ) : (
                   <p className="attachment-meta mt-1">No URL provided.</p>
                 )}
+                {renderPreview(attachment)}
                 {metadataEntries.length > 0 && (
                   <div className="mt-2 space-y-1">
                     {metadataEntries.map(([key, value]) => (

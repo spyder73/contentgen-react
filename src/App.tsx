@@ -3,15 +3,12 @@ import {
   ImageProvider, 
   VideoProvider,
   AudioProvider,
-  ChatProvider,
   DEFAULT_IMAGE_PROVIDER,
   DEFAULT_IMAGE_MODEL,
   DEFAULT_VIDEO_PROVIDER,
   DEFAULT_VIDEO_MODEL,
   DEFAULT_AUDIO_PROVIDER,
   DEFAULT_AUDIO_MODEL,
-  DEFAULT_CHAT_PROVIDER,
-  DEFAULT_CHAT_MODEL,
 } from './api/structs/providers';
 import { MediaOutputSpec, MediaProfile } from './api/structs/media-spec';
 import { settingsToOutputSpec } from './components/selectors/modelSettingsHelpers';
@@ -22,6 +19,7 @@ import { ClipPromptsList } from './components/clips';
 import { useWebSocketEvents } from './hooks';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import { useUserAccountState } from './hooks/useUserAccountState';
+import { ToastProviderWithState } from './hooks/useToast';
 import { applyTheme, getDocumentTheme, isThemeMode, THEME_STORAGE_KEY } from './theme';
 import { ToastMessage } from './toast';
 
@@ -34,25 +32,21 @@ function App() {
   const themeMode = isThemeMode(storedThemeMode) ? storedThemeMode : 'dark';
 
   // Image provider state
-  const [imageProvider, setImageProvider] = useLocalStorage<ImageProvider>('imageProvider', DEFAULT_IMAGE_PROVIDER);
-  const [imageModel, setImageModel] = useLocalStorage('imageModel', DEFAULT_IMAGE_MODEL);
+  const [imageProvider] = useLocalStorage<ImageProvider>('imageProvider', DEFAULT_IMAGE_PROVIDER);
+  const [imageModel] = useLocalStorage('imageModel', DEFAULT_IMAGE_MODEL);
 
   // Video provider state
-  const [videoProvider, setVideoProvider] = useLocalStorage<VideoProvider>('videoProvider', DEFAULT_VIDEO_PROVIDER);
-  const [videoModel, setVideoModel] = useLocalStorage('videoModel', DEFAULT_VIDEO_MODEL);
+  const [videoProvider] = useLocalStorage<VideoProvider>('videoProvider', DEFAULT_VIDEO_PROVIDER);
+  const [videoModel] = useLocalStorage('videoModel', DEFAULT_VIDEO_MODEL);
 
   // Audio provider state
-  const [audioProvider, setAudioProvider] = useLocalStorage<AudioProvider>('audioProvider', DEFAULT_AUDIO_PROVIDER);
-  const [audioModel, setAudioModel] = useLocalStorage('audioModel', DEFAULT_AUDIO_MODEL);
-
-  // Chat provider state (for ideas generation)
-  const [chatProvider, setChatProvider] = useLocalStorage<ChatProvider>('chatProvider', DEFAULT_CHAT_PROVIDER);
-  const [chatModel, setChatModel] = useLocalStorage('chatModel', DEFAULT_CHAT_MODEL);
+  const [audioProvider] = useLocalStorage<AudioProvider>('audioProvider', DEFAULT_AUDIO_PROVIDER);
+  const [audioModel] = useLocalStorage('audioModel', DEFAULT_AUDIO_MODEL);
 
   // Per-modality settings (provider-specific extras like width, height, steps, etc.)
-  const [imageSettings, setImageSettings] = useLocalStorage<Partial<MediaOutputSpec>>('imageSettings', {});
-  const [videoSettings, setVideoSettings] = useLocalStorage<Partial<MediaOutputSpec>>('videoSettings', {});
-  const [audioSettings, setAudioSettings] = useLocalStorage<Partial<MediaOutputSpec>>('audioSettings', {});
+  const [imageSettings] = useLocalStorage<Partial<MediaOutputSpec>>('imageSettings', {});
+  const [videoSettings] = useLocalStorage<Partial<MediaOutputSpec>>('videoSettings', {});
+  const [audioSettings] = useLocalStorage<Partial<MediaOutputSpec>>('audioSettings', {});
 
   // Modal state
   const [showProxyModal, setShowProxyModal] = useState(false);
@@ -100,32 +94,11 @@ function App() {
   }, [themeMode]);
 
   return (
+    <ToastProviderWithState toast={toast} setToast={setToast}>
     <div className="app-shell h-screen flex flex-col">
       <Toast message={toast} onClose={() => setToast(null)} />
 
       <Header
-        imageProvider={imageProvider}
-        imageModel={imageModel}
-        onImageProviderChange={setImageProvider}
-        onImageModelChange={setImageModel}
-        imageSettings={imageSettings}
-        onImageSettingsChange={setImageSettings}
-        videoProvider={videoProvider}
-        videoModel={videoModel}
-        onVideoProviderChange={setVideoProvider}
-        onVideoModelChange={setVideoModel}
-        videoSettings={videoSettings}
-        onVideoSettingsChange={setVideoSettings}
-        audioProvider={audioProvider}
-        audioModel={audioModel}
-        onAudioProviderChange={setAudioProvider}
-        onAudioModelChange={setAudioModel}
-        audioSettings={audioSettings}
-        onAudioSettingsChange={setAudioSettings}
-        chatProvider={chatProvider}
-        chatModel={chatModel}
-        onChatProviderChange={setChatProvider}
-        onChatModelChange={setChatModel}
         users={users}
         activeUser={activeUser}
         activeAccount={activeAccount}
@@ -148,9 +121,6 @@ function App() {
               <div className="card-body flex-1 flex flex-col min-h-0">
                 <IdeasList
                   refreshTrigger={ideasRefreshTrigger}
-                  chatProvider={chatProvider}
-                  chatModel={chatModel}
-                  mediaProfile={mediaProfile}
                   openLibrarySignal={openLibrarySignal}
                   onClipsCreated={refreshClips}
                 />
@@ -182,6 +152,7 @@ function App() {
         onSubmit={handleAddUser}
       />
     </div>
+    </ToastProviderWithState>
   );
 }
 

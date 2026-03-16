@@ -14,6 +14,7 @@ interface ChatProviderSelectorProps {
   model: string;
   onProviderChange: (provider: ChatProvider) => void;
   onModelChange: (model: string) => void;
+  className?: string;
 }
 
 const ChatProviderSelector: React.FC<ChatProviderSelectorProps> = ({
@@ -21,6 +22,7 @@ const ChatProviderSelector: React.FC<ChatProviderSelectorProps> = ({
   model,
   onProviderChange,
   onModelChange,
+  className = '',
 }) => {
   const [models, setModels] = useState<AIModel[]>([]);
   const [loading, setLoading] = useState(false);
@@ -64,12 +66,13 @@ const ChatProviderSelector: React.FC<ChatProviderSelectorProps> = ({
   }));
 
   return (
-    <div className="flex gap-2 items-center">
+    <div className={`grid grid-cols-1 sm:grid-cols-[minmax(0,9rem)_minmax(0,1fr)] gap-2 items-center min-w-0 ${className}`}>
       <Select
         options={CHAT_PROVIDERS}
         value={provider}
         onChange={(e) => onProviderChange(e.target.value as ChatProvider)}
         selectSize="sm"
+        className="w-full min-w-0"
       />
 
       {providerRequiresModel(provider) && (
@@ -80,6 +83,8 @@ const ChatProviderSelector: React.FC<ChatProviderSelectorProps> = ({
           placeholder="Select model"
           searchable
           loading={loading}
+          className="w-full min-w-0"
+          buttonClassName="w-full min-w-0"
         />
       )}
     </div>

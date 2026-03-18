@@ -39,7 +39,6 @@ const GeneratorSettingsSection: React.FC<GeneratorSettingsSectionProps> = ({
             value={generator.media_type}
             onChange={(event) => {
               onGeneratorChange('media_type', event.target.value);
-              onOutputSpecChange(undefined);
             }}
             className="input w-full text-xs"
           >
@@ -75,11 +74,9 @@ const GeneratorSettingsSection: React.FC<GeneratorSettingsSectionProps> = ({
         modelAriaLabel="Generator model"
         onProviderChange={(value) => {
           onGeneratorChange('provider', value);
-          onOutputSpecChange(undefined);
         }}
         onModelChange={(value) => {
           onGeneratorChange('model', value);
-          onOutputSpecChange(undefined);
         }}
       />
 

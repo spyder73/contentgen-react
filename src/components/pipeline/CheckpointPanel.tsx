@@ -59,7 +59,7 @@ const CheckpointPanel: React.FC<CheckpointPanelProps> = ({
   };
 
   const handleFlagChange = (
-    field: 'requires_confirm' | 'allow_regenerate' | 'allow_attachments',
+    field: 'requires_confirm' | 'allow_regenerate' | 'allow_attachments' | 'chain_last_frames',
     value: boolean
   ) => {
     updateCheckpoint({ [field]: value } as Pick<CheckpointConfig, typeof field>);
@@ -220,6 +220,11 @@ const CheckpointPanel: React.FC<CheckpointPanelProps> = ({
                 ...checkpoint.generator,
                 [field]: value,
               },
+              // Clear output_spec atomically when media_type, provider, or model changes
+              // to avoid a stale second updateCheckpoint call overwriting this one.
+              ...(field === 'media_type' || field === 'provider' || field === 'model'
+                ? { output_spec: undefined }
+                : {}),
             })
           }
           onOutputSpecChange={handleOutputSpecChange}
@@ -237,6 +242,7 @@ const CheckpointPanel: React.FC<CheckpointPanelProps> = ({
         requiresConfirm={checkpoint.requires_confirm}
         allowRegenerate={checkpoint.allow_regenerate}
         allowAttachments={checkpoint.allow_attachments}
+        chainLastFrames={checkpoint.chain_last_frames ?? false}
         onChange={handleFlagChange}
       />
     </div>

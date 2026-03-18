@@ -179,6 +179,7 @@ export interface CheckpointConfig {
   connector?: ConnectorConfig;
   generator?: GeneratorConfig;
   required_assets?: CheckpointRequiredAsset[];
+  chain_last_frames?: boolean;
 }
 
 export interface PipelineOutputFormat {

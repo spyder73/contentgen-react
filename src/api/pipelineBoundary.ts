@@ -266,6 +266,7 @@ const normalizeCheckpointConfig = (checkpoint: unknown): CheckpointConfig => {
     requires_confirm: Boolean(source.requires_confirm ?? source.requiresConfirm),
     allow_regenerate: Boolean(source.allow_regenerate ?? source.allowRegenerate),
     allow_attachments: Boolean(source.allow_attachments ?? source.allowAttachments),
+    chain_last_frames: Boolean(source.chain_last_frames ?? source.chainLastFrames),
     output_spec: sanitizeSettingsMap(source.output_spec ?? source.outputSpec),
     required_assets: sanitizeRequiredAssets(
       Array.isArray(source.required_assets)

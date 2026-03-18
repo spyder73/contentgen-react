@@ -98,6 +98,14 @@ export const normalizePromptReferenceImageUrls = (
     }
     delete metadata.referenceImageUrl;
 
+    const referenceMediaId = toStringValue((prompt as Record<string, unknown>).reference_media_id).trim() ||
+      toStringValue(metadata.reference_media_id).trim();
+    if (referenceMediaId) {
+      metadata.reference_media_id = referenceMediaId;
+    } else {
+      delete metadata.reference_media_id;
+    }
+
     promptRecord.metadata = metadata;
     return promptRecord as MediaPrompt;
   });
@@ -131,6 +139,14 @@ export const applyReferenceImageMetadata = (
       delete metadata.reference_image_url;
     }
     delete metadata.referenceImageUrl;
+
+    const referenceMediaId = toStringValue(entry.reference_media_id).trim() ||
+      toStringValue(metadata.reference_media_id).trim();
+    if (referenceMediaId) {
+      metadata.reference_media_id = referenceMediaId;
+    } else {
+      delete metadata.reference_media_id;
+    }
 
     nextEntry.metadata = metadata;
     return nextEntry;

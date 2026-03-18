@@ -5,7 +5,13 @@ import { MediaOutputSpec } from '../../api/structs/media-spec';
 import { Modal } from '../modals';
 import CheckpointProviderSelector from '../selectors/CheckpointProviderSelector';
 import { ConstraintFieldInput } from '../selectors/modelSettingsFields';
-import { buildDefaultSettings, getVisibleFields, validateSettings } from '../selectors/modelSettingsHelpers';
+import {
+  buildDefaultSettings,
+  getVisibleFields,
+  outputSpecToSettings,
+  settingsToOutputSpec,
+  validateSettings,
+} from '../selectors/modelSettingsHelpers';
 import { Button } from '../ui';
 
 interface PipelineOutputSettingsModalProps {
@@ -90,8 +96,9 @@ const PipelineOutputSettingsModal: React.FC<PipelineOutputSettingsModalProps> = 
   React.useEffect(() => {
     if (!constraints) return;
     const defaults = buildDefaultSettings(constraints);
-    setLocalSettings((current) => validateSettings({ ...defaults, ...current }, constraints));
-  }, [constraints]);
+    const hydrated = outputSpecToSettings(settings || {}, constraints);
+    setLocalSettings(validateSettings({ ...defaults, ...hydrated }, constraints));
+  }, [constraints, settings]);
 
   const visibleFields = constraints ? getVisibleFields(constraints) : [];
   const title = `${MODALITY_LABELS[modality]} Defaults`;
@@ -168,13 +175,14 @@ const PipelineOutputSettingsModal: React.FC<PipelineOutputSettingsModalProps> = 
           <div className="flex gap-2">
             <Button variant="ghost" onClick={onClose}>Cancel</Button>
             <Button
-              onClick={() =>
+              onClick={() => {
+                const convertedSettings = settingsToOutputSpec(localSettings);
                 onApply({
                   provider: localProvider || undefined,
                   model: localModel || undefined,
-                  settings: Object.keys(localSettings).length > 0 ? localSettings : undefined,
-                })
-              }
+                  settings: Object.keys(convertedSettings).length > 0 ? convertedSettings : undefined,
+                });
+              }}
             >
               Apply
             </Button>

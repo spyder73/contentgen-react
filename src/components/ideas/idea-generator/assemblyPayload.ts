@@ -51,8 +51,6 @@ const enrichPromptJsonWithRunProvenance = (
     );
 
     metadata.attachment_provenance = merged;
-    metadata.inherited_attachments = merged;
-    metadata.generated_reference_assets = generated;
     metadata.pipeline_run_id = readString(metadata.pipeline_run_id) || run.id;
 
     if (!Array.isArray(metadata.reference_assets) || metadata.reference_assets.length === 0) {
@@ -109,7 +107,6 @@ export const buildAssembledClipPromptPayload = (
   const singleImageReferenceUrl = orderedReferenceImageUrls.length > 0 ? [orderedReferenceImageUrls[0]] : [];
 
   metadata.scene_reference_mapping = sceneReferenceMapping;
-  metadata.scene_reference_bindings = sceneReferenceMapping;
 
   if (mergedReferenceAssets.length > 0) {
     metadata.reference_assets = mergedReferenceAssets;

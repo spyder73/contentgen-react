@@ -1,4 +1,4 @@
-import React, { createContext, useCallback, useContext, useState } from 'react';
+import React, { createContext, useCallback, useContext } from 'react';
 import { ToastMessage } from '../toast';
 
 type PushToast = (message: ToastMessage) => void;
@@ -6,8 +6,7 @@ type PushToast = (message: ToastMessage) => void;
 const ToastContext = createContext<PushToast>(() => {});
 
 export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [toast, setToast] = useState<ToastMessage | null>(null);
-  const pushToast = useCallback<PushToast>((message) => setToast(message), []);
+  const pushToast = useCallback<PushToast>(() => {}, []);
 
   return (
     <ToastContext.Provider value={pushToast}>

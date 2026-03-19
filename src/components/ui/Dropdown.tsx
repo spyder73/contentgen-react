@@ -16,6 +16,7 @@ interface DropdownProps {
   className?: string;
   buttonClassName?: string;
   loading?: boolean;
+  ariaLabel?: string;
 }
 
 const Dropdown: React.FC<DropdownProps> = ({
@@ -27,6 +28,7 @@ const Dropdown: React.FC<DropdownProps> = ({
   className = '',
   buttonClassName = '',
   loading = false,
+  ariaLabel,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -56,11 +58,12 @@ const Dropdown: React.FC<DropdownProps> = ({
     : options;
 
   return (
-    <div className={`relative ${className}`} ref={dropdownRef}>
+    <div className={`relative min-w-0 ${className}`} ref={dropdownRef}>
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className={`select min-w-[200px] flex items-center justify-between gap-2 ${buttonClassName}`}
+        aria-label={ariaLabel}
+        className={`select w-full min-w-0 flex items-center justify-between gap-2 ${buttonClassName}`}
       >
         {loading ? (
           <span className="text-muted">Loading...</span>
@@ -78,7 +81,7 @@ const Dropdown: React.FC<DropdownProps> = ({
       </button>
 
       {isOpen && (
-        <div className="dropdown w-80 max-h-96 flex flex-col animate-fade-in">
+        <div className="dropdown left-0 right-0 w-full max-w-full max-h-96 flex flex-col animate-fade-in">
           {searchable && (
             <div className="p-2 border-b border-slate-600">
               <input
@@ -92,7 +95,7 @@ const Dropdown: React.FC<DropdownProps> = ({
             </div>
           )}
 
-          <div className="overflow-y-auto">
+          <div className="overflow-y-auto overflow-x-hidden">
             {filteredOptions.length === 0 ? (
               <div className="px-3 py-4 text-muted text-center text-sm">
                 No options found

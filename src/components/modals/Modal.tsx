@@ -6,13 +6,15 @@ interface ModalProps {
   onClose: () => void;
   title: string;
   children: React.ReactNode;
-  size?: 'sm' | 'md' | 'lg';
+  size?: 'sm' | 'md' | 'lg' | 'xl';
+  overflow?: 'auto' | 'visible';
 }
 
 const sizeClasses = {
   sm: 'max-w-sm',
   md: 'max-w-md',
   lg: 'max-w-2xl',
+  xl: 'max-w-4xl',
 };
 
 const Modal: React.FC<ModalProps> = ({
@@ -21,6 +23,7 @@ const Modal: React.FC<ModalProps> = ({
   title,
   children,
   size = 'md',
+  overflow = 'auto',
 }) => {
   useEffect(() => {
     if (!isOpen) return;
@@ -43,7 +46,7 @@ const Modal: React.FC<ModalProps> = ({
       onClick={onClose}
     >
       <div
-        className={`modal-content p-5 overflow-y-auto ${sizeClasses[size]} animate-slide-up`}
+        className={`modal-content w-full p-5 ${overflow === 'visible' ? 'overflow-visible' : 'overflow-y-auto max-h-[85vh]'} ${sizeClasses[size]} animate-slide-up`}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex justify-between items-center mb-4 border-b border-white/10 pb-3">

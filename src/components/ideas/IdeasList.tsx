@@ -1,24 +1,22 @@
 import React, { useEffect, useState } from 'react';
 import API from '../../api/api';
 import { Idea } from '../../api/structs/clip';
-import { ChatProvider } from '../../api/structs/providers';
-import { MediaProfile } from '../../api/structs/media-spec';
 import IdeaGeneratorPanel from './IdeaGeneratorPanel';
 import IdeaItem from './IdeaItem';
+import { useToast } from '../../hooks/useToast';
 
 interface IdeasListProps {
   refreshTrigger: number;
-  chatProvider: ChatProvider;
-  chatModel: string;
-  mediaProfile: MediaProfile;
+  openLibrarySignal?: number;
+  onClipsCreated?: () => void;
 }
 
 const IdeasList: React.FC<IdeasListProps> = ({
   refreshTrigger,
-  chatProvider,
-  chatModel,
-  mediaProfile,
+  openLibrarySignal = 0,
+  onClipsCreated,
 }) => {
+  const toast = useToast();
   const [ideas, setIdeas] = useState<Idea[]>([]);
 
   const fetchIdeas = async () => {
@@ -39,21 +37,21 @@ const IdeasList: React.FC<IdeasListProps> = ({
       await API.deleteIdea(clip_idea);
       fetchIdeas();
     } catch (error: any) {
-      alert(`Failed: ${error.message}`);
+      toast({ text: `Failed: ${error.message}`, level: 'error' });
     }
   };
 
   const handleCreatePrompt = async (idea: Idea) => {
     if (!idea.clip_prompt_json) {
-      alert('Idea still generating...');
+      toast({ text: 'Idea still generating...', level: 'warning' });
       return;
     }
     try {
-      await API.createClipPromptFromJson(idea.clip_prompt_json, mediaProfile);
+      await API.createClipPromptFromJson(idea.clip_prompt_json);
       await API.deleteIdea(idea.clip_idea);
       fetchIdeas();
     } catch (error: any) {
-      alert(`Failed: ${error.message}`);
+      toast({ text: `Failed: ${error.message}`, level: 'error' });
     }
   };
 
@@ -70,10 +68,9 @@ const IdeasList: React.FC<IdeasListProps> = ({
           {/* Generator Panel */}
           <div className="flex-shrink-0">
             <IdeaGeneratorPanel
-              chatProvider={chatProvider}
-              chatModel={chatModel}
-              mediaProfile={mediaProfile}
+              openLibrarySignal={openLibrarySignal}
               onIdeasCreated={fetchIdeas}
+              onClipsCreated={onClipsCreated}
             />
           </div>
 

@@ -4,6 +4,7 @@ import { MediaType } from '../../api/structs/media';
 import { MediaProfile, MediaOutputSpec } from '../../api/structs/media-spec';
 import { Modal } from '../modals';
 import { Button, TextArea, Select } from '../ui';
+import { useToast } from '../../hooks/useToast';
 
 interface AddMediaModalProps {
   isOpen: boolean;
@@ -22,6 +23,7 @@ const AddMediaModal: React.FC<AddMediaModalProps> = ({
   defaultType,
   mediaProfile,
 }) => {
+  const toast = useToast();
   const [type, setType] = useState<MediaType>(defaultType);
   const [prompt, setPrompt] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -57,7 +59,7 @@ const AddMediaModal: React.FC<AddMediaModalProps> = ({
       onClose();
       onSuccess();
     } catch (error: any) {
-      alert(`Failed: ${error.message}`);
+      toast({ text: `Failed: ${error.message}`, level: 'error' });
     } finally {
       setIsSubmitting(false);
     }

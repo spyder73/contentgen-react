@@ -3,9 +3,19 @@ import { AIModel } from './structs';
 export const BASE_URL = 'http://localhost:81';
 
 export function constructMediaUrl(filePath: string, cacheBuster?: number): string {
-  const url = `${BASE_URL}${filePath}`;
+  const trimmed = (filePath || '').trim();
+  if (!trimmed) return '';
+
+  const isAbsolute =
+    /^https?:\/\//i.test(trimmed) ||
+    trimmed.startsWith('blob:') ||
+    trimmed.startsWith('data:');
+  const url = isAbsolute
+    ? trimmed
+    : `${BASE_URL}${trimmed.startsWith('/') ? '' : '/'}${trimmed}`;
+
   if (cacheBuster) {
-    return `${url}?t=${cacheBuster}`;
+    return `${url}${url.includes('?') ? '&' : '?'}t=${cacheBuster}`;
   }
   return url;
 }

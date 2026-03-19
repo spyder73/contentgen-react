@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import API, { Proxy } from '../api/api';
+import { useToast } from '../hooks/useToast';
 
 interface ProxyManagerProps {
   onRefresh: number;
 }
 
 const ProxyManager: React.FC<ProxyManagerProps> = ({ onRefresh }) => {
+  const toast = useToast();
   const [proxies, setProxies] = useState<Proxy[]>([]);
   const [newProxy, setNewProxy] = useState('');
   const [proxyType, setProxyType] = useState<'http' | 'https'>('http');
@@ -33,7 +35,7 @@ const ProxyManager: React.FC<ProxyManagerProps> = ({ onRefresh }) => {
       setNewProxy('');
       fetchProxies();
     } catch (error: any) {
-      alert(`Failed to add proxy: ${error.response?.data?.error || error.message}`);
+      toast({ text: `Failed to add proxy: ${error.response?.data?.error || error.message}`, level: 'error' });
     }
   };
 
@@ -42,7 +44,7 @@ const ProxyManager: React.FC<ProxyManagerProps> = ({ onRefresh }) => {
       await API.deleteProxy(id);
       fetchProxies();
     } catch (error: any) {
-      alert(`Failed: ${error.message}`);
+      toast({ text: `Failed: ${error.message}`, level: 'error' });
     }
   };
 

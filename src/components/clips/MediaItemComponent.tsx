@@ -6,6 +6,7 @@ import { ClipStyleField } from '../../api/clipstyleSchema';
 import { EditMediaModal } from '../modals';
 import { Button, Thumbnail } from '../ui';
 import { constructMediaUrl } from '../../api/helpers';
+import { useToast } from '../../hooks/useToast';
 
 interface MediaItemComponentProps {
   item: MediaItem;
@@ -24,6 +25,7 @@ const MediaItemComponent: React.FC<MediaItemComponentProps> = ({
   outputSpec,
   onPreview,
 }) => {
+  const toast = useToast();
   const [isEditing, setIsEditing] = useState(false);
   const [isRegenerating, setIsRegenerating] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -36,7 +38,7 @@ const MediaItemComponent: React.FC<MediaItemComponentProps> = ({
       });
       onRefresh();
     } catch (error: any) {
-      alert(`Failed to regenerate: ${error.message}`);
+      toast({ text: `Failed to regenerate: ${error.message}`, level: 'error' });
     } finally {
       setIsRegenerating(false);
     }
@@ -48,7 +50,7 @@ const MediaItemComponent: React.FC<MediaItemComponentProps> = ({
       await API.deleteMediaItem(item.id);
       onRefresh();
     } catch (error: any) {
-      alert(`Failed to delete: ${error.message}`);
+      toast({ text: `Failed to delete: ${error.message}`, level: 'error' });
     } finally {
       setIsDeleting(false);
     }

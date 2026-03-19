@@ -1,11 +1,12 @@
-import React, { useState, useEffect } from 'react';
-import { PipelineEditorProps } from './types';
-import PipelineFlow from './PipelineFlow';
+import React, { useEffect, useState } from 'react';
+import { CheckpointType, PipelineTemplate } from '../../api/structs';
 import CheckpointPanel from './CheckpointPanel';
-import { PipelineTemplate, CheckpointConfig, CheckpointType } from '../../api/structs';
+import { createCheckpointConfig } from './checkpointConfig';
+import PipelineExtendedModal from './extended/PipelineExtendedModal';
+import PipelineFlow from './PipelineFlow';
 import PipelineOutputFormatPanel from './PipelineOutputFormatPanel';
-import { ConfirmModal, Modal } from '../modals';
-import { Button, Input } from '../ui';
+import { PipelineEditorProps } from './types';
+import { buildSaveErrorMessage, pipelineRequiresSeedImageModel } from './utils';
 
 const PipelineEditor: React.FC<PipelineEditorProps> = ({
   pipeline,
@@ -23,41 +24,35 @@ const PipelineEditor: React.FC<PipelineEditorProps> = ({
   const [newCheckpointType, setNewCheckpointType] = useState<CheckpointType>('prompt');
   const [addCheckpointError, setAddCheckpointError] = useState('');
   const [checkpointToRemoveId, setCheckpointToRemoveId] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [showExtendedView, setShowExtendedView] = useState(false);
 
   const selectedCheckpoint = localPipeline.checkpoints.find(
-    (c) => c.id === selectedCheckpointId
+    (checkpoint) => checkpoint.id === selectedCheckpointId
+  );
+  const requiresSeedCompatibleImageModel = pipelineRequiresSeedImageModel(
+    localPipeline.checkpoints
   );
 
   useEffect(() => {
     setLocalPipeline(pipeline);
+    setHasChanges(false);
+    setSaveError(null);
   }, [pipeline]);
 
-  const handleCheckpointClick = (checkpointId: string) => {
-    setSelectedCheckpointId(
-      selectedCheckpointId === checkpointId ? null : checkpointId
-    );
+  const markDirty = () => {
+    setHasChanges(true);
+    setSaveError(null);
   };
 
-  const handleCheckpointUpdate = (updated: CheckpointConfig) => {
-    setLocalPipeline((prev) => ({
-      ...prev,
-      checkpoints: prev.checkpoints.map((c) =>
-        c.id === updated.id ? updated : c
+  const handleCheckpointUpdate = (updatedCheckpoint: PipelineTemplate['checkpoints'][number]) => {
+    setLocalPipeline((previous) => ({
+      ...previous,
+      checkpoints: previous.checkpoints.map((checkpoint) =>
+        checkpoint.id === updatedCheckpoint.id ? updatedCheckpoint : checkpoint
       ),
     }));
-    setHasChanges(true);
-  };
-
-  const resetAddCheckpointState = () => {
-    setNewCheckpointId('');
-    setNewCheckpointName('');
-    setNewCheckpointType('prompt');
-    setAddCheckpointError('');
-  };
-
-  const openAddCheckpointModal = () => {
-    resetAddCheckpointState();
-    setShowAddCheckpointModal(true);
+    markDirty();
   };
 
   const handleCheckpointIdChange = (value: string) => {
@@ -70,252 +65,256 @@ const PipelineEditor: React.FC<PipelineEditorProps> = ({
     setNewCheckpointId(normalizedId);
     if (!newCheckpointName.trim()) {
       setNewCheckpointName(
-        normalizedId.replace(/[-_]/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase())
+        normalizedId.replace(/[-_]+/g, ' ').replace(/\b\w/g, (character) => character.toUpperCase())
       );
     }
   };
 
   const handleCheckpointAdd = () => {
-    if (!newCheckpointId.trim()) {
+    const id = newCheckpointId.trim();
+    if (!id) {
       setAddCheckpointError('Checkpoint ID is required.');
       return;
     }
 
-    if (localPipeline.checkpoints.some((checkpoint) => checkpoint.id === newCheckpointId)) {
-      setAddCheckpointError(`Checkpoint ID "${newCheckpointId}" already exists.`);
+    if (localPipeline.checkpoints.some((checkpoint) => checkpoint.id === id)) {
+      setAddCheckpointError(`Checkpoint ID "${id}" already exists.`);
       return;
     }
 
-    const newCheckpoint: CheckpointConfig = {
-      id: newCheckpointId,
-      name: newCheckpointName.trim() || newCheckpointId,
-      type: newCheckpointType,
-      prompt_template_id: '',
-      input_mapping: {},
-      requires_confirm: true,
-      allow_regenerate: true,
-      allow_attachments: false,
-      provider: '',
-      model: '',
-      distributor:
-        newCheckpointType === 'distributor'
-          ? {
-              delimiter: 'newline',
-              max_children: 8,
-            }
-          : undefined,
-      connector:
-        newCheckpointType === 'connector'
-          ? {
-              strategy: 'first',
-            }
-          : undefined,
-    };
+    const previousDistributorId = localPipeline.checkpoints
+      .filter((checkpoint) => (checkpoint.type || 'prompt') === 'distributor')
+      .slice(-1)[0]?.id;
 
-    setLocalPipeline((prev) => ({
-      ...prev,
-      checkpoints: [...prev.checkpoints, newCheckpoint],
+    const newCheckpoint = createCheckpointConfig(
+      id,
+      newCheckpointName.trim() || id,
+      newCheckpointType,
+      previousDistributorId
+    );
+
+    setLocalPipeline((previous) => ({
+      ...previous,
+      checkpoints: [...previous.checkpoints, newCheckpoint],
     }));
-    setSelectedCheckpointId(newCheckpointId);
-    setHasChanges(true);
+    setSelectedCheckpointId(id);
     setShowAddCheckpointModal(false);
-    resetAddCheckpointState();
-  };
-
-  const handleCheckpointRemove = (checkpointId: string) => {
-    setLocalPipeline((prev) => ({
-      ...prev,
-      checkpoints: prev.checkpoints.filter((c) => c.id !== checkpointId),
-    }));
-
-    if (selectedCheckpointId === checkpointId) {
-      setSelectedCheckpointId(null);
-    }
-    setHasChanges(true);
-  };
-
-  const requestCheckpointRemove = (checkpointId: string) => {
-    setCheckpointToRemoveId(checkpointId);
-  };
-
-  const handleCheckpointReorder = (fromIndex: number, toIndex: number) => {
-    setLocalPipeline((prev) => {
-      const newCheckpoints = [...prev.checkpoints];
-      const [removed] = newCheckpoints.splice(fromIndex, 1);
-      newCheckpoints.splice(toIndex, 0, removed);
-      return { ...prev, checkpoints: newCheckpoints };
-    });
-    setHasChanges(true);
+    setNewCheckpointId('');
+    setNewCheckpointName('');
+    setNewCheckpointType('prompt');
+    setAddCheckpointError('');
+    markDirty();
   };
 
   const handleSave = async () => {
     setIsSaving(true);
+    setSaveError(null);
     try {
       await onSave(localPipeline);
       setHasChanges(false);
+    } catch (error) {
+      setSaveError(buildSaveErrorMessage(error));
     } finally {
       setIsSaving(false);
     }
   };
 
-  const handleMetadataChange = (field: 'name' | 'description', value: string) => {
-    setLocalPipeline((prev) => ({ ...prev, [field]: value }));
-    setHasChanges(true);
-  };
-
-  const handleOutputFormatChange = (output_format: PipelineTemplate['output_format']) => {
-    setLocalPipeline((prev) => ({ ...prev, output_format }));
-    setHasChanges(true);
-  };
-
   return (
-    <div className="flex flex-col h-full">
-      <div className="flex-shrink-0 p-3 border-b border-white/10 bg-black/50">
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex-1 mr-4">
-            <input
-              type="text"
-              value={localPipeline.name}
-              onChange={(e) => handleMetadataChange('name', e.target.value)}
-              className="text-base font-semibold bg-transparent text-white border-b border-transparent hover:border-white/30 focus:border-white/70 focus:outline-none w-full"
-              placeholder="Pipeline Name"
-            />
-            <input
-              type="text"
-              value={localPipeline.description || ''}
-              onChange={(e) => handleMetadataChange('description', e.target.value)}
-              className="text-xs text-gray-400 bg-transparent border-b border-transparent hover:border-white/30 focus:border-white/70 focus:outline-none w-full mt-1"
-              placeholder="Description..."
-            />
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-gray-500">
-              {localPipeline.checkpoints.length} checkpoints
-            </span>
-            {hasChanges && (
-              <span className="text-xs text-yellow-500">• Unsaved</span>
-            )}
-            <button
-              onClick={handleSave}
-              disabled={!hasChanges || isSaving}
-              className={`px-3 py-1.5 border text-xs uppercase tracking-wide transition-colors ${
-                hasChanges
-                  ? 'bg-white text-black border-white hover:bg-zinc-200'
-                  : 'bg-white/10 border-white/10 text-gray-500 cursor-not-allowed'
-              }`}
-            >
-              {isSaving ? 'Saving...' : 'Save'}
-            </button>
-          </div>
+    <div className="flex h-full min-h-0 flex-col">
+      <div className="flex items-center justify-between border-b border-white/10 bg-black/50 px-4 py-3">
+        <div className="min-w-0 flex-1">
+          <input
+            type="text"
+            value={localPipeline.name}
+            onChange={(event) => {
+              setLocalPipeline((previous) => ({ ...previous, name: event.target.value }));
+              markDirty();
+            }}
+            className="input border-none bg-transparent p-0 text-lg font-semibold"
+            placeholder="Pipeline name"
+          />
+          <input
+            type="text"
+            value={localPipeline.description}
+            onChange={(event) => {
+              setLocalPipeline((previous) => ({ ...previous, description: event.target.value }));
+              markDirty();
+            }}
+            className="input mt-1 border-none bg-transparent p-0 text-xs text-gray-400"
+            placeholder="Description (optional)"
+          />
         </div>
-        <PipelineOutputFormatPanel
-          value={localPipeline.output_format}
-          onChange={handleOutputFormatChange}
-        />
+
+        <div className="ml-4 flex items-center gap-2">
+          <span className="text-xs text-gray-500">{localPipeline.checkpoints.length} checkpoints</span>
+          <button
+            onClick={() => setShowExtendedView(true)}
+            className="btn btn-ghost btn-sm font-mono"
+            aria-label="Open extended view"
+          >
+            []
+          </button>
+          <button onClick={handleSave} disabled={!hasChanges || isSaving} className="btn btn-primary btn-sm">
+            {isSaving ? 'Saving...' : 'Save'}
+          </button>
+        </div>
       </div>
-      <div className="relative flex flex-1 overflow-hidden">
-        <div className="flex-1 overflow-auto p-3 bg-black/40">
-          <div className="mb-3 flex items-center justify-between">
-            <h3 className="text-xs font-medium uppercase tracking-[0.15em] text-gray-400">Pipeline Flow</h3>
-            <button
-              onClick={openAddCheckpointModal}
-              className="btn btn-sm btn-ghost"
-            >
+
+      {saveError && (
+        <div className="border-b border-red-500/30 bg-red-900/30 px-4 py-2 text-xs text-red-300">
+          {saveError}
+        </div>
+      )}
+
+      <div className="flex min-h-0 flex-1 overflow-hidden">
+        <div className="flex min-h-0 w-80 flex-col overflow-hidden border-r border-white/10 p-4">
+          <div className="mb-3 flex items-center justify-end">
+            <button onClick={() => setShowAddCheckpointModal(true)} className="btn btn-ghost btn-sm">
               + Add Checkpoint
             </button>
           </div>
 
-          <PipelineFlow
-            checkpoints={localPipeline.checkpoints}
-            promptTemplates={promptTemplates}
-            selectedCheckpointId={selectedCheckpointId}
-            onCheckpointClick={handleCheckpointClick}
-            onCheckpointRemove={requestCheckpointRemove}
-            onReorder={handleCheckpointReorder}
-          />
-
-          {localPipeline.checkpoints.length === 0 && (
-            <div className="text-center py-12 text-gray-500">
-              <p>No checkpoints yet</p>
-              <button
-                onClick={openAddCheckpointModal}
-                className="text-zinc-300 hover:text-white text-sm mt-2 underline"
-              >
-                Add your first checkpoint
-              </button>
-            </div>
-          )}
-        </div>
-        {selectedCheckpoint && (
-          <div className="w-[22rem] max-w-[45vw] min-w-[18rem] border-l border-white/10 bg-black/60 overflow-auto max-md:absolute max-md:inset-0 max-md:z-20 max-md:w-full max-md:max-w-none max-md:min-w-0">
-            <CheckpointPanel
-              checkpoint={selectedCheckpoint}
+          <div className="min-h-0 flex-1 overflow-y-auto">
+            <PipelineFlow
+              checkpoints={localPipeline.checkpoints}
               promptTemplates={promptTemplates}
-              allCheckpoints={localPipeline.checkpoints}
-              onUpdate={handleCheckpointUpdate}
-              onEditPrompt={onEditPrompt}
-              onClose={() => setSelectedCheckpointId(null)}
+              selectedCheckpointId={selectedCheckpointId}
+              onCheckpointClick={(checkpointId) =>
+                setSelectedCheckpointId((current) => (current === checkpointId ? null : checkpointId))
+              }
+              onCheckpointRemove={(checkpointId) => setCheckpointToRemoveId(checkpointId)}
+              onReorder={(fromIndex, toIndex) => {
+                setLocalPipeline((previous) => {
+                  const nextCheckpoints = [...previous.checkpoints];
+                  const [moved] = nextCheckpoints.splice(fromIndex, 1);
+                  nextCheckpoints.splice(toIndex, 0, moved);
+                  return { ...previous, checkpoints: nextCheckpoints };
+                });
+                markDirty();
+              }}
             />
           </div>
-        )}
-      </div>
+        </div>
 
-      <Modal
-        isOpen={showAddCheckpointModal}
-        onClose={() => setShowAddCheckpointModal(false)}
-        title="Add Checkpoint"
-        size="sm"
-      >
-        <div className="space-y-4">
-          <Input
-            placeholder="Checkpoint ID (e.g., first-draft)"
-            value={newCheckpointId}
-            onChange={(e) => handleCheckpointIdChange(e.target.value)}
-          />
-          <Input
-            placeholder="Checkpoint Name"
-            value={newCheckpointName}
-            onChange={(e) => setNewCheckpointName(e.target.value)}
-          />
-          <div>
-            <label className="block text-xs uppercase tracking-wide text-zinc-400 mb-1">
-              Checkpoint Type
-            </label>
-            <select
-              value={newCheckpointType}
-              onChange={(e) => setNewCheckpointType(e.target.value as CheckpointType)}
-              className="w-full select"
-            >
-              <option value="prompt">Prompt (single output)</option>
-              <option value="distributor">Distributor (fan-out)</option>
-              <option value="connector">Connector (fan-in)</option>
-            </select>
-          </div>
+        <div className="min-h-0 flex-1 overflow-y-auto p-4">
+          <div className="space-y-4">
+            <PipelineOutputFormatPanel
+              value={localPipeline.output_format}
+              onChange={(outputFormat) => {
+                setLocalPipeline((previous) => ({ ...previous, output_format: outputFormat }));
+                markDirty();
+              }}
+              requiresSeedCompatibleImageModel={requiresSeedCompatibleImageModel}
+            />
 
-          {addCheckpointError && (
-            <p className="text-sm text-red-400">{addCheckpointError}</p>
-          )}
-
-          <div className="flex justify-end gap-2">
-            <Button variant="secondary" onClick={() => setShowAddCheckpointModal(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleCheckpointAdd}>Add Checkpoint</Button>
+            {selectedCheckpoint ? (
+              <CheckpointPanel
+                checkpoint={selectedCheckpoint}
+                promptTemplates={promptTemplates}
+                allCheckpoints={localPipeline.checkpoints}
+                onUpdate={handleCheckpointUpdate}
+                onEditPrompt={onEditPrompt}
+                onClose={() => setSelectedCheckpointId(null)}
+              />
+            ) : (
+              <div className="rounded-lg border border-dashed border-white/10 bg-black/20 p-6 text-sm text-gray-500">
+                Select a checkpoint to edit its nested config. Final clip generation settings stay visible here.
+              </div>
+            )}
           </div>
         </div>
-      </Modal>
+      </div>
 
-      <ConfirmModal
-        isOpen={Boolean(checkpointToRemoveId)}
-        onClose={() => setCheckpointToRemoveId(null)}
-        onConfirm={() => {
-          if (!checkpointToRemoveId) return;
-          handleCheckpointRemove(checkpointToRemoveId);
-        }}
-        title="Remove checkpoint"
-        message={`Remove checkpoint "${checkpointToRemoveId || ''}"?`}
-        confirmText="Remove"
-        variant="warning"
+      {showAddCheckpointModal && (
+        <div className="fixed inset-0 z-[230] flex items-center justify-center bg-black/70 p-4">
+          <div className="w-full max-w-md space-y-3 border border-white/20 bg-zinc-950 p-5 shadow-xl">
+            <h3 className="text-sm font-semibold uppercase tracking-[0.2em] text-white">
+              Add Checkpoint
+            </h3>
+
+            <input
+              type="text"
+              value={newCheckpointId}
+              onChange={(event) => handleCheckpointIdChange(event.target.value)}
+              className="input w-full"
+              placeholder="Checkpoint ID (e.g., first-draft)"
+            />
+            <input
+              type="text"
+              value={newCheckpointName}
+              onChange={(event) => setNewCheckpointName(event.target.value)}
+              className="input w-full"
+              placeholder="Checkpoint Name"
+            />
+            <select
+              value={newCheckpointType}
+              onChange={(event) => setNewCheckpointType(event.target.value as CheckpointType)}
+              className="input w-full"
+            >
+              <option value="prompt">Prompt</option>
+              <option value="distributor">Distributor</option>
+              <option value="connector">Connector</option>
+              <option value="generator">Generator</option>
+            </select>
+
+            {addCheckpointError && <div className="text-xs text-red-300">{addCheckpointError}</div>}
+
+            <div className="flex justify-end gap-2 pt-2">
+              <button onClick={() => setShowAddCheckpointModal(false)} className="btn btn-secondary btn-sm">
+                Cancel
+              </button>
+              <button onClick={handleCheckpointAdd} className="btn btn-primary btn-sm">
+                Add Checkpoint
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {checkpointToRemoveId && (
+        <div className="fixed inset-0 z-[230] flex items-center justify-center bg-black/70 p-4">
+          <div className="w-full max-w-sm space-y-4 border border-white/20 bg-zinc-950 p-5 shadow-xl">
+            <div className="space-y-2">
+              <h3 className="text-sm font-semibold uppercase tracking-[0.2em] text-white">
+                Remove Checkpoint
+              </h3>
+              <p className="text-sm text-gray-400">
+                Remove `{checkpointToRemoveId}` from this pipeline?
+              </p>
+            </div>
+            <div className="flex justify-end gap-2">
+              <button onClick={() => setCheckpointToRemoveId(null)} className="btn btn-secondary btn-sm">
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  setLocalPipeline((previous) => ({
+                    ...previous,
+                    checkpoints: previous.checkpoints.filter(
+                      (checkpoint) => checkpoint.id !== checkpointToRemoveId
+                    ),
+                  }));
+                  if (selectedCheckpointId === checkpointToRemoveId) {
+                    setSelectedCheckpointId(null);
+                  }
+                  setCheckpointToRemoveId(null);
+                  markDirty();
+                }}
+                className="btn btn-primary btn-sm"
+              >
+                Remove
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <PipelineExtendedModal
+        isOpen={showExtendedView}
+        checkpoints={localPipeline.checkpoints}
+        selectedCheckpointId={selectedCheckpointId}
+        onClose={() => setShowExtendedView(false)}
+        onSelectCheckpoint={(checkpointId) => setSelectedCheckpointId(checkpointId)}
       />
     </div>
   );

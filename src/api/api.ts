@@ -28,6 +28,9 @@ const API = {
   // Media
   getMediaItem: MediaAPI.getMediaItem,
   createMediaItem: MediaAPI.createMediaItem,
+  listMediaLibrary: MediaAPI.listMediaLibrary,
+  uploadMediaLibraryFile: MediaAPI.uploadMediaLibraryFile,
+  renameMediaLibraryItem: MediaAPI.renameMediaLibraryItem,
   createImage: MediaAPI.createImage,
   createAIVideo: MediaAPI.createAIVideo,
   createAudio: MediaAPI.createAudio,
@@ -43,6 +46,7 @@ const API = {
   listPipelines: PipelineAPI.listPipelines,
   continuePipeline: PipelineAPI.continuePipeline,
   regenerateCheckpoint: PipelineAPI.regenerateCheckpoint,
+  injectCheckpointPrompt: PipelineAPI.injectCheckpointPrompt,
   addPipelineAttachment: PipelineAPI.addAttachment,
   cancelPipeline: PipelineAPI.cancelPipeline,
 
@@ -90,6 +94,9 @@ const API = {
   // Upscaler
   getUpscalingStatus: UpscalerAPI.getUpscalingStatus,
   updateUpscalingConfig: UpscalerAPI.updateUpscalingConfig,
+
+  // Prompt Enhancement
+  enhancePrompt: ExternalAPI.enhancePrompt,
 };
 
 export default API;

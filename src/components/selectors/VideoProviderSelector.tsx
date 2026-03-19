@@ -90,12 +90,13 @@ const VideoProviderSelector: React.FC<VideoProviderSelectorProps> = ({
 
   return (
     <>
-      <div className="flex gap-2 items-center">
+      <div className="grid grid-cols-1 sm:grid-cols-[minmax(0,9rem)_minmax(0,1fr)_auto] gap-2 items-center min-w-0">
         <Select
           options={VIDEO_PROVIDERS}
           value={provider}
           onChange={(e) => onProviderChange(e.target.value as VideoProvider)}
           selectSize="sm"
+          className="w-full min-w-0"
         />
 
         {providerRequiresModel(provider) && (
@@ -106,6 +107,8 @@ const VideoProviderSelector: React.FC<VideoProviderSelectorProps> = ({
             placeholder="Select model"
             searchable
             loading={loading}
+            className="w-full min-w-0"
+            buttonClassName="w-full min-w-0"
           />
         )}
 

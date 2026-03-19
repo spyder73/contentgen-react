@@ -190,6 +190,36 @@ export function validateSettings(
 }
 
 /**
+ * Convert a saved MediaOutputSpec back into modal-friendly settings.
+ * When a model exposes a dimensions enum, prefer hydrating that field from width/height.
+ */
+export function outputSpecToSettings(
+  settings: Partial<MediaOutputSpec>,
+  constraints: ModelConstraintsResponse
+): Partial<MediaOutputSpec> {
+  const next = { ...settings } as Record<string, unknown>;
+  const dimensionsField = constraints.fields?.dimensions;
+
+  if (dimensionsField) {
+    const width = typeof next.width === 'number' ? next.width : undefined;
+    const height = typeof next.height === 'number' ? next.height : undefined;
+    const explicitDimensions =
+      typeof next.dimensions === 'string' && next.dimensions.trim() ? next.dimensions.trim() : '';
+    const derivedDimensions =
+      width && height ? `${width}x${height}` : '';
+
+    if (!explicitDimensions && derivedDimensions) {
+      next.dimensions = derivedDimensions;
+    }
+
+    delete next.width;
+    delete next.height;
+  }
+
+  return next as Partial<MediaOutputSpec>;
+}
+
+/**
  * Split a "WxH" dimensions value into { width, height }.
  * Returns undefined if the value is not a valid dimensions string.
  */

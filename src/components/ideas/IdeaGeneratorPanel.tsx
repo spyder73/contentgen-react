@@ -1,84 +1,99 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { PipelineTemplate } from '../../api/structs';
+import React, { useEffect, useMemo } from 'react';
 import PipelineAPI from '../../api/pipeline';
-import ClipAPI from '../../api/clip';
+import ModelsAPI from '../../api/models';
+import { PipelineTemplate } from '../../api/structs';
+import { PipelineInputAttachment } from '../../api/structs/pipeline';
 import IdeaInputForm from './IdeaInputForm';
 import PipelineRunItem from './PipelineRunItem';
 import { usePipelineRuns } from '../../hooks/usePipelineRuns';
-import { MediaProfile } from '../../api/structs/media-spec';
-import { extractClipPromptJsonList } from './ideaOutput';
-import { PipelineInputAttachment } from '../../api/structs/pipeline';
+import CompletedRunAssembly from './idea-generator/CompletedRunAssembly';
+import { useRunAssemblyData } from './idea-generator/useRunAssemblyData';
+import { useRunAssemblyDraftActions } from './idea-generator/useRunAssemblyDraftActions';
+
+const toCleanString = (value: unknown): string => {
+  if (typeof value === 'string') return value.trim();
+  if (typeof value === 'number') return String(value);
+  return '';
+};
+
+const normalizeAttachmentType = (value: string): string => {
+  const normalized = toCleanString(value).toLowerCase();
+  if (normalized.includes('image')) return 'image';
+  if (normalized === 'ai_video' || normalized.includes('video')) return 'video';
+  if (normalized.includes('audio') || normalized.includes('music')) return 'audio';
+  return normalized;
+};
+
+const hasImageAttachment = (attachments: PipelineInputAttachment[]): boolean =>
+  attachments.some((attachment) => normalizeAttachmentType(attachment.type || '') === 'image');
+
+const hasInitialImageRequirement = (template: PipelineTemplate): boolean =>
+  template.checkpoints.some((checkpoint) =>
+    (checkpoint.required_assets || []).some((requirement) => {
+      const type = toCleanString(requirement.type).toLowerCase();
+      const source = toCleanString(requirement.source).toLowerCase();
+      return source === 'initial' && (type === 'image' || type.includes('image'));
+    })
+  );
+
+const normalizeGeneratorMediaType = (value: string): 'image' | 'video' | 'audio' | '' => {
+  const normalized = toCleanString(value).toLowerCase();
+  if (normalized === 'video' || normalized === 'ai_video') return 'video';
+  if (normalized === 'audio' || normalized === 'music') return 'audio';
+  if (normalized === 'image') return 'image';
+  return '';
+};
+
+const modelSupportsSeedImage = (capabilities: Record<string, unknown> | undefined): boolean =>
+  Boolean(capabilities && capabilities.supports_seed_image === true);
 
 interface IdeaGeneratorPanelProps {
-  chatProvider: string;
-  chatModel: string;
-  mediaProfile: MediaProfile;
+  openLibrarySignal?: number;
   onIdeasCreated: () => void;
+  onClipsCreated?: () => void;
 }
 
 const IdeaGeneratorPanel: React.FC<IdeaGeneratorPanelProps> = ({
-  chatProvider,
-  chatModel,
-  mediaProfile,
+  openLibrarySignal = 0,
   onIdeasCreated,
+  onClipsCreated,
 }) => {
-  const [templates, setTemplates] = useState<PipelineTemplate[]>([]);
-  const processingRef = useRef<Set<string>>(new Set());
+  const [templates, setTemplates] = React.useState<PipelineTemplate[]>([]);
   const {
     runs,
     startRun,
     continueRun,
     regenerateCheckpoint,
+    injectCheckpointPrompt,
+    addCheckpointAttachment,
     cancelRun,
     removeRun,
   } = usePipelineRuns();
 
-  // Load templates
   useEffect(() => {
     PipelineAPI.listPipelineTemplates().then(setTemplates);
   }, []);
 
-  const handleCompleted = useCallback(
-    async (runId: string) => {
-      try {
-        const { ready, output } = await PipelineAPI.getPipelineOutput(runId);
-        if (!ready || !output) {
-          removeRun(runId);
-          return;
-        }
+  const {
+    generatedAssets,
+    workspaceResetSignal,
+    assemblyByRunId,
+    setAssemblyByRunId,
+    prepareCompletedRun,
+    closeRunWorkspace,
+  } = useRunAssemblyData({ runs, templates, removeRun });
 
-        const run = runs.find((r) => r.id === runId);
-        if (!run) return;
-
-        const clipPromptList = extractClipPromptJsonList(output);
-        if (clipPromptList.length <= 1) {
-          await ClipAPI.createIdea(run.initial_input, clipPromptList[0] || output);
-        } else {
-          await ClipAPI.createIdeas(run.initial_input, clipPromptList);
-        }
-
-        onIdeasCreated();
-        removeRun(runId);
-      } catch (err) {
-        console.error('Failed to create ideas:', err);
-        removeRun(runId);
-      } finally {
-        processingRef.current.delete(runId);
-      }
-    },
-    [runs, onIdeasCreated, removeRun]
-  );
-
-  // Handle completed runs
-  useEffect(() => {
-    const completedRuns = runs.filter((r) => r.status === 'completed');
-    for (const run of completedRuns) {
-      if (!processingRef.current.has(run.id)) {
-        processingRef.current.add(run.id);
-        handleCompleted(run.id);
-      }
-    }
-  }, [runs, handleCompleted]);
+  const {
+    copiedPreviewDraftId,
+    handleSceneSelection,
+    copyPreviewJson,
+    handleAssembleDraft,
+  } = useRunAssemblyDraftActions({
+    runs,
+    assemblyByRunId,
+    setAssemblyByRunId,
+    onClipsCreated,
+  });
 
   const handleStart = async (
     input: string,
@@ -87,44 +102,94 @@ const IdeaGeneratorPanel: React.FC<IdeaGeneratorPanelProps> = ({
     attachments: PipelineInputAttachment[],
     musicMediaId?: string | null
   ) => {
+    const selectedTemplate = templates.find((template) => template.id === templateId) || null;
+
+    if (selectedTemplate && hasInitialImageRequirement(selectedTemplate) && hasImageAttachment(attachments)) {
+      const generatorCheckpoints = selectedTemplate.checkpoints.filter(
+        (checkpoint) =>
+          (checkpoint.type || 'prompt') === 'generator' &&
+          normalizeGeneratorMediaType(checkpoint.generator?.media_type || '') === 'image'
+      );
+
+      for (const checkpoint of generatorCheckpoints) {
+        const effectiveModel =
+          toCleanString(checkpoint.generator?.model) ||
+          toCleanString(selectedTemplate.output_format?.image_model);
+        if (!effectiveModel) {
+          continue;
+        }
+        const constraints = await ModelsAPI.getModelConstraints(effectiveModel, 'image');
+        if (!modelSupportsSeedImage(constraints.capabilities)) {
+          throw new Error(
+            `Model "${effectiveModel}" does not support seed/reference images (checkpoint: ${checkpoint.name}). Choose a seed-compatible image model in Pipeline Manager.`
+          );
+        }
+      }
+    }
+
     await startRun(templateId, input, {
       autoMode,
       initialAttachments: attachments,
       musicMediaId,
-      provider: chatProvider,
-      model: chatModel,
-      mediaProfile,
     });
+    onIdeasCreated();
   };
 
-  const getTemplate = (templateId: string) =>
-    templates.find((t) => t.id === templateId);
-
-  // All runs (active and terminal) shown together
-  const visibleRuns = runs.filter((r) => r.status !== 'completed');
+  const templatesById = useMemo(
+    () => new Map(templates.map((template) => [template.id, template])),
+    [templates]
+  );
 
   return (
     <div className="space-y-2">
-      {/* Input Form */}
-      <IdeaInputForm templates={templates} onStart={handleStart} />
+      <IdeaInputForm
+        templates={templates}
+        onStart={handleStart}
+        generatedAssets={generatedAssets}
+        openLibrarySignal={openLibrarySignal}
+        workspaceResetSignal={workspaceResetSignal}
+      />
 
-      {/* Pipeline Runs */}
-      {visibleRuns.length > 0 && (
+      {runs.length > 0 && (
         <div className="space-y-2">
-          {visibleRuns.map((run) => {
-            const template = getTemplate(run.pipeline_template_id);
+          {runs.map((run) => {
+            const template = templatesById.get(run.pipeline_template_id);
             if (!template) return null;
 
+            const runAssembly = assemblyByRunId[run.id];
+
             return (
-              <PipelineRunItem
-                key={run.id}
-                run={run}
-                template={template}
-                onContinue={() => continueRun(run.id)}
-                onRegenerate={(checkpoint) => regenerateCheckpoint(run.id, checkpoint)}
-                onCancel={() => cancelRun(run.id)}
-                onRemove={() => removeRun(run.id)}
-              />
+              <div key={run.id} className="space-y-2">
+                <PipelineRunItem
+                  run={run}
+                  template={template}
+                  onContinue={() => continueRun(run.id)}
+                  onRegenerate={(checkpoint) => regenerateCheckpoint(run.id, checkpoint)}
+                  onInjectPrompt={async (checkpoint, text, options) => {
+                    await injectCheckpointPrompt(run.id, checkpoint, text, options);
+                  }}
+                  onAddAttachment={async (checkpoint, attachment) => {
+                    await addCheckpointAttachment(run.id, checkpoint, attachment);
+                  }}
+                  onCancel={() => cancelRun(run.id)}
+                  onRemove={() => closeRunWorkspace(run.id)}
+                />
+
+                {run.status === 'completed' && (
+                  <CompletedRunAssembly
+                    run={run}
+                    runAssembly={runAssembly}
+                    copiedPreviewDraftId={copiedPreviewDraftId}
+                    onCopyPreview={copyPreviewJson}
+                    onRetryLoad={async () => prepareCompletedRun(run)}
+                    onSceneSelection={(draftId, rowKey, selectedOptionKey) =>
+                      handleSceneSelection(run.id, draftId, rowKey, selectedOptionKey)
+                    }
+                    onAssembleDraft={(draftId) => handleAssembleDraft(run.id, draftId)}
+                    onCloseWorkspace={() => closeRunWorkspace(run.id)}
+                  />
+                )}
+              </div>
             );
           })}
         </div>

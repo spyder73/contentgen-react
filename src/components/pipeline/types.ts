@@ -22,9 +22,6 @@ export interface PipelineEditorProps {
   pipeline: PipelineTemplate;
   promptTemplates: PromptTemplate[];
   onSave: (pipeline: PipelineTemplate) => Promise<void>;
-  onCheckpointAdd: () => void;
-  onCheckpointRemove: (index: number) => void;
-  onCheckpointUpdate: (index: number, checkpoint: CheckpointConfig) => void;
   onEditPrompt: (promptId: string) => void;
 }
 
@@ -35,13 +32,6 @@ export interface CheckpointEditorProps {
   onUpdate: (checkpoint: CheckpointConfig) => void;
   onRemove: () => void;
   onEditPrompt: (promptId: string) => void;
-}
-
-export interface CheckpointFlowProps {
-  checkpoints: CheckpointConfig[];
-  promptTemplates: PromptTemplate[];
-  selectedIndex: number | null;
-  onSelect: (index: number) => void;
 }
 
 export interface PromptTemplateEditorProps {

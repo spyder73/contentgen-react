@@ -1,49 +1,12 @@
 import React, { useState } from 'react';
-import { 
-  AudioProviderSelector,
-  ChatProviderSelector,
-  ImageProviderSelector, 
-  VideoProviderSelector 
-} from '../selectors';
 import UserMenu from '../user/UserMenu';
 import { Button } from '../ui';
 import { PipelineManager } from '../pipeline';
+import { PromptEnhancerSettingsModal } from '../modals';
 import { User, Account } from '../../api/structs/user';
-import { MediaOutputSpec } from '../../api/structs/media-spec';
-import { ImageProvider, VideoProvider, AudioProvider, ChatProvider } from '../../api/structs/providers';
 import { ThemeMode } from '../../theme';
 
 interface HeaderProps {
-  // Image provider
-  imageProvider: ImageProvider;
-  imageModel: string;
-  onImageProviderChange: (p: ImageProvider) => void;
-  onImageModelChange: (m: string) => void;
-  imageSettings: Partial<MediaOutputSpec>;
-  onImageSettingsChange: (s: Partial<MediaOutputSpec>) => void;
-  
-  // Video provider
-  videoProvider: VideoProvider;
-  videoModel: string;
-  onVideoProviderChange: (p: VideoProvider) => void;
-  onVideoModelChange: (m: string) => void;
-  videoSettings: Partial<MediaOutputSpec>;
-  onVideoSettingsChange: (s: Partial<MediaOutputSpec>) => void;
-
-  // Audio provider
-  audioProvider: AudioProvider;
-  audioModel: string;
-  onAudioProviderChange: (p: AudioProvider) => void;
-  onAudioModelChange: (m: string) => void;
-  audioSettings: Partial<MediaOutputSpec>;
-  onAudioSettingsChange: (s: Partial<MediaOutputSpec>) => void;
-
-  // Chat provider (for ideas)
-  chatProvider: ChatProvider;
-  chatModel: string;
-  onChatProviderChange: (p: ChatProvider) => void;
-  onChatModelChange: (m: string) => void;
-  
   // User management
   users: User[];
   activeUser: User | null;
@@ -54,34 +17,13 @@ interface HeaderProps {
   onSelectAccount: (id: string) => void;
   themeMode: ThemeMode;
   onThemeToggle: () => void;
+  onOpenUploadLibrary: () => void;
   
   // Modals
   onOpenProxyModal: () => void;
 }
 
 const Header: React.FC<HeaderProps> = ({
-  imageProvider,
-  imageModel,
-  onImageProviderChange,
-  onImageModelChange,
-  imageSettings,
-  onImageSettingsChange,
-  videoProvider,
-  videoModel,
-  onVideoProviderChange,
-  onVideoModelChange,
-  videoSettings,
-  onVideoSettingsChange,
-  audioProvider,
-  audioModel,
-  onAudioProviderChange,
-  onAudioModelChange,
-  audioSettings,
-  onAudioSettingsChange,
-  chatProvider,
-  chatModel,
-  onChatProviderChange,
-  onChatModelChange,
   users,
   activeUser,
   activeAccount,
@@ -91,10 +33,11 @@ const Header: React.FC<HeaderProps> = ({
   onSelectAccount,
   themeMode,
   onThemeToggle,
+  onOpenUploadLibrary,
   onOpenProxyModal,
 }) => {
   const [showPipelineManager, setShowPipelineManager] = useState(false);
-  const [showModelControls, setShowModelControls] = useState(false);
+  const [showEnhancerSettings, setShowEnhancerSettings] = useState(false);
 
   return (
     <>
@@ -103,7 +46,7 @@ const Header: React.FC<HeaderProps> = ({
           {/* Top row - Title & User */}
           <div className="flex justify-between items-center mb-3">
             <div className="flex items-center gap-4">
-              <h1 className="text-xl font-semibold uppercase tracking-[0.25em] text-white">ContentGen</h1>
+              <h1 className="text-xl font-semibold uppercase tracking-[0.25em] text-white">SpyderGen</h1>
               <Button variant="ghost" size="sm" onClick={onOpenProxyModal}>
                 Proxies
               </Button>
@@ -117,9 +60,10 @@ const Header: React.FC<HeaderProps> = ({
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => setShowModelControls((value) => !value)}
+                onClick={onOpenUploadLibrary}
+                className="border border-dashed border-white/40 bg-black/20 text-white"
               >
-                {showModelControls ? 'Hide Models' : 'Model Controls'}
+                Upload Media
               </Button>
             </div>
 
@@ -140,80 +84,43 @@ const Header: React.FC<HeaderProps> = ({
                 <span className="theme-switch-label">{themeMode === 'dark' ? 'Dark' : 'Light'}</span>
               </button>
 
-              <UserMenu
-                users={users}
-                activeUser={activeUser}
-                activeAccount={activeAccount}
-                onAddUser={onAddUser}
-                onSelectUser={onSelectUser}
-                onRemoveUser={onRemoveUser}
-                onSelectAccount={onSelectAccount}
-              />
+              <div className="flex items-center gap-1">
+                <UserMenu
+                  users={users}
+                  activeUser={activeUser}
+                  activeAccount={activeAccount}
+                  onAddUser={onAddUser}
+                  onSelectUser={onSelectUser}
+                  onRemoveUser={onRemoveUser}
+                  onSelectAccount={onSelectAccount}
+                />
+
+                <button
+                  type="button"
+                  onClick={() => setShowEnhancerSettings(true)}
+                  title="Settings"
+                  className="flex items-center justify-center w-8 h-8 rounded text-slate-400 hover:text-white hover:bg-white/10 transition-colors"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="3" />
+                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+                  </svg>
+                </button>
+              </div>
             </div>
           </div>
 
-          {/* Bottom row - All selectors (each renders its own settings modal) */}
-          {showModelControls && (
-            <div className="flex items-center gap-3 flex-wrap border-t border-white/10 pt-3 mt-3 animate-fade-in">
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-slate-400 uppercase tracking-wider">Chat</span>
-                <ChatProviderSelector
-                  provider={chatProvider}
-                  model={chatModel}
-                  onProviderChange={onChatProviderChange}
-                  onModelChange={onChatModelChange}
-                />
-              </div>
-
-              <div className="w-px h-6 bg-slate-600" />
-
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-slate-400 uppercase tracking-wider">Image</span>
-                <ImageProviderSelector
-                  provider={imageProvider}
-                  model={imageModel}
-                  onProviderChange={onImageProviderChange}
-                  onModelChange={onImageModelChange}
-                  settings={imageSettings}
-                  onSettingsChange={onImageSettingsChange}
-                />
-              </div>
-
-              <div className="w-px h-6 bg-slate-600" />
-
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-slate-400 uppercase tracking-wider">Video</span>
-                <VideoProviderSelector
-                  provider={videoProvider}
-                  model={videoModel}
-                  onProviderChange={onVideoProviderChange}
-                  onModelChange={onVideoModelChange}
-                  settings={videoSettings}
-                  onSettingsChange={onVideoSettingsChange}
-                />
-              </div>
-
-              <div className="w-px h-6 bg-slate-600" />
-
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-slate-400 uppercase tracking-wider">Audio</span>
-                <AudioProviderSelector
-                  provider={audioProvider}
-                  model={audioModel}
-                  onProviderChange={onAudioProviderChange}
-                  onModelChange={onAudioModelChange}
-                  settings={audioSettings}
-                  onSettingsChange={onAudioSettingsChange}
-                />
-              </div>
-            </div>
-          )}
         </div>
       </header>
 
       <PipelineManager
         isOpen={showPipelineManager}
         onClose={() => setShowPipelineManager(false)}
+      />
+
+      <PromptEnhancerSettingsModal
+        isOpen={showEnhancerSettings}
+        onClose={() => setShowEnhancerSettings(false)}
       />
     </>
   );

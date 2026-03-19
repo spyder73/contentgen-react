@@ -15,6 +15,8 @@ interface IdeaStartControlsProps {
   submitDisabled: boolean;
   submitError?: string;
   showRequiredAssetWarning: boolean;
+  onEnhance: () => void;
+  enhancing: boolean;
 }
 
 const IdeaStartControls: React.FC<IdeaStartControlsProps> = ({
@@ -30,15 +32,38 @@ const IdeaStartControls: React.FC<IdeaStartControlsProps> = ({
   submitDisabled,
   submitError,
   showRequiredAssetWarning,
+  onEnhance,
+  enhancing,
 }) => (
   <>
-    <TextArea
-      value={input}
-      onChange={(event) => onInputChange(event.target.value)}
-      placeholder="Describe your video idea..."
-      rows={3}
-      disabled={disabled}
-    />
+    <div className="relative">
+      <TextArea
+        value={input}
+        onChange={(event) => onInputChange(event.target.value)}
+        placeholder="Describe your video idea..."
+        rows={3}
+        disabled={disabled}
+      />
+      <button
+        type="button"
+        onClick={onEnhance}
+        disabled={disabled || enhancing || !input.trim()}
+        title="Enhance prompt with AI"
+        className={`
+          absolute bottom-2 right-2 flex items-center gap-1 px-2 py-1 rounded text-xs font-medium transition-colors
+          ${enhancing
+            ? 'bg-violet-600/30 text-violet-300 border border-violet-500/40 cursor-wait'
+            : 'bg-violet-600/20 text-violet-300 border border-violet-500/30 hover:bg-violet-600/40 hover:text-violet-200'
+          }
+          ${(disabled || !input.trim()) ? 'opacity-40 cursor-not-allowed' : ''}
+        `}
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/>
+        </svg>
+        {enhancing ? 'Enhancing…' : 'Enhance'}
+      </button>
+    </div>
 
     <div className="flex flex-wrap items-center gap-3">
       <Select

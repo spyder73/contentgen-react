@@ -94,6 +94,9 @@ const API = {
   // Upscaler
   getUpscalingStatus: UpscalerAPI.getUpscalingStatus,
   updateUpscalingConfig: UpscalerAPI.updateUpscalingConfig,
+
+  // Prompt Enhancement
+  enhancePrompt: ExternalAPI.enhancePrompt,
 };
 
 export default API;

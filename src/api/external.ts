@@ -120,6 +120,13 @@ const setActiveAccount = (accountId: string) =>
     'Failed to set active account'
   );
 
+// ==================== Prompt Enhancement ====================
+
+const enhancePrompt = async (userIdea: string, provider: string, model: string): Promise<string> => {
+  const response = await axios.post(`${BASE_URL}/enhance-prompt`, { user_idea: userIdea, provider, model });
+  return response.data.enhanced_idea as string;
+};
+
 // ==================== Scheduling ====================
 
 interface ScheduleClipRequest {
@@ -154,6 +161,7 @@ const ExternalAPI = {
   getActiveAccount,
   setActiveAccount,
   scheduleClip,
+  enhancePrompt,
 };
 
 export default ExternalAPI;

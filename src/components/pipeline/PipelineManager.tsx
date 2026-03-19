@@ -8,6 +8,7 @@ import PipelineList from './PipelineList';
 import PipelineEditor from './PipelineEditor';
 import PromptTemplateEditor from './PromptTemplateEditor';
 import { DEFAULT_OUTPUT_FORMAT } from './utils';
+import PipelineAPI from '../../api/pipeline';
 
 const PipelineManager: React.FC<PipelineManagerProps> = ({ isOpen, onClose }) => {
   const toast = useToast();
@@ -25,6 +26,7 @@ const PipelineManager: React.FC<PipelineManagerProps> = ({ isOpen, onClose }) =>
     updateTemplate: updatePromptTemplate,
   } = usePromptTemplates();
 
+  const [isSyncing, setIsSyncing] = useState(false);
   const [selectedPipelineId, setSelectedPipelineId] = useState<string | null>(null);
   const [editingPrompt, setEditingPrompt] = useState<PromptTemplate | null>(null);
   const [isCreatingPrompt, setIsCreatingPrompt] = useState(false);
@@ -74,6 +76,23 @@ const PipelineManager: React.FC<PipelineManagerProps> = ({ isOpen, onClose }) =>
     }
   };
 
+  const handleSyncLocal = async () => {
+    setIsSyncing(true);
+    try {
+      const result = await PipelineAPI.syncLocalToRemote();
+      const msg = `Synced ${result.pipelines_synced} pipeline(s) and ${result.prompts_synced} prompt(s) to DB`;
+      if (result.errors?.length) {
+        toast({ text: `${msg}. Errors: ${result.errors.join('; ')}`, level: 'warning' });
+      } else {
+        toast({ text: msg, level: 'success' });
+      }
+    } catch (err: any) {
+      toast({ text: `Sync failed: ${err.message}`, level: 'error' });
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
   const handleEditPrompt = (promptId: string) => {
     if (!promptId) {
       setIsCreatingPrompt(true);
@@ -114,6 +133,14 @@ const PipelineManager: React.FC<PipelineManagerProps> = ({ isOpen, onClose }) =>
             </h2>
           </div>
           <div className="flex items-center gap-2">
+            <button
+              onClick={handleSyncLocal}
+              disabled={isSyncing}
+              className="btn btn-sm btn-secondary"
+              title="Push all local disk templates to the DB"
+            >
+              {isSyncing ? 'Syncing…' : 'Sync Local → DB'}
+            </button>
             <button onClick={onClose} className="btn btn-sm btn-ghost">
               Close
             </button>

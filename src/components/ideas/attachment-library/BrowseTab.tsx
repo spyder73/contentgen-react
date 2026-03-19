@@ -170,6 +170,12 @@ const BrowseTab: React.FC<BrowseTabProps> = ({
               {readGeneratedOriginLabel(activeItem) && (
                 <p className="attachment-meta">Generated from: {readGeneratedOriginLabel(activeItem)}</p>
               )}
+              {activeItem.prompt && (
+                <div>
+                  <p className="attachment-meta font-medium mb-1">Prompt</p>
+                  <p className="attachment-meta whitespace-pre-wrap break-words">{activeItem.prompt}</p>
+                </div>
+              )}
 
               {mode === 'manage' ? (
                 <>

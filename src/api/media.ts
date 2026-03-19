@@ -45,6 +45,7 @@ export interface MediaLibraryItem {
   size_bytes?: number;
   clip_id?: string;
   created_at?: string;
+  prompt?: string;
   metadata?: Record<string, unknown>;
 }
 
@@ -120,6 +121,7 @@ const normalizeMediaLibraryItem = (value: unknown, index: number): MediaLibraryI
     size_bytes: toNumberValue(value.size_bytes ?? value.sizeBytes ?? value.size),
     clip_id: toStringValue(value.clip_id ?? value.clipId) || undefined,
     created_at: toStringValue(value.created_at ?? value.createdAt) || undefined,
+    prompt: toStringValue(value.prompt) || undefined,
     metadata,
   };
 };

@@ -239,6 +239,17 @@ const deletePipelineTemplate = (templateId: string) =>
     .delete<{ status: string }>(`${BASE_URL}/pipeline-templates/${templateId}`)
     .then((res) => res.data);
 
+interface SyncLocalResponse {
+  pipelines_synced: number;
+  prompts_synced: number;
+  errors?: string[];
+}
+
+const syncLocalToRemote = (): Promise<SyncLocalResponse> =>
+  axios
+    .post<SyncLocalResponse>(`${BASE_URL}/pipeline-templates/sync-local`)
+    .then((res) => res.data);
+
 const getPipelineOutput = (pipelineId: string) =>
   axios
     .get<PipelineOutputResponse>(`${BASE_URL}/pipelines/${pipelineId}/output`)
@@ -296,6 +307,7 @@ const PipelineAPI = {
   listPipelineTemplates,
   updatePipelineTemplate,
   deletePipelineTemplate,
+  syncLocalToRemote,
   createPromptTemplate,
   getPromptTemplate,
   listPromptTemplates,

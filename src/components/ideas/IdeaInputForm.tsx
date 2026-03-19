@@ -2,12 +2,14 @@ import React from 'react';
 import { MediaLibraryItem } from '../../api/media';
 import { PipelineTemplate } from '../../api/structs';
 import { PipelineInputAttachment } from '../../api/structs/pipeline';
-import { AssetPoolItem, evaluateCheckpointRequirements, extractCheckpointRequirements } from './assetPool';
+import { AssetPoolItem, evaluateCheckpointRequirements, extractCheckpointRequirements, mediaItemToPoolItem } from './assetPool';
 import AttachmentLibraryModal from './AttachmentLibraryModal';
 import IdeaStartControls from './idea-input/IdeaStartControls';
 import RunAttachmentsSection from './idea-input/RunAttachmentsSection';
-import { buildRunAttachments, toAssetPoolItem } from './idea-input/attachmentPayload';
+import { buildRunAttachments } from './idea-input/attachmentPayload';
 import { useLocalStorage } from '../../hooks/useLocalStorage';
+import ExternalAPI from '../../api/external';
+import { DEFAULT_CHAT_PROVIDER, DEFAULT_CHAT_MODEL } from '../../api/structs/providers';
 
 interface Props {
   templates: PipelineTemplate[];
@@ -36,7 +38,10 @@ const IdeaInputForm: React.FC<Props> = ({
   const [templateId, setTemplateId] = React.useState(templates[0]?.id || '');
   const [autoMode, setAutoMode] = useLocalStorage('pipeline_auto_mode', true);
   const [loading, setLoading] = React.useState(false);
+  const [enhancing, setEnhancing] = React.useState(false);
   const [submitError, setSubmitError] = React.useState('');
+  const [promptEnhancerProvider] = useLocalStorage('promptEnhancerProvider', DEFAULT_CHAT_PROVIDER);
+  const [promptEnhancerModel] = useLocalStorage('promptEnhancerModel', DEFAULT_CHAT_MODEL);
   const [selectedRunMedia, setSelectedRunMedia] = React.useState<MediaLibraryItem[]>([]);
   const [isLibraryModalOpen, setIsLibraryModalOpen] = React.useState(false);
   const [libraryModalMode, setLibraryModalMode] = React.useState<'manage' | 'select'>('select');
@@ -78,7 +83,7 @@ const IdeaInputForm: React.FC<Props> = ({
   }, [selectedTemplate]);
 
   const selectedRunAssets = React.useMemo<AssetPoolItem[]>(() => {
-    return selectedRunMedia.map((item) => toAssetPoolItem(item));
+    return selectedRunMedia.map((item) => mediaItemToPoolItem(item));
   }, [selectedRunMedia]);
 
   const unmetRequiredCheckpointRows = React.useMemo(
@@ -101,6 +106,19 @@ const IdeaInputForm: React.FC<Props> = ({
     shouldShowAttachmentUI,
     selectedRunMedia,
   }), [selectedRunMedia, shouldShowAttachmentUI]);
+
+  const handleEnhance = async () => {
+    if (!input.trim() || enhancing) return;
+    setEnhancing(true);
+    try {
+      const enhanced = await ExternalAPI.enhancePrompt(input.trim(), promptEnhancerProvider, promptEnhancerModel);
+      if (enhanced) setInput(enhanced);
+    } catch (error) {
+      console.error('Prompt enhancement failed:', error);
+    } finally {
+      setEnhancing(false);
+    }
+  };
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -154,6 +172,8 @@ const IdeaInputForm: React.FC<Props> = ({
         submitDisabled={!input.trim() || loading || Boolean(disabled) || hasMissingRequiredAssets}
         submitError={submitError}
         showRequiredAssetWarning={hasMissingRequiredAssets}
+        onEnhance={handleEnhance}
+        enhancing={enhancing}
       />
 
       <RunAttachmentsSection

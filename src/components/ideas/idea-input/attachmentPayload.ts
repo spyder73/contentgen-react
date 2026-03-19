@@ -1,23 +1,5 @@
 import { MediaLibraryItem } from '../../../api/media';
 import { PipelineInputAttachment } from '../../../api/structs/pipeline';
-import { AssetPoolItem, normalizeAssetKind, normalizeAssetSource } from '../assetPool';
-
-export const toAssetPoolItem = (item: MediaLibraryItem): AssetPoolItem => {
-  const mediaId = item.media_id || item.id;
-  const source = normalizeAssetSource(item.source);
-  return {
-    id: `media:${mediaId}`,
-    media_id: mediaId,
-    type: item.type || 'unknown',
-    kind: normalizeAssetKind(item.type, item.mime_type),
-    source: source === 'unknown' || source === 'file' ? 'media' : source,
-    name: item.name || mediaId,
-    url: item.url,
-    mime_type: item.mime_type,
-    size_bytes: item.size_bytes,
-    metadata: item.metadata,
-  };
-};
 
 export const toAttachmentType = (item: MediaLibraryItem): string => {
   const type = (item.type || '').toLowerCase();

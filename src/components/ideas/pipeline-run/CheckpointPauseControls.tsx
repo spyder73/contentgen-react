@@ -8,6 +8,7 @@ interface CheckpointPauseControlsProps {
   runId: string;
   index: number;
   checkpoint: CheckpointConfig;
+  isUploadCheckpoint?: boolean;
   pauseState: 'awaiting_asset' | 'awaiting_confirm' | 'paused';
   canContinueCurrentCheckpoint: boolean;
   backendErrorText: string;
@@ -30,6 +31,7 @@ const CheckpointPauseControls: React.FC<CheckpointPauseControlsProps> = ({
   runId,
   index,
   checkpoint,
+  isUploadCheckpoint = false,
   pauseState,
   canContinueCurrentCheckpoint,
   backendErrorText,
@@ -47,7 +49,7 @@ const CheckpointPauseControls: React.FC<CheckpointPauseControlsProps> = ({
   onRegenerate,
   onContinue,
 }) => {
-  const showAssetGate = pauseState === 'awaiting_asset' || Boolean(requiredReferencePrompt);
+  const showAssetGate = !isUploadCheckpoint && (pauseState === 'awaiting_asset' || Boolean(requiredReferencePrompt));
   const continueDisabled =
     !canContinueCurrentCheckpoint || progressionLoading || (pauseState !== 'awaiting_asset' && Boolean(requiredReferencePrompt));
 

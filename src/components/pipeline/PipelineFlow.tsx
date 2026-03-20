@@ -147,7 +147,7 @@ const PipelineFlow: React.FC<PipelineFlowProps> = ({
                   {checkpoint.allow_regenerate && (
                     <span className="text-[10px] text-blue-400/70">🔄 Regen</span>
                   )}
-                  {checkpoint.allow_attachments && (
+                  {checkpoint.type === 'upload' && (
                     <span className="text-[10px] text-green-400/70">📎 Attach</span>
                   )}
                 </div>

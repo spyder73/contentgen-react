@@ -249,6 +249,7 @@ const normalizeCheckpointConfig = (checkpoint: unknown): CheckpointConfig => {
     rawType === 'distributor' ||
     rawType === 'connector' ||
     rawType === 'generator' ||
+    rawType === 'upload' ||
     rawType === 'prompt'
       ? rawType
       : 'prompt';
@@ -265,7 +266,6 @@ const normalizeCheckpointConfig = (checkpoint: unknown): CheckpointConfig => {
     ),
     requires_confirm: Boolean(source.requires_confirm ?? source.requiresConfirm),
     allow_regenerate: Boolean(source.allow_regenerate ?? source.allowRegenerate),
-    allow_attachments: Boolean(source.allow_attachments ?? source.allowAttachments),
     chain_last_frames: Boolean(source.chain_last_frames ?? source.chainLastFrames),
     output_spec: sanitizeSettingsMap(source.output_spec ?? source.outputSpec),
     required_assets: sanitizeRequiredAssets(
@@ -289,6 +289,14 @@ const normalizeCheckpointConfig = (checkpoint: unknown): CheckpointConfig => {
 
   if (type === 'generator') {
     normalized.generator = normalizeGenerator(source.generator, legacyProvider, legacyModel);
+  }
+
+  if (type === 'upload') {
+    const uploadSource = isRecord(source.upload) ? source.upload : {};
+    normalized.upload = {
+      media_type: cleanString(uploadSource.media_type) || 'image',
+      role: cleanString(uploadSource.role) || 'seed_image',
+    };
   }
 
   return normalized;
@@ -367,10 +375,6 @@ export const normalizePipelineRun = (run: unknown): PipelineRun => {
   if (!isRecord(run)) return run as PipelineRun;
 
   const normalized: PipelineRun = { ...(run as unknown as PipelineRun) };
-
-  if (hasOwn(run, 'initial_attachments')) {
-    normalized.initial_attachments = normalizeAttachmentList(run.initial_attachments);
-  }
 
   if (Array.isArray(run.results)) {
     normalized.results = run.results.map((result) => {

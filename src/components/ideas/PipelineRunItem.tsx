@@ -61,16 +61,6 @@ const PipelineRunItem: React.FC<Props> = ({
   const reusablePoolAssets = useMemo(() => {
     const items: AssetPoolItem[] = [];
 
-    (run.initial_attachments || []).forEach((attachment) => {
-      const normalizedSource = normalizeAssetSource(attachment.source);
-      items.push(
-        pipelineAttachmentToPoolItem(attachment, {
-          source: normalizedSource === 'unknown' ? 'media' : normalizedSource,
-          runId: run.id,
-        })
-      );
-    });
-
     (run.results || []).forEach((result, checkpointIndex) => {
       const checkpointName =
         template.checkpoints[checkpointIndex]?.name || result.checkpoint_id || `Checkpoint ${checkpointIndex + 1}`;
@@ -91,7 +81,7 @@ const PipelineRunItem: React.FC<Props> = ({
     const deduped = new Map<string, AssetPoolItem>();
     items.forEach((item) => deduped.set(item.id, item));
     return Array.from(deduped.values());
-  }, [run.id, run.initial_attachments, run.results, template.checkpoints]);
+  }, [run.id, run.results, template.checkpoints]);
 
   const evaluateRequirementDetails = (
     index: number,
@@ -142,12 +132,7 @@ const PipelineRunItem: React.FC<Props> = ({
 
             <AttachmentSurface
               heading="Initial Attachments"
-              attachments={run.initial_attachments}
-              loadingText={
-                run.initial_attachments === undefined && ['pending', 'running'].includes(run.status)
-                  ? 'Loading initial attachments...'
-                  : undefined
-              }
+              attachments={[]}
               emptyText="No initial attachments."
               unavailableText="Attachment payload unavailable in this run response."
             />

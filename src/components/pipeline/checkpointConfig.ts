@@ -13,7 +13,6 @@ const buildBaseCheckpoint = (
   input_mapping: checkpoint.input_mapping || {},
   requires_confirm: Boolean(checkpoint.requires_confirm),
   allow_regenerate: Boolean(checkpoint.allow_regenerate),
-  allow_attachments: Boolean(checkpoint.allow_attachments),
 });
 
 export const createCheckpointConfig = (
@@ -31,7 +30,6 @@ export const createCheckpointConfig = (
       input_mapping: {},
       requires_confirm: true,
       allow_regenerate: true,
-      allow_attachments: false,
     },
     type,
     previousDistributorId
@@ -49,6 +47,7 @@ export const applyCheckpointType = (
     distributor: undefined,
     connector: undefined,
     generator: undefined,
+    upload: undefined,
   });
 
   if (type === 'prompt') {
@@ -72,6 +71,13 @@ export const applyCheckpointType = (
         source_checkpoint_id:
           checkpoint.connector?.source_checkpoint_id || previousDistributorId || undefined,
       },
+    };
+  }
+
+  if (type === 'upload') {
+    return {
+      ...next,
+      upload: checkpoint.upload || { media_type: 'image', role: 'seed_image' },
     };
   }
 

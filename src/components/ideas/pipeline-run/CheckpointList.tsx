@@ -1,4 +1,6 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useState } from 'react';
+import { MediaLibraryItem } from '../../../api/media';
+import AttachmentLibraryModal from '../AttachmentLibraryModal';
 import CheckpointCard from './CheckpointCard';
 import { CheckpointInteractionState } from './checkpointCardTypes';
 import { CheckpointListProps } from './checkpointListTypes';
@@ -18,20 +20,27 @@ const CheckpointList: React.FC<CheckpointListProps> = ({
   onAddAttachment,
 }) => {
   const controls = useCheckpointListControls({
-    reusablePoolAssets,
     onContinue,
     onRegenerate,
     onInjectPrompt,
     onAddAttachment,
   });
 
+  const [libraryOpenForCheckpoint, setLibraryOpenForCheckpoint] = useState<number | null>(null);
+
+  const handleLibrarySelect = useCallback(async (items: MediaLibraryItem[]) => {
+    if (libraryOpenForCheckpoint === null || items.length === 0) return;
+    const index = libraryOpenForCheckpoint;
+    setLibraryOpenForCheckpoint(null);
+    await controls.handleLibraryAttach(index, items[0]);
+  }, [libraryOpenForCheckpoint, controls]);
+
   const buildInteraction = useCallback(
     (index: number): CheckpointInteractionState => ({
-      selectedAssetId: controls.selectedAssetByCheckpoint[index] || '',
-      setSelectedAssetId: (id: string) =>
-        controls.setSelectedAssetByCheckpoint((prev) => ({ ...prev, [index]: id })),
       attachLoading: Boolean(controls.attachLoadingByCheckpoint[index]),
       attachError: controls.attachErrorByCheckpoint[index] || '',
+      onOpenLibrary: () => setLibraryOpenForCheckpoint(index),
+      onFileUpload: (file: File) => controls.handleFileUpload(index, file),
       injectText: controls.injectTextByCheckpoint[index] || '',
       setInjectText: (text: string) =>
         controls.setInjectTextByCheckpoint((prev) => ({ ...prev, [index]: text })),
@@ -61,16 +70,20 @@ const CheckpointList: React.FC<CheckpointListProps> = ({
           isPaused={isPaused}
           checkpointRequirements={checkpointRequirements}
           evaluateRequirementDetails={evaluateRequirementDetails}
-          reusablePoolAssets={reusablePoolAssets}
           interaction={buildInteraction(index)}
           selectedCheckpoint={controls.selectedCheckpoint}
           setSelectedCheckpoint={controls.setSelectedCheckpoint}
-          onAttachFromPool={() => controls.handleAttachFromPool(index)}
           onInjectPrompt={() => controls.handleInjectPrompt(index)}
           onContinue={() => controls.handleContinue(index)}
           onRegenerate={() => controls.handleRegenerate(index)}
         />
       ))}
+      <AttachmentLibraryModal
+        isOpen={libraryOpenForCheckpoint !== null}
+        mode="select"
+        onClose={() => setLibraryOpenForCheckpoint(null)}
+        onConfirmSelection={(items) => void handleLibrarySelect(items)}
+      />
     </>
   );
 };

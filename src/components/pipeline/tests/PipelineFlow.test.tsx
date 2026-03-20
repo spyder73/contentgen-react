@@ -14,7 +14,6 @@ const checkpoints: CheckpointConfig[] = [
     },
     requires_confirm: false,
     allow_regenerate: false,
-    allow_attachments: false,
     distributor: {
       delimiter: 'newline',
       max_children: 3,
@@ -30,7 +29,6 @@ const checkpoints: CheckpointConfig[] = [
     },
     requires_confirm: false,
     allow_regenerate: false,
-    allow_attachments: false,
   },
   {
     id: 'join',
@@ -40,7 +38,6 @@ const checkpoints: CheckpointConfig[] = [
     input_mapping: {},
     requires_confirm: true,
     allow_regenerate: true,
-    allow_attachments: false,
     connector: {
       strategy: 'collect_all',
       source_checkpoint_id: 'split',
@@ -54,7 +51,6 @@ const checkpoints: CheckpointConfig[] = [
     input_mapping: {},
     requires_confirm: false,
     allow_regenerate: true,
-    allow_attachments: true,
     generator: {
       media_type: 'image',
       role: 'reference_frame',

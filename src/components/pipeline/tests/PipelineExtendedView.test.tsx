@@ -12,7 +12,6 @@ const checkpoints: CheckpointConfig[] = [
     input_mapping: { subject: 'initial_input' },
     requires_confirm: false,
     allow_regenerate: true,
-    allow_attachments: false,
     promptGate: { provider: 'openrouter', model: 'x-ai/grok-4-fast' },
   },
   {
@@ -23,7 +22,6 @@ const checkpoints: CheckpointConfig[] = [
     input_mapping: { prompt: 'checkpoint:prompt-step', refs: 'attachments:prompt-step' },
     requires_confirm: false,
     allow_regenerate: true,
-    allow_attachments: true,
     generator: {
       media_type: 'image',
       role: 'reference_frame',

@@ -2,6 +2,7 @@ export {
   formatMetadataValue,
   formatOutput,
   getRunProgressPercent,
+  mediaLibraryItemToAttachment,
   modeLabel,
   toActionableErrorMessage,
   toAttachmentRequest,

@@ -19,7 +19,7 @@ export type CheckpointStatus =
   | 'awaiting_confirm'
   | 'skipped';
 
-export type CheckpointType = 'prompt' | 'distributor' | 'connector' | 'generator';
+export type CheckpointType = 'prompt' | 'distributor' | 'connector' | 'generator' | 'upload';
 export type CheckpointInjectionMode = 'guidance_only' | 'with_prior_output_context';
 
 export interface CostProviderTotal {
@@ -108,7 +108,6 @@ export interface PipelineRun {
   pipeline_template_id: string;
   parent_run_id?: string;
   initial_input: string;
-  initial_attachments?: MediaAttachment[];
   current_checkpoint: number;
   status: PipelineRunStatus;
   results: CheckpointResult[];
@@ -156,6 +155,11 @@ export interface GeneratorConfig {
   model?: string;
 }
 
+export interface UploadCheckpointConfig {
+  media_type?: string;
+  role?: string;
+}
+
 export interface CheckpointRequiredAsset {
   key?: string;
   type?: string;
@@ -172,12 +176,12 @@ export interface CheckpointConfig {
   input_mapping: InputMapping;
   requires_confirm: boolean;
   allow_regenerate: boolean;
-  allow_attachments: boolean;
   output_spec?: Partial<MediaOutputSpec>;
   promptGate?: PromptCheckpointConfig;
   distributor?: DistributorConfig;
   connector?: ConnectorConfig;
   generator?: GeneratorConfig;
+  upload?: UploadCheckpointConfig;
   required_assets?: CheckpointRequiredAsset[];
   chain_last_frames?: boolean;
 }

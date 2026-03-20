@@ -15,6 +15,7 @@ const styles = {
   distributor: 'border-amber-300/45 bg-amber-500/12 text-amber-50',
   generator: 'border-sky-300/55 bg-sky-500/14 text-sky-50 shadow-[0_0_0_1px_rgba(56,189,248,0.18),0_0_42px_rgba(56,189,248,0.18)]',
   connector: 'border-emerald-300/45 bg-emerald-500/10 text-emerald-50',
+  upload: 'border-violet-300/55 bg-violet-500/14 text-violet-50',
 } as const;
 
 const details = (node: GraphNode) => {

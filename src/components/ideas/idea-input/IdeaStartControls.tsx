@@ -14,7 +14,6 @@ interface IdeaStartControlsProps {
   disabled?: boolean;
   submitDisabled: boolean;
   submitError?: string;
-  showRequiredAssetWarning: boolean;
   onEnhance: () => void;
   enhancing: boolean;
 }
@@ -31,7 +30,6 @@ const IdeaStartControls: React.FC<IdeaStartControlsProps> = ({
   disabled,
   submitDisabled,
   submitError,
-  showRequiredAssetWarning,
   onEnhance,
   enhancing,
 }) => (
@@ -104,11 +102,6 @@ const IdeaStartControls: React.FC<IdeaStartControlsProps> = ({
 
     {submitError && <p className="text-xs text-rose-300">{submitError}</p>}
 
-    {showRequiredAssetWarning && (
-      <p className="text-xs text-amber-300">
-        Required checkpoint assets are missing. Bind required items below before generating.
-      </p>
-    )}
   </>
 );
 

@@ -18,7 +18,6 @@ interface UnmetRow {
 
 interface RunAttachmentsSectionProps {
   selectedRunMedia: MediaLibraryItem[];
-  shouldShowAttachmentUI: boolean;
   hasMissingRequiredAssets: boolean;
   unmetRequiredCheckpointRows: UnmetRow[];
   onOpenRunPicker: () => void;
@@ -69,19 +68,10 @@ const renderMissingDetails = (row: UnmetRow): string =>
 
 const RunAttachmentsSection: React.FC<RunAttachmentsSectionProps> = ({
   selectedRunMedia,
-  shouldShowAttachmentUI,
   hasMissingRequiredAssets,
   unmetRequiredCheckpointRows,
   onOpenRunPicker,
 }) => {
-  if (!shouldShowAttachmentUI) {
-    return (
-      <div className="attachment-surface">
-        <p className="attachment-meta">This pipeline does not require attachments for its configured checkpoints.</p>
-      </div>
-    );
-  }
-
   return (
     <div className={`attachment-surface space-y-3 ${hasMissingRequiredAssets ? 'border-amber-400/50' : ''}`}>
       <div className="flex flex-wrap items-center justify-between gap-2">

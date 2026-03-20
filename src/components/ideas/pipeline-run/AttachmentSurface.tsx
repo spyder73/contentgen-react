@@ -1,11 +1,11 @@
 import React from 'react';
-import { PipelineRun } from '../../../api/structs';
+import { MediaAttachment } from '../../../api/structs/pipeline';
 import { formatMetadataValue } from './helpers';
 import { constructMediaUrl } from '../../../api/helpers';
 
 interface AttachmentSurfaceProps {
   heading: string;
-  attachments?: PipelineRun['initial_attachments'];
+  attachments?: MediaAttachment[];
   loadingText?: string;
   emptyText: string;
   unavailableText: string;
@@ -22,7 +22,7 @@ const AttachmentSurface: React.FC<AttachmentSurfaceProps> = ({
 }) => {
   const hasAttachments = Array.isArray(attachments) && attachments.length > 0;
 
-  const renderPreview = (attachment: NonNullable<AttachmentSurfaceProps['attachments']>[number]) => {
+  const renderPreview = (attachment: MediaAttachment) => {
     const normalizedType = String(attachment.type || '').toLowerCase();
     const mimeType = String(attachment.mime_type || '').toLowerCase();
     const url = attachment.url ? constructMediaUrl(attachment.url) : '';

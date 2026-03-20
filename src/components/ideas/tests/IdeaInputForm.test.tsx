@@ -30,7 +30,6 @@ const templates: PipelineTemplate[] = [
         input_mapping: {},
         requires_confirm: false,
         allow_regenerate: false,
-        allow_attachments: true,
       },
     ],
     version: 1,
@@ -123,7 +122,6 @@ describe('IdeaInputForm modal attachment flow', () => {
           {
             ...templates[0].checkpoints[0],
             id: 'prompt-only',
-            allow_attachments: false,
             required_assets: [],
           },
         ],
@@ -152,13 +150,11 @@ describe('IdeaInputForm modal attachment flow', () => {
           {
             ...templates[0].checkpoints[0],
             id: 'character-seed',
-            allow_attachments: true,
             required_assets: [],
           },
           {
             ...templates[0].checkpoints[0],
             id: 'generate-scene-reference-image',
-            allow_attachments: false,
             required_assets: [{ key: 'seed_ref', type: 'image', source: 'checkpoint:character-seed' }],
           },
         ],
@@ -190,7 +186,6 @@ describe('IdeaInputForm modal attachment flow', () => {
           {
             ...templates[0].checkpoints[0],
             id: 'prompt-only',
-            allow_attachments: true,
             required_assets: [{ key: 'seed_ref', type: 'image', source: 'user' }],
           },
         ],
@@ -563,7 +558,6 @@ describe('IdeaInputForm modal attachment flow', () => {
           {
             ...templates[0].checkpoints[0],
             id: 'prompt-only',
-            allow_attachments: false,
             required_assets: [],
           },
         ],
@@ -584,7 +578,6 @@ describe('IdeaInputForm modal attachment flow', () => {
         checkpoints: [
           {
             ...templates[0].checkpoints[0],
-            allow_attachments: false,
             required_assets: [{ key: 'req-image', type: 'image', source: 'user' }],
           },
         ],

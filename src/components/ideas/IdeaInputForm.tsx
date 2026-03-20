@@ -2,11 +2,9 @@ import React from 'react';
 import { MediaLibraryItem } from '../../api/media';
 import { PipelineTemplate } from '../../api/structs';
 import { PipelineInputAttachment } from '../../api/structs/pipeline';
-import { AssetPoolItem, evaluateCheckpointRequirements, extractCheckpointRequirements, mediaItemToPoolItem } from './assetPool';
 import AttachmentLibraryModal from './AttachmentLibraryModal';
 import IdeaStartControls from './idea-input/IdeaStartControls';
-import RunAttachmentsSection from './idea-input/RunAttachmentsSection';
-import { buildRunAttachments } from './idea-input/attachmentPayload';
+import { AssetPoolItem } from './assetPool';
 import { useLocalStorage } from '../../hooks/useLocalStorage';
 import ExternalAPI from '../../api/external';
 import { DEFAULT_CHAT_PROVIDER, DEFAULT_CHAT_MODEL } from '../../api/structs/providers';
@@ -42,9 +40,7 @@ const IdeaInputForm: React.FC<Props> = ({
   const [submitError, setSubmitError] = React.useState('');
   const [promptEnhancerProvider] = useLocalStorage('promptEnhancerProvider', DEFAULT_CHAT_PROVIDER);
   const [promptEnhancerModel] = useLocalStorage('promptEnhancerModel', DEFAULT_CHAT_MODEL);
-  const [selectedRunMedia, setSelectedRunMedia] = React.useState<MediaLibraryItem[]>([]);
   const [isLibraryModalOpen, setIsLibraryModalOpen] = React.useState(false);
-  const [libraryModalMode, setLibraryModalMode] = React.useState<'manage' | 'select'>('select');
   const lastLibrarySignalRef = React.useRef(openLibrarySignal);
   const lastWorkspaceResetSignalRef = React.useRef(workspaceResetSignal);
 
@@ -55,57 +51,16 @@ const IdeaInputForm: React.FC<Props> = ({
   React.useEffect(() => {
     if (openLibrarySignal === lastLibrarySignalRef.current) return;
     lastLibrarySignalRef.current = openLibrarySignal;
-    setLibraryModalMode('manage');
     setIsLibraryModalOpen(true);
   }, [openLibrarySignal]);
 
   React.useEffect(() => {
     if (workspaceResetSignal === lastWorkspaceResetSignalRef.current) return;
     lastWorkspaceResetSignalRef.current = workspaceResetSignal;
-    setSelectedRunMedia([]);
     setIsLibraryModalOpen(false);
-    setLibraryModalMode('select');
   }, [workspaceResetSignal]);
 
   const templateOptions = React.useMemo(() => templates.map((template) => ({ value: template.id, label: template.name })), [templates]);
-  const selectedTemplate = React.useMemo(() => templates.find((template) => template.id === templateId) || null, [templateId, templates]);
-
-  const checkpointsWithAttachmentIntent = React.useMemo(() => {
-    if (!selectedTemplate) return [];
-    return selectedTemplate.checkpoints
-      .map((checkpoint) => ({
-        id: checkpoint.id,
-        name: checkpoint.name,
-        allowAttachments: Boolean(checkpoint.allow_attachments),
-        requirements: extractCheckpointRequirements(checkpoint),
-      }))
-      .filter((row) => row.allowAttachments || row.requirements.length > 0);
-  }, [selectedTemplate]);
-
-  const selectedRunAssets = React.useMemo<AssetPoolItem[]>(() => {
-    return selectedRunMedia.map((item) => mediaItemToPoolItem(item));
-  }, [selectedRunMedia]);
-
-  const unmetRequiredCheckpointRows = React.useMemo(
-    () => checkpointsWithAttachmentIntent
-      .map((row) => ({
-        ...row,
-        startRequirements: row.requirements.filter((requirement) => requirement.source.trim().toLowerCase() === 'initial'),
-      }))
-      .map((row) => ({
-        ...row,
-        summary: evaluateCheckpointRequirements(row.startRequirements, selectedRunAssets),
-      }))
-      .filter((row) => row.requirements.length > 0 && !row.summary.satisfied),
-    [checkpointsWithAttachmentIntent, selectedRunAssets]
-  );
-
-  const shouldShowAttachmentUI = checkpointsWithAttachmentIntent.length > 0;
-  const hasMissingRequiredAssets = unmetRequiredCheckpointRows.length > 0;
-  const runAttachments = React.useMemo<PipelineInputAttachment[]>(() => buildRunAttachments({
-    shouldShowAttachmentUI,
-    selectedRunMedia,
-  }), [selectedRunMedia, shouldShowAttachmentUI]);
 
   const handleEnhance = async () => {
     if (!input.trim() || enhancing) return;
@@ -124,23 +79,9 @@ const IdeaInputForm: React.FC<Props> = ({
     event.preventDefault();
     if (!input.trim() || !templateId) return;
     setSubmitError('');
-    if (hasMissingRequiredAssets) {
-      const detail = unmetRequiredCheckpointRows
-        .map((row) => {
-          const missing = row.summary.details
-            .filter((item) => !item.satisfied)
-            .map((item) => `${item.requirement.label} (missing ${item.missing_count})`)
-            .join(', ');
-          return `${row.name}: ${missing}`;
-        })
-        .join(' | ');
-      setSubmitError(`Missing required checkpoint assets: ${detail}`);
-      return;
-    }
-
     setLoading(true);
     try {
-      await onStart(input.trim(), templateId, autoMode, runAttachments, null);
+      await onStart(input.trim(), templateId, autoMode, [], null);
       setInput('');
     } catch (error) {
       const record = error as
@@ -150,11 +91,6 @@ const IdeaInputForm: React.FC<Props> = ({
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleLibraryConfirm = (items: MediaLibraryItem[]) => {
-    setSelectedRunMedia(items);
-    setIsLibraryModalOpen(false);
   };
 
   return (
@@ -169,31 +105,19 @@ const IdeaInputForm: React.FC<Props> = ({
         onToggleAutoMode={() => setAutoMode((value) => !value)}
         loading={loading}
         disabled={disabled}
-        submitDisabled={!input.trim() || loading || Boolean(disabled) || hasMissingRequiredAssets}
+        submitDisabled={!input.trim() || loading || Boolean(disabled)}
         submitError={submitError}
-        showRequiredAssetWarning={hasMissingRequiredAssets}
         onEnhance={handleEnhance}
         enhancing={enhancing}
       />
 
-      <RunAttachmentsSection
-        selectedRunMedia={selectedRunMedia}
-        shouldShowAttachmentUI={shouldShowAttachmentUI}
-        hasMissingRequiredAssets={hasMissingRequiredAssets}
-        unmetRequiredCheckpointRows={unmetRequiredCheckpointRows}
-        onOpenRunPicker={() => {
-          setLibraryModalMode('select');
-          setIsLibraryModalOpen(true);
-        }}
-      />
-
       <AttachmentLibraryModal
         isOpen={isLibraryModalOpen}
-        mode={libraryModalMode}
+        mode="manage"
         generatedAssets={generatedAssets}
-        initialSelectedMediaIds={selectedRunMedia.map((item) => item.media_id || item.id)}
+        initialSelectedMediaIds={[]}
         onClose={() => setIsLibraryModalOpen(false)}
-        onConfirmSelection={handleLibraryConfirm}
+        onConfirmSelection={() => setIsLibraryModalOpen(false)}
       />
     </form>
   );

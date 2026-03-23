@@ -41,6 +41,8 @@ const AttachmentLibraryModal: React.FC<AttachmentLibraryModalProps> = ({
     handleRenameActive,
     handleSaveContext,
     handleUpload,
+    handleSearchSubmit,
+    handlePageChange,
     loadLibrary,
     deleting,
     loading,
@@ -60,6 +62,9 @@ const AttachmentLibraryModal: React.FC<AttachmentLibraryModalProps> = ({
     statusMessage,
     uploadFiles,
     uploading,
+    currentPage,
+    totalPages,
+    totalItems,
   } = useAttachmentLibraryState({
     isOpen,
     mode,
@@ -119,10 +124,15 @@ const AttachmentLibraryModal: React.FC<AttachmentLibraryModalProps> = ({
           savingContext={savingContext}
           renaming={renaming}
           deleting={deleting}
+          currentPage={currentPage}
+          totalPages={totalPages}
+          totalItems={totalItems}
           onFolderTypeChange={setFolderType}
           onSourceFilterChange={setSourceFilter}
           onSearchQueryChange={setSearchQuery}
-          onFileClick={handleFileClick}
+          onSearchSubmit={handleSearchSubmit}
+          onPageChange={handlePageChange}
+          onFileClick={(id) => void handleFileClick(id)}
           onContextDraftChange={setContextDraft}
           onRenameDraftChange={setRenameDraft}
           onSaveContext={() => void handleSaveContext()}

@@ -29,6 +29,7 @@ const API = {
   getMediaItem: MediaAPI.getMediaItem,
   createMediaItem: MediaAPI.createMediaItem,
   listMediaLibrary: MediaAPI.listMediaLibrary,
+  listMediaLibraryPaged: MediaAPI.listMediaLibraryPaged,
   uploadMediaLibraryFile: MediaAPI.uploadMediaLibraryFile,
   renameMediaLibraryItem: MediaAPI.renameMediaLibraryItem,
   createImage: MediaAPI.createImage,

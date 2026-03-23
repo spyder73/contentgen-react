@@ -27,9 +27,14 @@ interface BrowseTabProps {
   savingContext: boolean;
   renaming: boolean;
   deleting: boolean;
+  currentPage: number;
+  totalPages: number;
+  totalItems: number;
   onFolderTypeChange: (value: FolderType) => void;
   onSourceFilterChange: (value: SourceFilter) => void;
   onSearchQueryChange: (value: string) => void;
+  onSearchSubmit: (query: string) => void;
+  onPageChange: (page: number) => void;
   onFileClick: (mediaId: string) => void;
   onContextDraftChange: (value: string) => void;
   onRenameDraftChange: (value: string) => void;
@@ -53,9 +58,14 @@ const BrowseTab: React.FC<BrowseTabProps> = ({
   savingContext,
   renaming,
   deleting,
+  currentPage,
+  totalPages,
+  totalItems,
   onFolderTypeChange,
   onSourceFilterChange,
   onSearchQueryChange,
+  onSearchSubmit,
+  onPageChange,
   onFileClick,
   onContextDraftChange,
   onRenameDraftChange,
@@ -65,6 +75,12 @@ const BrowseTab: React.FC<BrowseTabProps> = ({
 }) => {
   const activeMediaId = activeItem ? activeItem.media_id || activeItem.id : '';
   const isActiveSelected = activeMediaId ? selectedIds.includes(activeMediaId) : false;
+
+  const handleSearchKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'Enter') {
+      onSearchSubmit(searchQuery);
+    }
+  };
 
   return (
     <div className="space-y-3">
@@ -93,7 +109,8 @@ const BrowseTab: React.FC<BrowseTabProps> = ({
         <Input
           value={searchQuery}
           onChange={(event) => onSearchQueryChange(event.target.value)}
-          placeholder="Search name, media ID, type, source..."
+          onKeyDown={handleSearchKeyDown}
+          placeholder="Search by prompt or ID, press Enter..."
         />
         <select
           className="select"
@@ -110,49 +127,79 @@ const BrowseTab: React.FC<BrowseTabProps> = ({
       </div>
 
       <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_320px]">
-        <div className="max-h-80 overflow-auto space-y-2 pr-1">
-          {loading ? (
-            <p className="attachment-meta">Loading library files...</p>
-          ) : filteredItems.length === 0 ? (
-            <p className="attachment-meta">No files match current folder/source filters.</p>
-          ) : (
-            filteredItems.map((item) => {
-              const mediaId = item.media_id || item.id;
-              const selected = selectedIds.includes(mediaId);
-              const folder = inferFolderFromType(item.type, item.mime_type);
-              const originLabel = inferSourceBucket(item.source) === 'generated' ? readGeneratedOriginLabel(item) : '';
+        <div className="space-y-2">
+          <div className="max-h-80 overflow-auto space-y-2 pr-1">
+            {loading ? (
+              <p className="attachment-meta">Loading library files...</p>
+            ) : filteredItems.length === 0 ? (
+              <p className="attachment-meta">No files match current folder/source filters.</p>
+            ) : (
+              filteredItems.map((item) => {
+                const mediaId = item.media_id || item.id;
+                const selected = selectedIds.includes(mediaId);
+                const folder = inferFolderFromType(item.type, item.mime_type);
+                const originLabel = inferSourceBucket(item.source) === 'generated' ? readGeneratedOriginLabel(item) : '';
 
-              return (
-                <button
-                  key={mediaId}
-                  type="button"
-                  className={`w-full text-left attachment-item transition ${selected ? 'ring-1 ring-white/45 bg-white/10' : ''} ${
-                    folder === 'image'
-                      ? 'border-red-400/35'
-                      : folder === 'video'
-                      ? 'border-blue-400/35'
-                      : folder === 'audio'
-                      ? 'border-amber-400/35'
-                      : ''
-                  }`}
-                  onClick={() => onFileClick(mediaId)}
-                >
-                  <div className="flex items-start gap-2">
-                    <BrowseTabPreview item={item} mode="row" />
-                    <div className="min-w-0 flex-1">
-                      <p className="text-xs text-zinc-100 truncate">{item.name || mediaId}</p>
-                      <p className="attachment-meta mt-1">
-                        {item.type || 'unknown'} · {inferSourceBucket(item.source)} · {mediaId}
-                        {originLabel ? ` · ${originLabel}` : ''}
-                      </p>
+                return (
+                  <button
+                    key={mediaId}
+                    type="button"
+                    className={`w-full text-left attachment-item transition ${selected ? 'ring-1 ring-white/45 bg-white/10' : ''} ${
+                      folder === 'image'
+                        ? 'border-red-400/35'
+                        : folder === 'video'
+                        ? 'border-blue-400/35'
+                        : folder === 'audio'
+                        ? 'border-amber-400/35'
+                        : ''
+                    }`}
+                    onClick={() => onFileClick(mediaId)}
+                  >
+                    <div className="flex items-start gap-2">
+                      <BrowseTabPreview item={item} mode="row" />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs text-zinc-100 truncate">{item.name || mediaId}</p>
+                        <p className="attachment-meta mt-1">
+                          {item.type || 'unknown'} · {inferSourceBucket(item.source)} · {mediaId}
+                          {originLabel ? ` · ${originLabel}` : ''}
+                        </p>
+                      </div>
+                      {mode === 'select' && (
+                        <span className="attachment-meta">{selected ? 'Selected' : 'Tap to select'}</span>
+                      )}
                     </div>
-                    {mode === 'select' && (
-                      <span className="attachment-meta">{selected ? 'Selected' : 'Tap to select'}</span>
-                    )}
-                  </div>
-                </button>
-              );
-            })
+                  </button>
+                );
+              })
+            )}
+          </div>
+
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between gap-2 pt-1 border-t border-white/10">
+              <span className="text-[11px] text-zinc-400">
+                Page {currentPage} of {totalPages} · {totalItems} total
+              </span>
+              <div className="flex gap-1">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => onPageChange(currentPage - 1)}
+                  disabled={currentPage <= 1 || loading}
+                >
+                  ← Prev
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => onPageChange(currentPage + 1)}
+                  disabled={currentPage >= totalPages || loading}
+                >
+                  Next →
+                </Button>
+              </div>
+            </div>
           )}
         </div>
 

@@ -46,7 +46,10 @@ export const toAttachmentRequest = (asset: AssetPoolItem): Omit<MediaAttachment,
   },
 });
 
-export const mediaLibraryItemToAttachment = (item: MediaLibraryItem): Omit<MediaAttachment, 'id' | 'created_at'> => ({
+export const mediaLibraryItemToAttachment = (
+  item: MediaLibraryItem,
+  role?: string,
+): Omit<MediaAttachment, 'id' | 'created_at'> => ({
   media_id: item.media_id,
   type: item.type || 'image',
   url: item.url || item.preview_url || '',
@@ -54,6 +57,7 @@ export const mediaLibraryItemToAttachment = (item: MediaLibraryItem): Omit<Media
   name: item.name || item.media_id,
   filename: item.name || item.media_id,
   size_bytes: item.size_bytes,
+  ...(role ? { role } : {}),
   metadata: {
     ...(item.metadata || {}),
     source: item.source || 'media_library',

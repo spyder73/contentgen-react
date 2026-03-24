@@ -105,7 +105,7 @@ const CheckpointCard: React.FC<CheckpointCardProps> = ({
           {checkpointType === 'upload' && <span className="text-[10px] uppercase tracking-wide bg-violet-300 text-violet-950 px-1.5 py-0.5 rounded">Upload</span>}
           {isAwaitingAsset && <span className="text-[10px] uppercase tracking-wide bg-amber-300 text-amber-950 px-1.5 py-0.5 rounded">Awaiting Asset</span>}
           {isAwaitingConfirm && <span className="text-[10px] uppercase tracking-wide bg-white text-black px-1.5 py-0.5 rounded">Awaiting Confirm</span>}
-          {hasRequiredAssets && (
+          {hasRequiredAssets && (result || isCurrent) && (
             <span className={`text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded border ${requirementSummary.satisfied ? 'border-emerald-500/40 text-emerald-300' : 'border-amber-500/40 text-amber-300'}`}>
               {requirementSummary.satisfied ? 'Assets Ready' : 'Assets Missing'}
             </span>
@@ -137,7 +137,7 @@ const CheckpointCard: React.FC<CheckpointCardProps> = ({
           {result && fanInSources.length > 0 && <div className="text-[10px] text-zinc-400 uppercase tracking-wide">Fan-in from {fanInSources.join(', ')}</div>}
           {checkpointType === 'generator' && <div className="text-[10px] text-sky-200 uppercase tracking-wide">Output: {checkpoint.generator?.media_type || 'media'}</div>}
 
-          {hasRequiredAssets && (
+          {hasRequiredAssets && (result || isCurrent) && (
             <div className="attachment-surface space-y-1">
               <p className="attachment-state">Required Asset Status</p>
               {requirementSummary.details.map((detail) => (
@@ -196,12 +196,31 @@ const CheckpointCard: React.FC<CheckpointCardProps> = ({
                 <p className={`text-xs ${isAwaitingAsset ? 'text-amber-200' : 'text-zinc-400'}`}>
                   {interaction.attachLoading
                     ? 'Attaching...'
-                    : 'Drop image here, or click to upload / pick from library'}
+                    : (result?.attachments || []).length > 0
+                    ? `${(result?.attachments || []).length} image${(result?.attachments || []).length !== 1 ? 's' : ''} attached — drop more or click to add`
+                    : 'Drop image(s) here, or click to add from library'}
                 </p>
               </div>
               {interaction.attachError && (
                 <p className="attachment-meta text-red-300">{interaction.attachError}</p>
               )}
+            </div>
+          )}
+
+          {!isTerminal && checkpointType === 'upload' && isComplete && !isCurrent && (
+            <div className="flex flex-wrap items-center gap-2">
+              {(result?.attachments || []).length > 0 && (
+                <span className="text-[10px] text-zinc-400">
+                  {(result?.attachments || []).length} image{(result?.attachments || []).length !== 1 ? 's' : ''} attached
+                </span>
+              )}
+              <button
+                className="text-xs text-zinc-400 hover:text-white underline underline-offset-2"
+                onClick={interaction.onOpenLibrary}
+                disabled={interaction.attachLoading}
+              >
+                {interaction.attachLoading ? 'Attaching...' : 'Add image'}
+              </button>
             </div>
           )}
 
@@ -211,6 +230,7 @@ const CheckpointCard: React.FC<CheckpointCardProps> = ({
               index={index}
               checkpoint={checkpoint}
               isUploadCheckpoint={checkpointType === 'upload'}
+              isGeneratorCheckpoint={checkpointType === 'generator'}
               pauseState={isAwaitingAsset ? 'awaiting_asset' : isAwaitingConfirm ? 'awaiting_confirm' : 'paused'}
               canContinueCurrentCheckpoint={canContinueCurrentCheckpoint}
               backendErrorText={backendErrorText}
@@ -230,17 +250,30 @@ const CheckpointCard: React.FC<CheckpointCardProps> = ({
               onInject={() => onInjectPrompt()}
               onRegenerate={() => onRegenerate()}
               onContinue={() => onContinue()}
+              attachLoading={interaction.attachLoading}
+              onOpenLibrary={interaction.onOpenLibrary}
             />
           )}
 
           {result && !isCurrent && checkpoint.allow_regenerate && !isTerminal && isComplete && (
-            <button
-              className="btn btn-sm btn-secondary"
-              onClick={() => void onRegenerate()}
-              disabled={interaction.progressionLoading}
-            >
-              {interaction.progressionLoading ? 'Regenerating...' : 'Regenerate Step'}
-            </button>
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                className="btn btn-sm btn-secondary"
+                onClick={() => void onRegenerate()}
+                disabled={interaction.progressionLoading}
+              >
+                {interaction.progressionLoading ? 'Regenerating...' : 'Regenerate Step'}
+              </button>
+              {checkpointType === 'generator' && (
+                <button
+                  className="text-xs text-zinc-400 hover:text-white underline underline-offset-2"
+                  onClick={interaction.onOpenLibrary}
+                  disabled={interaction.attachLoading}
+                >
+                  {interaction.attachLoading ? 'Attaching...' : 'Pick from library'}
+                </button>
+              )}
+            </div>
           )}
         </div>
       )}

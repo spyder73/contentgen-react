@@ -74,7 +74,13 @@ function useChildRun(runId: string) {
       const data = await PipelineAPI.getPipeline(runId);
       setRun(data);
       if (TERMINAL_STATUSES.has(data.status)) {
-        if (intervalRef.current) clearInterval(intervalRef.current);
+        if (intervalRef.current) {
+          clearInterval(intervalRef.current);
+          intervalRef.current = null;
+        }
+      } else if (!intervalRef.current) {
+        // Restart polling if it was stopped (e.g. after regeneration)
+        intervalRef.current = setInterval(() => void fetch(), 2000);
       }
     } catch {
       setError('Failed to load');
@@ -108,16 +114,18 @@ const ChildPipelineCard: React.FC<ChildPipelineCardProps> = ({ runId, sceneNumbe
   const [actionLoading, setActionLoading] = useState(false);
   const [actionError, setActionError] = useState('');
   const [libraryOpen, setLibraryOpen] = useState(false);
+  const [pickedImageUrl, setPickedImageUrl] = useState<string | null>(null);
 
-  const imageUrl = run ? getGeneratedImageUrl(run) : null;
   const isComplete = run?.status === 'completed';
   const isFailed = run?.status === 'failed';
-  const isRunning = run && !TERMINAL_STATUSES.has(run.status);
+  const isRunning = Boolean(run && !TERMINAL_STATUSES.has(run.status));
+  const displayUrl = pickedImageUrl || (run ? getGeneratedImageUrl(run) : null);
 
   const handleRegenerate = async () => {
     if (!run) return;
     setActionLoading(true);
     setActionError('');
+    setPickedImageUrl(null);
     try {
       const idx = findImageCheckpointIndex(run, template);
       await PipelineAPI.regenerateCheckpoint(runId, idx);
@@ -139,6 +147,8 @@ const ChildPipelineCard: React.FC<ChildPipelineCardProps> = ({ runId, sceneNumbe
       const attachment = mediaLibraryItemToAttachment(items[0], role);
       await PipelineAPI.addAttachment(runId, idx, attachment);
       setLibraryOpen(false);
+      const previewUrl = items[0].url || items[0].preview_url || '';
+      if (previewUrl) setPickedImageUrl(constructMediaUrl(previewUrl));
       await refetch();
     } catch {
       setActionError('Library pick failed.');
@@ -190,12 +200,12 @@ const ChildPipelineCard: React.FC<ChildPipelineCardProps> = ({ runId, sceneNumbe
 
       {/* Image area */}
       <div className="relative bg-black/40 flex items-center justify-center min-h-28">
-        {imageUrl ? (
+        {displayUrl ? (
           <img
-            src={imageUrl}
+            key={displayUrl}
+            src={displayUrl}
             alt={`Scene ${sceneNumber} reference`}
             className="w-full max-h-44 object-contain"
-            loading="lazy"
           />
         ) : (
           <span className="text-[10px] text-zinc-600 uppercase tracking-wide">
@@ -210,7 +220,7 @@ const ChildPipelineCard: React.FC<ChildPipelineCardProps> = ({ runId, sceneNumbe
           <button
             className="btn btn-sm btn-secondary flex-1 text-[10px]"
             onClick={() => void handleRegenerate()}
-            disabled={actionLoading || !isComplete}
+            disabled={actionLoading || isRunning}
           >
             {actionLoading && !showInject ? 'Regenerating…' : 'Regenerate'}
           </button>
@@ -225,7 +235,7 @@ const ChildPipelineCard: React.FC<ChildPipelineCardProps> = ({ runId, sceneNumbe
         <button
           className="text-xs text-zinc-400 hover:text-white underline underline-offset-2"
           onClick={() => setLibraryOpen(true)}
-          disabled={actionLoading || !isComplete}
+          disabled={actionLoading || isRunning}
         >
           Pick from library
         </button>

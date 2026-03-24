@@ -71,8 +71,8 @@ export const useCheckpointListControls = ({
     }
   };
 
-  const handleLibraryAttach = async (checkpointIndex: number, item: MediaLibraryItem) => {
-    await handleAttach(checkpointIndex, mediaLibraryItemToAttachment(item));
+  const handleLibraryAttach = async (checkpointIndex: number, item: MediaLibraryItem, role?: string) => {
+    await handleAttach(checkpointIndex, mediaLibraryItemToAttachment(item, role));
   };
 
   const handleContinue = async (checkpointIndex: number) => {

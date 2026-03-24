@@ -16,7 +16,6 @@ const template: PipelineTemplate = {
       input_mapping: { source: 'initial_input' },
       requires_confirm: false,
       allow_regenerate: false,
-      allow_attachments: false,
       distributor: {
         delimiter: 'newline',
         max_children: 2,
@@ -30,7 +29,6 @@ const template: PipelineTemplate = {
       input_mapping: { source: 'checkpoint:split' },
       requires_confirm: false,
       allow_regenerate: true,
-      allow_attachments: false,
     },
     {
       id: 'join',
@@ -40,7 +38,6 @@ const template: PipelineTemplate = {
       input_mapping: {},
       requires_confirm: false,
       allow_regenerate: false,
-      allow_attachments: false,
       connector: {
         strategy: 'collect_all',
         source_checkpoint_id: 'split',
@@ -205,14 +202,13 @@ describe('PipelineRunItem connector cues', () => {
     const templateWithAttachments: PipelineTemplate = {
       ...template,
       checkpoints: template.checkpoints.map((checkpoint, index) =>
-        index === 1 ? { ...checkpoint, allow_attachments: true } : checkpoint
+        index === 1 ? { ...checkpoint } : checkpoint
       ),
     };
 
     const runWithAttachmentStates: PipelineRun = {
       ...run,
       status: 'running',
-      initial_attachments: undefined,
       results: run.results.map((result, index) =>
         index === 1 ? { ...result, attachments: [] } : result
       ),
@@ -234,7 +230,7 @@ describe('PipelineRunItem connector cues', () => {
     fireEvent.click(screen.getByText('Expand'));
 
     expect(screen.getByText('Initial Attachments')).toBeInTheDocument();
-    expect(screen.getByText('Loading initial attachments...')).toBeInTheDocument();
+    expect(screen.getByText('No initial attachments.')).toBeInTheDocument();
 
     fireEvent.click(screen.getByText('Draft'));
     expect(screen.getByText('Checkpoint 2 Attachments')).toBeInTheDocument();
@@ -245,23 +241,12 @@ describe('PipelineRunItem connector cues', () => {
     const templateWithAttachments: PipelineTemplate = {
       ...template,
       checkpoints: template.checkpoints.map((checkpoint, index) =>
-        index === 1 ? { ...checkpoint, allow_attachments: true } : checkpoint
+        index === 1 ? { ...checkpoint } : checkpoint
       ),
     };
 
     const runWithAttachments: PipelineRun = {
       ...run,
-      initial_attachments: [
-        {
-          id: 'asset-1',
-          type: 'image',
-          url: 'https://cdn.example.com/asset-1.png',
-          mime_type: 'image/png',
-          name: 'cover-frame',
-          created_at: '2026-01-01T00:00:00Z',
-          metadata: { width: 1024, height: 1024 },
-        },
-      ],
       results: run.results.map((result, index) =>
         index === 1
           ? {
@@ -349,13 +334,12 @@ describe('PipelineRunItem connector cues', () => {
     const templateWithAttachments: PipelineTemplate = {
       ...template,
       checkpoints: template.checkpoints.map((checkpoint, index) =>
-        index === 1 ? { ...checkpoint, allow_attachments: true } : checkpoint
+        index === 1 ? { ...checkpoint } : checkpoint
       ),
     };
 
     const runWithReusableAssets: PipelineRun = {
       ...run,
-      initial_attachments: [],
       results: run.results.map((result, index) =>
         index === 0
           ? {
@@ -542,7 +526,6 @@ describe('PipelineRunItem connector cues', () => {
         index === 1
           ? {
               ...checkpoint,
-              allow_attachments: false,
               required_assets: [{ key: 'req-image', type: 'image', source: 'user' }],
             }
           : checkpoint
@@ -592,7 +575,7 @@ describe('PipelineRunItem connector cues', () => {
     const templateWithAttachments: PipelineTemplate = {
       ...template,
       checkpoints: template.checkpoints.map((checkpoint, index) =>
-        index === 1 ? { ...checkpoint, allow_attachments: true } : checkpoint
+        index === 1 ? { ...checkpoint } : checkpoint
       ),
     };
 
@@ -600,18 +583,6 @@ describe('PipelineRunItem connector cues', () => {
       ...run,
       status: 'paused',
       current_checkpoint: 1,
-      initial_attachments: [
-        {
-          id: 'seed-1',
-          media_id: 'seed-1',
-          type: 'image',
-          url: 'https://cdn.example.com/seed.png',
-          mime_type: 'image/png',
-          name: 'Seed Ref',
-          created_at: '2026-01-01T00:00:00Z',
-          source: 'media',
-        },
-      ],
       results: run.results.map((result, index) =>
         index === 1
           ? {

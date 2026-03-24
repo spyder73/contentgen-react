@@ -1,11 +1,10 @@
 import { useState } from 'react';
+import MediaAPI, { MediaLibraryItem } from '../../../api/media';
 import { CheckpointInjectionMode } from '../../../api/structs/pipeline';
-import { AssetPoolItem } from '../assetPool';
-import { getReusableAssetsForCheckpoint, toActionableErrorMessage, toAttachmentRequest } from './helpers';
+import { mediaLibraryItemToAttachment, toActionableErrorMessage } from './helpers';
 import { extractRequiredReferenceMessage, isRequiredReferenceBlockError } from './checkpointListUtils';
 
 interface UseCheckpointListControlsArgs {
-  reusablePoolAssets: AssetPoolItem[];
   onContinue: () => Promise<void> | void;
   onRegenerate: (checkpoint: number) => Promise<void> | void;
   onInjectPrompt: (
@@ -21,14 +20,12 @@ interface UseCheckpointListControlsArgs {
 }
 
 export const useCheckpointListControls = ({
-  reusablePoolAssets,
   onContinue,
   onRegenerate,
   onInjectPrompt,
   onAddAttachment,
 }: UseCheckpointListControlsArgs) => {
   const [selectedCheckpoint, setSelectedCheckpoint] = useState<number | null>(null);
-  const [selectedAssetByCheckpoint, setSelectedAssetByCheckpoint] = useState<Record<number, string>>({});
   const [attachLoadingByCheckpoint, setAttachLoadingByCheckpoint] = useState<Record<number, boolean>>({});
   const [attachErrorByCheckpoint, setAttachErrorByCheckpoint] = useState<Record<number, string>>({});
   const [injectTextByCheckpoint, setInjectTextByCheckpoint] = useState<Record<number, string>>({});
@@ -39,42 +36,43 @@ export const useCheckpointListControls = ({
   const [progressionErrorByCheckpoint, setProgressionErrorByCheckpoint] = useState<Record<number, string>>({});
   const [requiredReferencePromptByCheckpoint, setRequiredReferencePromptByCheckpoint] = useState<Record<number, string>>({});
 
-  const handleAttachFromPool = async (checkpointIndex: number) => {
-    const selectedAssetId = selectedAssetByCheckpoint[checkpointIndex];
-    if (!selectedAssetId) {
-      setAttachErrorByCheckpoint((prev) => ({ ...prev, [checkpointIndex]: 'Select an asset from the pool first.' }));
-      return;
-    }
-
-    const selectedAsset = getReusableAssetsForCheckpoint(reusablePoolAssets, checkpointIndex).find(
-      (asset) => asset.id === selectedAssetId
-    );
-    if (!selectedAsset) {
-      setAttachErrorByCheckpoint((prev) => ({ ...prev, [checkpointIndex]: 'Selected asset is no longer available for this checkpoint.' }));
-      return;
-    }
-
-    if (!selectedAsset.media_id && !selectedAsset.url) {
-      setAttachErrorByCheckpoint((prev) => ({ ...prev, [checkpointIndex]: 'Selected asset has no media ID or URL to bind.' }));
-      return;
-    }
-
+  const handleAttach = async (checkpointIndex: number, attachment: ReturnType<typeof mediaLibraryItemToAttachment>) => {
     setAttachLoadingByCheckpoint((prev) => ({ ...prev, [checkpointIndex]: true }));
     setAttachErrorByCheckpoint((prev) => ({ ...prev, [checkpointIndex]: '' }));
-
     try {
-      await onAddAttachment(checkpointIndex, toAttachmentRequest(selectedAsset));
-      setSelectedAssetByCheckpoint((prev) => ({ ...prev, [checkpointIndex]: '' }));
+      await onAddAttachment(checkpointIndex, attachment);
       setRequiredReferencePromptByCheckpoint((prev) => ({ ...prev, [checkpointIndex]: '' }));
       setProgressionErrorByCheckpoint((prev) => ({ ...prev, [checkpointIndex]: '' }));
     } catch (error) {
       setAttachErrorByCheckpoint((prev) => ({
         ...prev,
-        [checkpointIndex]: toActionableErrorMessage(error, 'Failed to attach selected asset to this checkpoint.'),
+        [checkpointIndex]: toActionableErrorMessage(error, 'Failed to attach asset to this checkpoint.'),
       }));
     } finally {
       setAttachLoadingByCheckpoint((prev) => ({ ...prev, [checkpointIndex]: false }));
     }
+  };
+
+  const handleFileUpload = async (checkpointIndex: number, file: File) => {
+    setAttachLoadingByCheckpoint((prev) => ({ ...prev, [checkpointIndex]: true }));
+    setAttachErrorByCheckpoint((prev) => ({ ...prev, [checkpointIndex]: '' }));
+    try {
+      const uploaded = await MediaAPI.uploadMediaLibraryFile(file, { source: 'seed_upload', type: 'image' });
+      await onAddAttachment(checkpointIndex, mediaLibraryItemToAttachment(uploaded));
+      setRequiredReferencePromptByCheckpoint((prev) => ({ ...prev, [checkpointIndex]: '' }));
+      setProgressionErrorByCheckpoint((prev) => ({ ...prev, [checkpointIndex]: '' }));
+    } catch (error) {
+      setAttachErrorByCheckpoint((prev) => ({
+        ...prev,
+        [checkpointIndex]: toActionableErrorMessage(error, 'Failed to upload seed image.'),
+      }));
+    } finally {
+      setAttachLoadingByCheckpoint((prev) => ({ ...prev, [checkpointIndex]: false }));
+    }
+  };
+
+  const handleLibraryAttach = async (checkpointIndex: number, item: MediaLibraryItem, role?: string) => {
+    await handleAttach(checkpointIndex, mediaLibraryItemToAttachment(item, role));
   };
 
   const handleContinue = async (checkpointIndex: number) => {
@@ -150,8 +148,6 @@ export const useCheckpointListControls = ({
   return {
     selectedCheckpoint,
     setSelectedCheckpoint,
-    selectedAssetByCheckpoint,
-    setSelectedAssetByCheckpoint,
     attachLoadingByCheckpoint,
     attachErrorByCheckpoint,
     injectTextByCheckpoint,
@@ -163,7 +159,8 @@ export const useCheckpointListControls = ({
     progressionLoadingByCheckpoint,
     progressionErrorByCheckpoint,
     requiredReferencePromptByCheckpoint,
-    handleAttachFromPool,
+    handleFileUpload,
+    handleLibraryAttach,
     handleContinue,
     handleRegenerate,
     handleInjectPrompt,

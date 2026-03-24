@@ -5,10 +5,10 @@ import { CheckpointInjectionMode } from '../../../api/structs/pipeline';
  * in useCheckpointListControls so that CheckpointCard doesn't need to do index lookups.
  */
 export interface CheckpointInteractionState {
-  selectedAssetId: string;
-  setSelectedAssetId: (id: string) => void;
   attachLoading: boolean;
   attachError: string;
+  onOpenLibrary: () => void;
+  onFileUpload: (file: File) => Promise<void>;
   injectText: string;
   setInjectText: (text: string) => void;
   injectMode: CheckpointInjectionMode;

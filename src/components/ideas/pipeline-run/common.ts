@@ -1,3 +1,4 @@
+import { MediaLibraryItem } from '../../../api/media';
 import { PipelineRun } from '../../../api/structs';
 import { CheckpointInjectionMode, MediaAttachment } from '../../../api/structs/pipeline';
 import { AssetPoolItem } from '../assetPool';
@@ -42,6 +43,24 @@ export const toAttachmentRequest = (asset: AssetPoolItem): Omit<MediaAttachment,
     source_checkpoint_id: asset.checkpoint_id,
     source_checkpoint_index: asset.checkpoint_index,
     reused_from_asset_pool: true,
+  },
+});
+
+export const mediaLibraryItemToAttachment = (
+  item: MediaLibraryItem,
+  role?: string,
+): Omit<MediaAttachment, 'id' | 'created_at'> => ({
+  media_id: item.media_id,
+  type: item.type || 'image',
+  url: item.url || item.preview_url || '',
+  mime_type: item.mime_type || DEFAULT_MIME_TYPE,
+  name: item.name || item.media_id,
+  filename: item.name || item.media_id,
+  size_bytes: item.size_bytes,
+  ...(role ? { role } : {}),
+  metadata: {
+    ...(item.metadata || {}),
+    source: item.source || 'media_library',
   },
 });
 

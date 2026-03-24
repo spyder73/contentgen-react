@@ -53,6 +53,15 @@ interface MediaLibraryListQuery {
   search?: string;
   type?: string;
   source?: string;
+  page?: number;
+  limit?: number;
+}
+
+export interface MediaLibraryPage {
+  items: MediaLibraryItem[];
+  total: number;
+  page: number;
+  limit: number;
 }
 
 interface HttpErrorWithStatus {
@@ -178,6 +187,8 @@ const listMediaLibrary = async (query?: MediaLibraryListQuery): Promise<MediaLib
     search: query?.search?.trim() || undefined,
     type: query?.type?.trim() || undefined,
     source: query?.source?.trim() || undefined,
+    page: query?.page ?? undefined,
+    limit: query?.limit ?? undefined,
   };
 
   try {
@@ -193,6 +204,40 @@ const listMediaLibrary = async (query?: MediaLibraryListQuery): Promise<MediaLib
 
   const legacyPayload = await axios.get(`${BASE_URL}/media`, { params }).then((res) => res.data);
   return normalizeMediaLibraryList(legacyPayload);
+};
+
+const listMediaLibraryPaged = async (query?: MediaLibraryListQuery): Promise<MediaLibraryPage> => {
+  const params = {
+    search: query?.search?.trim() || undefined,
+    type: query?.type?.trim() || undefined,
+    page: query?.page ?? 1,
+    limit: query?.limit ?? 20,
+  };
+
+  try {
+    const payload = await axios
+      .get(`${BASE_URL}/media/library`, { params })
+      .then((res) => res.data);
+    return {
+      items: normalizeMediaLibraryList(payload),
+      total: (payload as Record<string, unknown>)?.total as number ?? 0,
+      page: (payload as Record<string, unknown>)?.page as number ?? params.page,
+      limit: (payload as Record<string, unknown>)?.limit as number ?? params.limit,
+    };
+  } catch (error) {
+    if (!shouldFallbackToLegacyRoute(error)) {
+      throw error;
+    }
+  }
+
+  const legacyPayload = await axios.get(`${BASE_URL}/media`, { params }).then((res) => res.data);
+  const items = normalizeMediaLibraryList(legacyPayload);
+  return {
+    items,
+    total: (legacyPayload as Record<string, unknown>)?.total as number ?? items.length,
+    page: params.page,
+    limit: params.limit,
+  };
 };
 
 const uploadMediaLibraryFile = async (
@@ -336,6 +381,7 @@ const MediaAPI = {
   getMediaItem,
   createMediaItem,
   listMediaLibrary,
+  listMediaLibraryPaged,
   uploadMediaLibraryFile,
   renameMediaLibraryItem,
   createImage,

@@ -41,6 +41,7 @@ const CheckpointPanel: React.FC<CheckpointPanelProps> = ({
   onEditPrompt,
   onClose,
 }) => {
+  const type = checkpoint.type || 'prompt';
   const currentIndex = allCheckpoints.findIndex((candidate) => candidate.id === checkpoint.id);
   const previousDistributorCheckpoints = allCheckpoints
     .slice(0, currentIndex)
@@ -54,12 +55,12 @@ const CheckpointPanel: React.FC<CheckpointPanelProps> = ({
     onUpdate({ ...checkpoint, ...updates });
   };
 
-  const handleTypeChange = (type: CheckpointType) => {
-    onUpdate(applyCheckpointType(checkpoint, type, previousDistributorId));
+  const handleTypeChange = (nextType: CheckpointType) => {
+    onUpdate(applyCheckpointType(checkpoint, nextType, previousDistributorId));
   };
 
   const handleFlagChange = (
-    field: 'requires_confirm' | 'allow_regenerate' | 'allow_attachments' | 'chain_last_frames',
+    field: 'requires_confirm' | 'allow_regenerate' | 'chain_last_frames',
     value: boolean
   ) => {
     updateCheckpoint({ [field]: value } as Pick<CheckpointConfig, typeof field>);
@@ -122,12 +123,16 @@ const CheckpointPanel: React.FC<CheckpointPanelProps> = ({
     updateCheckpoint({ output_spec: value && Object.keys(value).length > 0 ? value : undefined });
   };
 
+  const showPromptAndMapping = type !== 'upload' && type !== 'connector';
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
           <h3 className="text-sm font-semibold uppercase tracking-[0.15em] text-white">
             Checkpoint Details
+            {type === 'upload' && <span className="ml-2 text-[10px] bg-violet-500/20 text-violet-300 border border-violet-500/30 px-1.5 py-0.5 rounded normal-case tracking-normal">Upload</span>}
+            {type === 'connector' && <span className="ml-2 text-[10px] bg-zinc-700 text-zinc-300 border border-white/10 px-1.5 py-0.5 rounded normal-case tracking-normal">Connector</span>}
           </h3>
           <p className="mt-1 text-xs text-gray-500">
             Edit the canonical backend shape for this checkpoint.
@@ -147,13 +152,15 @@ const CheckpointPanel: React.FC<CheckpointPanelProps> = ({
         onEditPrompt={onEditPrompt}
       />
 
-      <InputMappingSection
-        inputMapping={checkpoint.input_mapping}
-        onChange={handleInputMappingChange}
-        onRemove={handleInputMappingRemove}
-      />
+      {showPromptAndMapping && (
+        <InputMappingSection
+          inputMapping={checkpoint.input_mapping}
+          onChange={handleInputMappingChange}
+          onRemove={handleInputMappingRemove}
+        />
+      )}
 
-      {(checkpoint.type || 'prompt') === 'prompt' && (
+      {type === 'prompt' && (
         <PromptSettingsSection
           provider={selector.provider}
           model={selector.model}
@@ -162,7 +169,7 @@ const CheckpointPanel: React.FC<CheckpointPanelProps> = ({
         />
       )}
 
-      {(checkpoint.type || 'prompt') === 'distributor' && (
+      {type === 'distributor' && (
         <DistributorSettingsSection
           provider={selector.provider}
           model={selector.model}
@@ -192,7 +199,7 @@ const CheckpointPanel: React.FC<CheckpointPanelProps> = ({
         />
       )}
 
-      {(checkpoint.type || 'prompt') === 'connector' && (
+      {type === 'connector' && (
         <ConnectorSettingsSection
           sourceCheckpointId={checkpoint.connector?.source_checkpoint_id}
           previousDistributorCheckpoints={previousDistributorCheckpoints}
@@ -209,7 +216,7 @@ const CheckpointPanel: React.FC<CheckpointPanelProps> = ({
         />
       )}
 
-      {(checkpoint.type || 'prompt') === 'generator' && (
+      {type === 'generator' && (
         <GeneratorSettingsSection
           generator={{ ...DEFAULT_GENERATOR_CONFIG, ...checkpoint.generator }}
           outputSpec={checkpoint.output_spec as Record<string, unknown> | undefined}
@@ -220,8 +227,6 @@ const CheckpointPanel: React.FC<CheckpointPanelProps> = ({
                 ...checkpoint.generator,
                 [field]: value,
               },
-              // Clear output_spec atomically when media_type, provider, or model changes
-              // to avoid a stale second updateCheckpoint call overwriting this one.
               ...(field === 'media_type' || field === 'provider' || field === 'model'
                 ? { output_spec: undefined }
                 : {}),
@@ -231,20 +236,51 @@ const CheckpointPanel: React.FC<CheckpointPanelProps> = ({
         />
       )}
 
-      <RequiredAssetsSection
-        requiredAssets={requiredAssets}
-        onChange={handleRequiredAssetChange}
-        onAdd={handleAddRequiredAsset}
-        onRemove={handleRemoveRequiredAsset}
-      />
+      {type === 'upload' && (
+        <section className="space-y-3 rounded-lg border border-violet-500/20 bg-violet-500/5 p-4">
+          <h4 className="text-xs font-semibold uppercase tracking-[0.15em] text-violet-300">Upload Settings</h4>
+          <div className="grid gap-3 md:grid-cols-2">
+            <div>
+              <label className="mb-1 block text-xs uppercase tracking-wide text-gray-400">Media Type</label>
+              <select
+                value={checkpoint.upload?.media_type || 'image'}
+                onChange={(event) => updateCheckpoint({ upload: { ...checkpoint.upload, media_type: event.target.value } })}
+                className="input w-full text-sm"
+              >
+                <option value="image">Image</option>
+              </select>
+            </div>
+            <div>
+              <label className="mb-1 block text-xs uppercase tracking-wide text-gray-400">Role</label>
+              <input
+                type="text"
+                value={checkpoint.upload?.role || ''}
+                onChange={(event) => updateCheckpoint({ upload: { ...checkpoint.upload, role: event.target.value } })}
+                className="input w-full text-sm"
+                placeholder="seed_image"
+              />
+            </div>
+          </div>
+        </section>
+      )}
 
-      <FlagsSection
-        requiresConfirm={checkpoint.requires_confirm}
-        allowRegenerate={checkpoint.allow_regenerate}
-        allowAttachments={checkpoint.allow_attachments}
-        chainLastFrames={checkpoint.chain_last_frames ?? false}
-        onChange={handleFlagChange}
-      />
+      {showPromptAndMapping && (
+        <RequiredAssetsSection
+          requiredAssets={requiredAssets}
+          onChange={handleRequiredAssetChange}
+          onAdd={handleAddRequiredAsset}
+          onRemove={handleRemoveRequiredAsset}
+        />
+      )}
+
+      {type !== 'upload' && (
+        <FlagsSection
+          requiresConfirm={checkpoint.requires_confirm}
+          allowRegenerate={checkpoint.allow_regenerate}
+          chainLastFrames={checkpoint.chain_last_frames ?? false}
+          onChange={handleFlagChange}
+        />
+      )}
     </div>
   );
 };

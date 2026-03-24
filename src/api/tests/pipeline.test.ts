@@ -17,22 +17,6 @@ describe('pipeline API boundary', () => {
         current_checkpoint: 0,
         status: 'running',
         auto_mode: true,
-        initial_attachments: [
-          {
-            asset_id: 'asset-1',
-            media_type: 'image',
-            role: 'seed_image',
-            sceneId: 'scene-1',
-            frameOrder: 1,
-            asset_url: 'https://cdn.example.com/asset-1.png',
-            mimeType: 'image/png',
-            file_name: 'cover',
-            createdAt: '2026-01-01T00:00:00Z',
-            sizeBytes: 1024,
-            generatedFromCheckpointId: 'seed-step',
-            metadata: { source: 'pool' },
-          },
-        ],
         results: [
           {
             checkpoint_id: 'step-1',
@@ -59,18 +43,6 @@ describe('pipeline API boundary', () => {
 
     const run = await PipelineAPI.getPipeline('run-1');
 
-    expect(run.initial_attachments?.[0]).toEqual(
-      expect.objectContaining({
-        id: 'asset-1',
-        type: 'image',
-        role: 'seed_image',
-        scene_id: 'scene-1',
-        frame_order: 1,
-        generated_from_checkpoint_id: 'seed-step',
-        size_bytes: 1024,
-        size: 1024,
-      })
-    );
     expect(run.results[0].attachments?.[0]).toEqual(
       expect.objectContaining({
         id: 'attachment-2',
@@ -245,7 +217,6 @@ describe('pipeline API boundary', () => {
           input_mapping: { topic: ' initial_input ' },
           requires_confirm: false,
           allow_regenerate: true,
-          allow_attachments: false,
           promptGate: {
             provider: ' openrouter ',
             model: ' x-ai/grok-4-fast ',
@@ -259,7 +230,6 @@ describe('pipeline API boundary', () => {
           input_mapping: { source: ' checkpoint:prompt-step ' },
           requires_confirm: false,
           allow_regenerate: true,
-          allow_attachments: false,
           distributor: {
             provider: ' openrouter ',
             model: ' x-ai/grok-4-fast ',
@@ -275,7 +245,6 @@ describe('pipeline API boundary', () => {
           input_mapping: {},
           requires_confirm: true,
           allow_regenerate: true,
-          allow_attachments: false,
           connector: {
             strategy: 'first' as any,
             source_checkpoint_id: 'split-step',
@@ -289,7 +258,6 @@ describe('pipeline API boundary', () => {
           input_mapping: { prompt: ' checkpoint:join-step ' },
           requires_confirm: false,
           allow_regenerate: true,
-          allow_attachments: true,
           generator: {
             media_type: ' image ',
             role: ' seed_image ',
@@ -381,7 +349,6 @@ describe('pipeline API boundary', () => {
           input_mapping: { prompt: 'checkpoint:scene-reference-prompt' },
           requires_confirm: false,
           allow_regenerate: true,
-          allow_attachments: false,
           required_assets: [
             {
               key: 'seed_image',
@@ -441,7 +408,6 @@ describe('pipeline API boundary', () => {
             input_mapping: {},
             requires_confirm: false,
             allow_regenerate: true,
-            allow_attachments: false,
             provider: 'openrouter',
             model: 'x-ai/grok-4-fast',
           },
@@ -453,7 +419,6 @@ describe('pipeline API boundary', () => {
             input_mapping: {},
             requires_confirm: true,
             allow_regenerate: true,
-            allow_attachments: false,
             connector: {
               strategy: 'longest',
               source_checkpoint_id: 'split-step',
@@ -467,7 +432,6 @@ describe('pipeline API boundary', () => {
             input_mapping: { prompt: 'initial_input' },
             requires_confirm: false,
             allow_regenerate: true,
-            allow_attachments: false,
             provider: 'runware',
             model: 'runware:400@1',
             required_assets: [

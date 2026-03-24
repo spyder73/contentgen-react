@@ -17,6 +17,8 @@ import {
 export type AttachmentLibraryMode = 'manage' | 'select';
 export type AttachmentLibraryTab = 'upload' | 'browse';
 
+const PAGE_SIZE = 20;
+
 interface UseAttachmentLibraryStateProps {
   isOpen: boolean;
   mode: AttachmentLibraryMode;
@@ -51,15 +53,24 @@ export const useAttachmentLibraryState = ({
   const [statusMessage, setStatusMessage] = React.useState('');
   const [errorMessage, setErrorMessage] = React.useState('');
 
-  const loadLibrary = React.useCallback(async () => {
+  // Pagination state
+  const [currentPage, setCurrentPage] = React.useState(1);
+  const [totalItems, setTotalItems] = React.useState(0);
+
+  const totalPages = Math.max(1, Math.ceil(totalItems / PAGE_SIZE));
+
+  const loadLibrary = React.useCallback(async (page = 1, search = '') => {
     setLoading(true);
     setErrorMessage('');
     try {
-      const nextLibraryItems = await API.listMediaLibrary();
-      setLibraryItems(Array.isArray(nextLibraryItems) ? nextLibraryItems : []);
+      const result = await API.listMediaLibraryPaged({ page, limit: PAGE_SIZE, search: search || undefined });
+      setLibraryItems(Array.isArray(result.items) ? result.items : []);
+      setTotalItems(result.total ?? result.items.length);
+      setCurrentPage(result.page ?? page);
     } catch (error) {
       setErrorMessage(toActionableError(error, 'list'));
       setLibraryItems([]);
+      setTotalItems(0);
     } finally {
       setLoading(false);
     }
@@ -88,7 +99,9 @@ export const useAttachmentLibraryState = ({
     setDismissedMediaIds([]);
     setStatusMessage('');
     setErrorMessage('');
-    void loadLibrary();
+    setCurrentPage(1);
+    setTotalItems(0);
+    void loadLibrary(1, '');
     wasOpenRef.current = true;
     lastModeRef.current = mode;
   }, [initialSelectedMediaIds, isOpen, loadLibrary, mode]);
@@ -112,17 +125,43 @@ export const useAttachmentLibraryState = ({
   }, [activeItem]);
 
   const filteredItems = React.useMemo(
-    () => filterLibraryItems(items, folderType, sourceFilter, searchQuery),
-    [folderType, items, searchQuery, sourceFilter]
+    () => filterLibraryItems(items, folderType, sourceFilter, ''),
+    [folderType, items, sourceFilter]
   );
 
   const folderCounts = React.useMemo(() => countItemsByFolder(items), [items]);
 
   const selectedItems = React.useMemo(() => selectMediaItems(items, selectedIds), [items, selectedIds]);
 
-  const handleFileClick = (mediaId: string) => {
+  const handleSearchSubmit = React.useCallback((query: string) => {
+    setCurrentPage(1);
+    void loadLibrary(1, query);
+  }, [loadLibrary]);
+
+  const handlePageChange = React.useCallback((page: number) => {
+    void loadLibrary(page, searchQuery);
+  }, [loadLibrary, searchQuery]);
+
+  const handleFileClick = async (mediaId: string) => {
     setActiveMediaId(mediaId);
-    if (mode !== 'select') return;
+    if (mode !== 'select') {
+      // Fetch full item details from DB if not already in list.
+      const existing = items.find((item) => (item.media_id || item.id) === mediaId);
+      if (!existing) {
+        try {
+          const fetched = await API.getMediaItem(mediaId);
+          if (fetched) {
+            setLibraryItems((prev) => {
+              if (prev.some((item) => (item.media_id || item.id) === mediaId)) return prev;
+              return [fetched as MediaLibraryItem, ...prev];
+            });
+          }
+        } catch {
+          // ignore fetch errors — the item may still show partial info
+        }
+      }
+      return;
+    }
     setSelectedIds((previous) =>
       previous.includes(mediaId)
         ? previous.filter((id) => id !== mediaId)
@@ -154,7 +193,7 @@ export const useAttachmentLibraryState = ({
     if (uploadedCount > 0) {
       setStatusMessage(`Uploaded ${uploadedCount} file${uploadedCount === 1 ? '' : 's'} successfully.`);
       setActiveTab('browse');
-      await loadLibrary();
+      await loadLibrary(1, searchQuery);
     }
   };
 
@@ -271,6 +310,9 @@ export const useAttachmentLibraryState = ({
     statusMessage,
     uploadFiles,
     uploading,
+    currentPage,
+    totalPages,
+    totalItems,
     setActiveTab,
     setContextDraft,
     setRenameDraft,
@@ -283,6 +325,8 @@ export const useAttachmentLibraryState = ({
     handleRenameActive,
     handleRemoveActive,
     handleUpload,
+    handleSearchSubmit,
+    handlePageChange,
     loadLibrary,
   };
 };

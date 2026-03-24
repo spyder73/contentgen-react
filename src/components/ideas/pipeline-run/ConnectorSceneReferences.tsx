@@ -43,7 +43,14 @@ const ConnectorSceneReferences: React.FC<ConnectorSceneReferencesProps> = ({ out
           <p className="attachment-meta">
             {entry.reference_name || entry.reference_media_id || entry.reference_id || 'No bound reference'}
           </p>
-          {entry.reference_url && <p className="attachment-meta break-all">{entry.reference_url}</p>}
+          {entry.reference_url && (
+            <img
+              src={entry.reference_url}
+              alt={entry.reference_name || entry.scene_id}
+              className="w-full max-h-44 object-contain rounded border border-white/15 bg-black/40 mt-1"
+              loading="lazy"
+            />
+          )}
         </div>
       ))}
     </div>

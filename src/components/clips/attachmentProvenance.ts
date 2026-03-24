@@ -155,13 +155,6 @@ export const collectRunAttachmentProvenance = (
     });
   };
 
-  (run.initial_attachments || []).forEach((attachment) => {
-    push(attachment, {
-      source: 'media',
-      source_run_id: run.id,
-    });
-  });
-
   (run.results || []).forEach((result, checkpointIndex) => {
     const checkpointName =
       template?.checkpoints?.[checkpointIndex]?.name || result.checkpoint_id || `Checkpoint ${checkpointIndex + 1}`;

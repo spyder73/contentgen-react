@@ -75,7 +75,6 @@ describe('PipelineEditor', () => {
           input_mapping: {},
           requires_confirm: false,
           allow_regenerate: true,
-          allow_attachments: false,
         },
       ])
     );
@@ -169,7 +168,6 @@ describe('PipelineEditor', () => {
           input_mapping: {},
           requires_confirm: false,
           allow_regenerate: true,
-          allow_attachments: false,
           output_spec: {
             width: 768,
             height: 1344,
@@ -208,7 +206,6 @@ describe('PipelineEditor', () => {
           input_mapping: {},
           requires_confirm: false,
           allow_regenerate: true,
-          allow_attachments: false,
         },
       ])
     );

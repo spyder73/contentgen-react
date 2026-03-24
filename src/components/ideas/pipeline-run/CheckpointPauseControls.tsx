@@ -8,6 +8,8 @@ interface CheckpointPauseControlsProps {
   runId: string;
   index: number;
   checkpoint: CheckpointConfig;
+  isUploadCheckpoint?: boolean;
+  isGeneratorCheckpoint?: boolean;
   pauseState: 'awaiting_asset' | 'awaiting_confirm' | 'paused';
   canContinueCurrentCheckpoint: boolean;
   backendErrorText: string;
@@ -18,18 +20,22 @@ interface CheckpointPauseControlsProps {
   injectError: string;
   progressionLoading: boolean;
   progressionError: string;
+  attachLoading?: boolean;
   onSetSelectedCheckpoint: () => void;
   onInjectTextChange: (value: string) => void;
   onInjectModeChange: (mode: CheckpointInjectionMode) => void;
   onInject: () => Promise<void>;
   onRegenerate: () => Promise<void>;
   onContinue: () => Promise<void>;
+  onOpenLibrary?: () => void;
 }
 
 const CheckpointPauseControls: React.FC<CheckpointPauseControlsProps> = ({
   runId,
   index,
   checkpoint,
+  isUploadCheckpoint = false,
+  isGeneratorCheckpoint = false,
   pauseState,
   canContinueCurrentCheckpoint,
   backendErrorText,
@@ -40,14 +46,16 @@ const CheckpointPauseControls: React.FC<CheckpointPauseControlsProps> = ({
   injectError,
   progressionLoading,
   progressionError,
+  attachLoading = false,
   onSetSelectedCheckpoint,
   onInjectTextChange,
   onInjectModeChange,
   onInject,
   onRegenerate,
   onContinue,
+  onOpenLibrary,
 }) => {
-  const showAssetGate = pauseState === 'awaiting_asset' || Boolean(requiredReferencePrompt);
+  const showAssetGate = !isUploadCheckpoint && (pauseState === 'awaiting_asset' || Boolean(requiredReferencePrompt));
   const continueDisabled =
     !canContinueCurrentCheckpoint || progressionLoading || (pauseState !== 'awaiting_asset' && Boolean(requiredReferencePrompt));
 
@@ -108,6 +116,15 @@ const CheckpointPauseControls: React.FC<CheckpointPauseControlsProps> = ({
           </Button>
         )}
         {checkpoint.allow_regenerate && <Button variant="secondary" size="sm" onClick={() => void onRegenerate()} disabled={progressionLoading}>Regenerate</Button>}
+        {isGeneratorCheckpoint && onOpenLibrary && (
+          <button
+            className="text-xs text-zinc-400 hover:text-white underline underline-offset-2"
+            onClick={onOpenLibrary}
+            disabled={attachLoading}
+          >
+            {attachLoading ? 'Attaching...' : 'Pick from library'}
+          </button>
+        )}
         <Button variant="primary" size="sm" onClick={() => void onContinue()} disabled={continueDisabled}>
           {progressionLoading ? 'Continuing...' : 'Continue'}
         </Button>

@@ -1,5 +1,4 @@
 import React from 'react';
-import { MediaLibraryItem } from '../../api/media';
 import { PipelineTemplate } from '../../api/structs';
 import { PipelineInputAttachment } from '../../api/structs/pipeline';
 import AttachmentLibraryModal from './AttachmentLibraryModal';

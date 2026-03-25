@@ -90,6 +90,17 @@ const getVideoModels = async (provider?: string): Promise<AIModel[]> => {
   return dedupeById([...recommended, ...runware]);
 };
 
+const getAudioModels = async (provider?: string): Promise<AIModel[]> => {
+  if (provider) return getModelsForProvider(provider, 'audio');
+
+  const response = await getModels({ type: 'audio' });
+
+  const recommended = (response.recommended || []).filter((m) => m.type === 'audio');
+  const runware = (response.runware || []).filter((m) => m.type === 'audio');
+
+  return dedupeById([...recommended, ...runware]);
+};
+
 const getModelConstraints = async (
   modelId: string,
   modality: 'image' | 'video' | 'audio' = 'image',
@@ -131,6 +142,7 @@ const ModelsAPI = {
   getChatModels,
   getImageModels,
   getVideoModels,
+  getAudioModels,
   getModelConstraints,
   clearConstraintsCache,
 };

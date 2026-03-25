@@ -109,6 +109,8 @@ const CheckpointProviderSelector: React.FC<CheckpointProviderSelectorProps> = ({
           fetched = await ModelsAPI.getImageModels(provider);
         } else if (modality === 'video') {
           fetched = await ModelsAPI.getVideoModels(provider as VideoProvider);
+        } else if (modality === 'audio') {
+          fetched = await ModelsAPI.getAudioModels(provider);
         }
 
         if (modality === 'image' && requireSeedImageSupport) {

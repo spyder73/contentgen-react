@@ -216,16 +216,16 @@ const ChildPipelineCard: React.FC<ChildPipelineCardProps> = ({ runId, sceneNumbe
 
       {/* Controls */}
       <div className="p-2 space-y-1.5 border-t border-white/10">
-        <div className="flex items-center gap-1.5">
+        <div className="flex flex-col gap-1.5">
           <button
-            className="btn btn-sm btn-secondary flex-1 text-[10px]"
+            className="btn btn-sm btn-secondary w-full text-[10px]"
             onClick={() => void handleRegenerate()}
             disabled={actionLoading || isRunning}
           >
             {actionLoading && !showInject ? 'Regenerating…' : 'Regenerate'}
           </button>
           <button
-            className={`btn btn-sm flex-1 text-[10px] ${showInject ? 'btn-primary' : 'btn-secondary'}`}
+            className={`btn btn-sm w-full text-[10px] ${showInject ? 'btn-primary' : 'btn-secondary'}`}
             onClick={() => setShowInject((v) => !v)}
             disabled={actionLoading}
           >
@@ -384,22 +384,18 @@ const DistributorConnectorBlock: React.FC<DistributorConnectorBlockProps> = ({
               {rows.map((row, rowIdx) => (
                 <div
                   key={rowIdx}
-                  className={`flex gap-3 ${row.length < 3 ? 'justify-center' : ''}`}
+                  className="grid gap-3"
+                  style={{ gridTemplateColumns: `repeat(${row.length}, 1fr)` }}
                 >
                   {row.map((childId, idxInRow) => {
                     const sceneNumber = rowIdx * 3 + idxInRow + 1;
                     return (
-                      <div
+                      <ChildPipelineCard
                         key={childId}
-                        className="flex-shrink-0"
-                        style={{ width: 'calc(33.333% - 8px)' }}
-                      >
-                        <ChildPipelineCard
-                          runId={childId}
-                          sceneNumber={sceneNumber}
-                          template={template}
-                        />
-                      </div>
+                        runId={childId}
+                        sceneNumber={sceneNumber}
+                        template={template}
+                      />
                     );
                   })}
                 </div>

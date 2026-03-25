@@ -9,7 +9,7 @@ export type ImageProvider = 'pollinations' | 'openrouter' | 'runware';
 export type VideoProvider = 'runware';
 
 /** Audio generation API providers */
-export type AudioProvider = 'suno' | 'udio';
+export type AudioProvider = 'suno' | 'udio' | 'runware';
 
 /** Chat/Text inference API providers */
 export type ChatProvider = 'openrouter';
@@ -43,6 +43,7 @@ export const VIDEO_PROVIDERS: ProviderDefinition[] = [
 export const AUDIO_PROVIDERS: ProviderDefinition[] = [
   { value: 'suno', label: 'Suno' },
   { value: 'udio', label: 'Udio' },
+  { value: 'runware', label: 'Runware' },
 ];
 
 export const CHAT_PROVIDERS: ProviderDefinition[] = [
@@ -127,8 +128,8 @@ export const DEFAULT_IMAGE_MODEL: ImageModel = 'openai/gpt-5-image-mini';
 export const DEFAULT_VIDEO_PROVIDER: VideoProvider = 'runware';
 export const DEFAULT_VIDEO_MODEL: VideoModel = 'lightricks:2@1';
 
-export const DEFAULT_AUDIO_PROVIDER: AudioProvider = 'suno';
-export const DEFAULT_AUDIO_MODEL: AudioModel = '';
+export const DEFAULT_AUDIO_PROVIDER: AudioProvider = 'runware';
+export const DEFAULT_AUDIO_MODEL: AudioModel = 'elevenlabs:1@1';
 
 export const DEFAULT_CHAT_PROVIDER: ChatProvider = 'openrouter';
 export const DEFAULT_CHAT_MODEL: ChatModel = 'x-ai/grok-4-fast';

@@ -40,6 +40,7 @@ const API = {
   editMediaMetadata: MediaAPI.editMediaMetadata,
   replaceMediaMetadata: MediaAPI.replaceMediaMetadata,
   deleteMediaItem: MediaAPI.deleteMediaItem,
+  lipSyncMedia: MediaAPI.lipSyncMedia,
 
   // Pipeline Runs
   startPipeline: PipelineAPI.startPipeline,

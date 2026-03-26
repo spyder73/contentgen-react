@@ -15,6 +15,7 @@ interface MediaSectionProps {
   outputSpec?: MediaOutputSpec;
   onPreview?: (url: string) => void;
   onAdd?: () => void;
+  onLipSync?: (item: MediaItem) => void;
 }
 
 const MediaSection: React.FC<MediaSectionProps> = ({
@@ -27,6 +28,7 @@ const MediaSection: React.FC<MediaSectionProps> = ({
   outputSpec,
   onPreview,
   onAdd,
+  onLipSync,
 }) => {
   return (
     <div>
@@ -54,6 +56,7 @@ const MediaSection: React.FC<MediaSectionProps> = ({
               onRefresh={onRefresh}
               outputSpec={item.output_spec ?? outputSpec}
               onPreview={onPreview}
+              onLipSync={onLipSync}
             />
           ))}
         </div>

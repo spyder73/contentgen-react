@@ -15,6 +15,7 @@ interface MediaItemComponentProps {
   onRefresh: () => void;
   outputSpec?: MediaOutputSpec;
   onPreview?: (url: string) => void;
+  onLipSync?: (item: MediaItem) => void;
 }
 
 const MediaItemComponent: React.FC<MediaItemComponentProps> = ({
@@ -24,6 +25,7 @@ const MediaItemComponent: React.FC<MediaItemComponentProps> = ({
   onRefresh,
   outputSpec,
   onPreview,
+  onLipSync,
 }) => {
   const toast = useToast();
   const [isEditing, setIsEditing] = useState(false);
@@ -115,6 +117,15 @@ const MediaItemComponent: React.FC<MediaItemComponentProps> = ({
           >
             {isDeleting ? '...' : 'Delete'}
           </Button>
+          {item.type === 'ai_video' && onLipSync && (
+            <Button
+              size="sm"
+              variant={item.metadata?.needs_lip_sync ? 'primary' : 'ghost'}
+              onClick={() => onLipSync(item)}
+            >
+              Lip Sync
+            </Button>
+          )}
         </div>
       </div>
 

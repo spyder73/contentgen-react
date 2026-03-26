@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { MediaItem } from '../../api/structs/media';
 import Modal from './Modal';
 import { Button } from '../ui';
@@ -35,15 +35,18 @@ const LipSyncModal: React.FC<LipSyncModalProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const readyAudios = audios.filter(
-    (a) => a.type === 'audio' && a.file_url && !a.file_url.includes('_waiting') && !a.file_url.includes('_failed')
+    (a) => !a.file_url?.includes('_waiting') && !a.file_url?.includes('_failed') && !a.file_url?.includes('_failed.png')
   );
 
-  // Pre-select audio whose scene_id matches the video's scene_id
-  const matchingAudio = readyAudios.find(
-    (a) => a.metadata?.scene_id && a.metadata.scene_id === video.metadata?.scene_id
-  );
+  const [audioMediaId, setAudioMediaId] = useState('');
 
-  const [audioMediaId, setAudioMediaId] = useState(matchingAudio?.id ?? '');
+  useEffect(() => {
+    const matching = readyAudios.find(
+      (a) => a.metadata?.scene_id === video.metadata?.scene_id
+    );
+    setAudioMediaId(matching?.id ?? '');
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [video.metadata?.scene_id, readyAudios.length]);
 
   const handleSubmit = async () => {
     setIsSubmitting(true);

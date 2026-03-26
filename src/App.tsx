@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { 
-  ImageProvider, 
+import {
+  ImageProvider,
   VideoProvider,
   AudioProvider,
   DEFAULT_IMAGE_PROVIDER,
@@ -16,6 +16,7 @@ import { Header, Toast } from './components/layout';
 import { AddUserModal, ProxyModal } from './components/modals';
 import { IdeasList } from './components/ideas';
 import { ClipPromptsList } from './components/clips';
+import SeriesView from './components/series/SeriesView';
 import { useWebSocketEvents } from './hooks';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import { useUserAccountState } from './hooks/useUserAccountState';
@@ -23,7 +24,10 @@ import { ToastProviderWithState } from './hooks/useToast';
 import { applyTheme, getDocumentTheme, isThemeMode, THEME_STORAGE_KEY } from './theme';
 import { ToastMessage } from './toast';
 
+type AppView = 'studio' | 'series';
+
 function App() {
+  const [view, setView] = useState<AppView>('studio');
   const [ideasRefreshTrigger, setIdeasRefreshTrigger] = useState(0);
   const [clipsRefreshTrigger, setClipsRefreshTrigger] = useState(0);
   const [openLibrarySignal, setOpenLibrarySignal] = useState(0);
@@ -110,35 +114,43 @@ function App() {
         onThemeToggle={() => setStoredThemeMode(themeMode === 'dark' ? 'light' : 'dark')}
         onOpenUploadLibrary={() => setOpenLibrarySignal((value) => value + 1)}
         onOpenProxyModal={() => setShowProxyModal(true)}
+        activeView={view}
+        onSetView={setView}
       />
 
       {/* Main Content */}
       <main className="flex-1 overflow-hidden">
-        <div className="page-container h-full py-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 h-full min-h-0">
-            {/* Ideas Panel */}
-            <div className="card flex flex-col h-full min-h-0">
-              <div className="card-body flex-1 flex flex-col min-h-0">
-                <IdeasList
-                  refreshTrigger={ideasRefreshTrigger}
-                  openLibrarySignal={openLibrarySignal}
-                  onClipsCreated={refreshClips}
-                />
+        {view === 'series' ? (
+          <div className="page-container h-full py-6 overflow-y-auto">
+            <SeriesView />
+          </div>
+        ) : (
+          <div className="page-container h-full py-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 h-full min-h-0">
+              {/* Ideas Panel */}
+              <div className="card flex flex-col h-full min-h-0">
+                <div className="card-body flex-1 flex flex-col min-h-0">
+                  <IdeasList
+                    refreshTrigger={ideasRefreshTrigger}
+                    openLibrarySignal={openLibrarySignal}
+                    onClipsCreated={refreshClips}
+                  />
+                </div>
               </div>
-            </div>
 
-            {/* Clips Panel */}
-            <div className="card flex flex-col h-full min-h-0">
-              <div className="card-body flex-1 flex flex-col min-h-0">
-                <ClipPromptsList
-                  refreshTrigger={clipsRefreshTrigger}
-                  mediaProfile={mediaProfile}
-                  activeAccount={activeAccount}
-                />
+              {/* Clips Panel */}
+              <div className="card flex flex-col h-full min-h-0">
+                <div className="card-body flex-1 flex flex-col min-h-0">
+                  <ClipPromptsList
+                    refreshTrigger={clipsRefreshTrigger}
+                    mediaProfile={mediaProfile}
+                    activeAccount={activeAccount}
+                  />
+                </div>
               </div>
             </div>
           </div>
-        </div>
+        )}
       </main>
 
       {/* Modals */}

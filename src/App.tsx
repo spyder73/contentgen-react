@@ -17,6 +17,7 @@ import { AddUserModal, ProxyModal } from './components/modals';
 import { IdeasList } from './components/ideas';
 import { ClipPromptsList } from './components/clips';
 import SeriesView from './components/series/SeriesView';
+import DocsView from './components/docs/DocsView';
 import { useWebSocketEvents } from './hooks';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import { useUserAccountState } from './hooks/useUserAccountState';
@@ -24,7 +25,7 @@ import { ToastProviderWithState } from './hooks/useToast';
 import { applyTheme, getDocumentTheme, isThemeMode, THEME_STORAGE_KEY } from './theme';
 import { ToastMessage } from './toast';
 
-type AppView = 'studio' | 'series';
+type AppView = 'studio' | 'series' | 'docs';
 
 function App() {
   const [view, setView] = useState<AppView>('studio');
@@ -120,7 +121,11 @@ function App() {
 
       {/* Main Content */}
       <main className="flex-1 overflow-hidden">
-        {view === 'series' ? (
+        {view === 'docs' ? (
+          <div className="page-container h-full py-6 overflow-y-auto">
+            <DocsView />
+          </div>
+        ) : view === 'series' ? (
           <div className="page-container h-full py-6 overflow-y-auto">
             <SeriesView />
           </div>

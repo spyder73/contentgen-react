@@ -6,7 +6,7 @@ import { PromptEnhancerSettingsModal } from '../modals';
 import { User, Account } from '../../api/structs/user';
 import { ThemeMode } from '../../theme';
 
-type AppView = 'studio' | 'series';
+type AppView = 'studio' | 'series' | 'docs';
 
 interface HeaderProps {
   // User management
@@ -73,6 +73,14 @@ const Header: React.FC<HeaderProps> = ({
                   className={activeView === 'series' ? 'text-white bg-white/10' : ''}
                 >
                   Series
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => onSetView('docs')}
+                  className={activeView === 'docs' ? 'text-white bg-white/10' : ''}
+                >
+                  Docs
                 </Button>
               </div>
 

@@ -16,6 +16,7 @@ interface MediaItemComponentProps {
   outputSpec?: MediaOutputSpec;
   onPreview?: (url: string) => void;
   onLipSync?: (item: MediaItem) => void;
+  lipSyncedItem?: MediaItem;
 }
 
 const MediaItemComponent: React.FC<MediaItemComponentProps> = ({
@@ -26,11 +27,13 @@ const MediaItemComponent: React.FC<MediaItemComponentProps> = ({
   outputSpec,
   onPreview,
   onLipSync,
+  lipSyncedItem,
 }) => {
   const toast = useToast();
   const [isEditing, setIsEditing] = useState(false);
   const [isRegenerating, setIsRegenerating] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [showSynced, setShowSynced] = useState(!!lipSyncedItem);
 
   const handleRegenerate = async () => {
     setIsRegenerating(true);
@@ -59,19 +62,20 @@ const MediaItemComponent: React.FC<MediaItemComponentProps> = ({
   };
 
   const spec = item.output_spec ?? outputSpec;
+  const displayItem = lipSyncedItem && showSynced ? lipSyncedItem : item;
 
   return (
     <>
       <div className="flex items-center gap-3 p-2 rounded-lg bg-slate-800/50 hover:bg-slate-800 transition-colors group">
         {/* Thumbnail */}
-        {item.file_url && item.type !== 'audio' && (
+        {displayItem.file_url && displayItem.type !== 'audio' && (
           <div
             className="shrink-0 cursor-pointer"
-            onClick={() => onPreview?.(constructMediaUrl(item.file_url))}
+            onClick={() => onPreview?.(constructMediaUrl(displayItem.file_url))}
           >
             <Thumbnail
-              src={constructMediaUrl(item.file_url)}
-              alt={item.prompt}
+              src={constructMediaUrl(displayItem.file_url)}
+              alt={displayItem.prompt}
               size="sm"
             />
           </div>
@@ -117,6 +121,15 @@ const MediaItemComponent: React.FC<MediaItemComponentProps> = ({
           >
             {isDeleting ? '...' : 'Delete'}
           </Button>
+          {lipSyncedItem && (
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => setShowSynced((prev) => !prev)}
+            >
+              {showSynced ? 'Original' : 'Synced'}
+            </Button>
+          )}
           {item.type === 'ai_video' && onLipSync && (
             <Button
               size="sm"

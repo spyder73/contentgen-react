@@ -47,18 +47,24 @@ const MediaSection: React.FC<MediaSectionProps> = ({
         <p className="text-xs text-slate-500 italic">None yet</p>
       ) : (
         <div className="space-y-2">
-          {items.map((item) => (
-            <MediaItemComponent
-              key={item.id}
-              item={item}
-              clipStyle={clipStyle}
-              metadataFields={mediaMetadataFields?.[item.type] || []}
-              onRefresh={onRefresh}
-              outputSpec={item.output_spec ?? outputSpec}
-              onPreview={onPreview}
-              onLipSync={onLipSync}
-            />
-          ))}
+          {items.map((item) => {
+            const lipSyncedItem = items.find(
+              (other) => other.metadata?.lip_sync_source_id === item.id
+            );
+            return (
+              <MediaItemComponent
+                key={item.id}
+                item={item}
+                clipStyle={clipStyle}
+                metadataFields={mediaMetadataFields?.[item.type] || []}
+                onRefresh={onRefresh}
+                outputSpec={item.output_spec ?? outputSpec}
+                onPreview={onPreview}
+                onLipSync={onLipSync}
+                lipSyncedItem={lipSyncedItem}
+              />
+            );
+          })}
         </div>
       )}
     </div>

@@ -26,7 +26,6 @@ const LipSyncModal: React.FC<LipSyncModalProps> = ({
 }) => {
   const toast = useToast();
   const [tab, setTab] = useState<Tab>('speech');
-  const [audioMediaId, setAudioMediaId] = useState('');
   const [text, setText] = useState<string>(
     typeof video.metadata?.subtitles === 'string' ? video.metadata.subtitles : ''
   );
@@ -38,6 +37,13 @@ const LipSyncModal: React.FC<LipSyncModalProps> = ({
   const readyAudios = audios.filter(
     (a) => a.type === 'audio' && a.file_url && !a.file_url.includes('_waiting') && !a.file_url.includes('_failed')
   );
+
+  // Pre-select audio whose scene_id matches the video's scene_id
+  const matchingAudio = readyAudios.find(
+    (a) => a.metadata?.scene_id && a.metadata.scene_id === video.metadata?.scene_id
+  );
+
+  const [audioMediaId, setAudioMediaId] = useState(matchingAudio?.id ?? '');
 
   const handleSubmit = async () => {
     setIsSubmitting(true);

@@ -6,6 +6,8 @@ import { PromptEnhancerSettingsModal } from '../modals';
 import { User, Account } from '../../api/structs/user';
 import { ThemeMode } from '../../theme';
 
+type AppView = 'studio' | 'series' | 'docs';
+
 interface HeaderProps {
   // User management
   users: User[];
@@ -18,9 +20,13 @@ interface HeaderProps {
   themeMode: ThemeMode;
   onThemeToggle: () => void;
   onOpenUploadLibrary: () => void;
-  
+
   // Modals
   onOpenProxyModal: () => void;
+
+  // View navigation
+  activeView: AppView;
+  onSetView: (view: AppView) => void;
 }
 
 const Header: React.FC<HeaderProps> = ({
@@ -35,6 +41,8 @@ const Header: React.FC<HeaderProps> = ({
   onThemeToggle,
   onOpenUploadLibrary,
   onOpenProxyModal,
+  activeView,
+  onSetView,
 }) => {
   const [showPipelineManager, setShowPipelineManager] = useState(false);
   const [showEnhancerSettings, setShowEnhancerSettings] = useState(false);
@@ -47,12 +55,41 @@ const Header: React.FC<HeaderProps> = ({
           <div className="flex justify-between items-center mb-3">
             <div className="flex items-center gap-4">
               <h1 className="text-xl font-semibold uppercase tracking-[0.25em] text-white">SpyderGen</h1>
+
+              {/* View switcher */}
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => onSetView('studio')}
+                  className={activeView === 'studio' ? 'text-white bg-white/10' : ''}
+                >
+                  Studio
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => onSetView('series')}
+                  className={activeView === 'series' ? 'text-white bg-white/10' : ''}
+                >
+                  Series
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => onSetView('docs')}
+                  className={activeView === 'docs' ? 'text-white bg-white/10' : ''}
+                >
+                  Docs
+                </Button>
+              </div>
+
               <Button variant="ghost" size="sm" onClick={onOpenProxyModal}>
                 Proxies
               </Button>
-              <Button 
-                variant="ghost" 
-                size="sm" 
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={() => setShowPipelineManager(true)}
               >
                 Pipelines

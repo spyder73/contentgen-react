@@ -16,6 +16,7 @@ interface AudioProviderSelectorProps {
 const AUDIO_PROVIDERS: { value: string; label: string }[] = [
   { value: 'suno', label: 'Suno' },
   { value: 'udio', label: 'Udio' },
+  { value: 'runware', label: 'Runware' },
 ];
 
 const AudioProviderSelector: React.FC<AudioProviderSelectorProps> = ({

@@ -329,6 +329,10 @@ const SceneChainSection: React.FC<SceneChainSectionProps> = ({
   const [connections, setConnections] = React.useState<ChainConnection[]>(initialConnections);
   const [saveStatus, setSaveStatus] = React.useState<'idle' | 'saved'>('idle');
 
+  React.useEffect(() => {
+    setConnections(initialConnections);
+  }, [initialConnections]);
+
   const handleSave = async () => {
     await onSave(connections);
     setSaveStatus('saved');

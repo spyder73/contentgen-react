@@ -3,9 +3,10 @@ import PipelineAPI from '../../../api/pipeline';
 import { constructMediaUrl } from '../../../api/helpers';
 import { MediaLibraryItem } from '../../../api/media';
 import { PipelineRun, PipelineTemplate } from '../../../api/structs';
-import { CheckpointInjectionMode } from '../../../api/structs/pipeline';
+import { CheckpointInjectionMode, ChainConnection } from '../../../api/structs/pipeline';
 import AttachmentLibraryModal from '../AttachmentLibraryModal';
 import ConnectorSceneReferences, { toConnectorSceneReferenceEntries } from './ConnectorSceneReferences';
+import SceneChainCablesEditor from './SceneChainCablesEditor';
 import { mediaLibraryItemToAttachment } from './helpers';
 
 interface DistributorConnectorBlockProps {
@@ -290,6 +291,74 @@ const ChildPipelineCard: React.FC<ChildPipelineCardProps> = ({ runId, sceneNumbe
   );
 };
 
+// --- SceneChainSection ---
+
+interface SceneChainSectionProps {
+  connectorOutput: string;
+  template: PipelineTemplate;
+  onSave: (connections: ChainConnection[]) => Promise<void>;
+  saving: boolean;
+}
+
+const SceneChainSection: React.FC<SceneChainSectionProps> = ({
+  connectorOutput,
+  template,
+  onSave,
+  saving,
+}) => {
+  const scenes = React.useMemo(() => {
+    const entries = toConnectorSceneReferenceEntries(connectorOutput);
+    return entries
+      .filter((e) => e.scene_id)
+      .map((e) => ({
+        scene_id: e.scene_id,
+        order: e.order ?? 0,
+        reference_url: e.reference_url || undefined,
+      }));
+  }, [connectorOutput]);
+
+  const initialConnections = React.useMemo((): ChainConnection[] => {
+    for (const cp of template.checkpoints) {
+      if (cp.chain_connections && cp.chain_connections.length > 0) {
+        return cp.chain_connections;
+      }
+    }
+    return [];
+  }, [template]);
+
+  const [connections, setConnections] = React.useState<ChainConnection[]>(initialConnections);
+  const [saveStatus, setSaveStatus] = React.useState<'idle' | 'saved'>('idle');
+
+  const handleSave = async () => {
+    await onSave(connections);
+    setSaveStatus('saved');
+    setTimeout(() => setSaveStatus('idle'), 2000);
+  };
+
+  if (scenes.length < 2) return null;
+
+  return (
+    <div className="mt-3 p-2.5 rounded border border-white/10 bg-black/20 space-y-2">
+      <div className="flex items-center justify-between">
+        <p className="text-[11px] text-zinc-300 font-medium">Scene Chain Connections</p>
+        <button
+          className="btn btn-sm btn-secondary text-[10px] px-2 py-0.5"
+          onClick={() => void handleSave()}
+          disabled={saving}
+        >
+          {saving ? 'Saving…' : saveStatus === 'saved' ? 'Saved ✓' : 'Save'}
+        </button>
+      </div>
+      <SceneChainCablesEditor
+        scenes={scenes}
+        connections={connections}
+        onChange={setConnections}
+        saving={saving}
+      />
+    </div>
+  );
+};
+
 // --- DistributorConnectorBlock ---
 
 const DistributorConnectorBlock: React.FC<DistributorConnectorBlockProps> = ({
@@ -303,6 +372,22 @@ const DistributorConnectorBlock: React.FC<DistributorConnectorBlockProps> = ({
   onConnectorContinue,
 }) => {
   const [isExpanded, setIsExpanded] = useState(true);
+  const [chainSaving, setChainSaving] = useState(false);
+
+  const handleSaveChainConnections = async (newConnections: ChainConnection[]) => {
+    setChainSaving(true);
+    try {
+      const updatedCheckpoints = template.checkpoints.map((cp, idx) => {
+        if (idx === connectorIndex) {
+          return { ...cp, chain_connections: newConnections, chain_last_frames: false };
+        }
+        return cp;
+      });
+      await PipelineAPI.updatePipelineTemplate(template.id, { checkpoints: updatedCheckpoints });
+    } finally {
+      setChainSaving(false);
+    }
+  };
 
   const distributorCheckpoint = template.checkpoints[distributorIndex];
   const connectorCheckpoint = template.checkpoints[connectorIndex];
@@ -448,7 +533,17 @@ const DistributorConnectorBlock: React.FC<DistributorConnectorBlockProps> = ({
               </span>
             </div>
 
-            {hasSceneReferences && <ConnectorSceneReferences output={connectorResult.output} />}
+            {hasSceneReferences && (
+              <>
+                <ConnectorSceneReferences output={connectorResult.output} />
+                <SceneChainSection
+                  connectorOutput={connectorResult.output}
+                  template={template}
+                  onSave={handleSaveChainConnections}
+                  saving={chainSaving}
+                />
+              </>
+            )}
 
             {connectorResult && !hasSceneReferences && connectorResult.output && (
               <pre className="text-[11px] text-slate-300 bg-black/70 p-2 rounded overflow-auto max-h-56 border border-white/10">

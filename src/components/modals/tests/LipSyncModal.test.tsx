@@ -19,7 +19,7 @@ const mockedApi = API as jest.Mocked<typeof API>;
 
 const videoItem: MediaItem = {
   id: 'video-1',
-  type: 'video',
+  type: 'ai_video',
   prompt: 'A talking character',
   file_url: 'https://cdn.example.com/video.mp4',
   metadata: {

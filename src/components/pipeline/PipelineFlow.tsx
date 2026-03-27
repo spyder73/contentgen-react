@@ -54,7 +54,7 @@ const PipelineFlow: React.FC<PipelineFlowProps> = ({
             <div
               onClick={() => onCheckpointClick(checkpoint.id)}
               className={`
-                flex items-start gap-2 p-2.5 rounded cursor-pointer transition-all
+                group flex items-start gap-2 p-2.5 rounded cursor-pointer transition-all
                 ${type === 'generator' && selectedCheckpointId !== checkpoint.id
                   ? 'bg-sky-500/10 border border-sky-400/40 hover:border-sky-300/60'
                   : ''
@@ -153,16 +153,32 @@ const PipelineFlow: React.FC<PipelineFlowProps> = ({
                 </div>
               </div>
 
-              {/* Remove button */}
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onCheckpointRemove(checkpoint.id);
-                }}
-                className="text-zinc-500 hover:text-red-400 text-xs px-1.5 py-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
-              >
-                ✕
-              </button>
+              {/* Reorder + remove */}
+              <div className="flex flex-col items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                <button
+                  onClick={(e) => { e.stopPropagation(); onReorder(index, index - 1); }}
+                  disabled={index === 0}
+                  className="text-zinc-500 hover:text-white disabled:opacity-20 disabled:cursor-not-allowed text-xs px-1 py-0.5 leading-none"
+                  title="Move up"
+                >
+                  ↑
+                </button>
+                <button
+                  onClick={(e) => { e.stopPropagation(); onReorder(index, index + 1); }}
+                  disabled={index === checkpoints.length - 1}
+                  className="text-zinc-500 hover:text-white disabled:opacity-20 disabled:cursor-not-allowed text-xs px-1 py-0.5 leading-none"
+                  title="Move down"
+                >
+                  ↓
+                </button>
+                <button
+                  onClick={(e) => { e.stopPropagation(); onCheckpointRemove(checkpoint.id); }}
+                  className="text-zinc-500 hover:text-red-400 text-xs px-1 py-0.5 leading-none mt-0.5"
+                  title="Remove"
+                >
+                  ✕
+                </button>
+              </div>
             </div>
 
             {/* Connector to next */}

@@ -26,7 +26,7 @@ const SceneChainCablesEditor: React.FC<Props> = ({ scenes, connections, onChange
   const [hoveredConnection, setHoveredConnection] = useState<number | null>(null);
   const [mousePos, setMousePos] = useState<PortPosition>({ x: 0, y: 0 });
 
-  const sorted = [...scenes].sort((a, b) => a.order - b.order);
+  const sorted = React.useMemo(() => [...scenes].sort((a, b) => a.order - b.order), [scenes]);
 
   const measurePorts = useCallback(() => {
     if (!containerRef.current) return;

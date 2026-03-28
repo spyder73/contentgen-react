@@ -36,7 +36,7 @@ const LipSyncModal: React.FC<LipSyncModalProps> = ({
 
   useEffect(() => {
     setText(typeof video.metadata?.text === 'string' ? video.metadata.text : '');
-  }, [video.id]);
+  }, [video.id, video.metadata?.text]);
   const [speed, setSpeed] = useState(1.0);
   const [pitch, setPitch] = useState(0.0);
   const [isSubmitting, setIsSubmitting] = useState(false);

@@ -424,7 +424,6 @@ const DistributorConnectorBlock: React.FC<DistributorConnectorBlockProps> = ({
   };
 
   const distributorCheckpoint = template.checkpoints[distributorIndex];
-  const connectorCheckpoint = template.checkpoints[connectorIndex];
   const distributorResult = run.results?.[distributorIndex];
   const connectorResult = run.results?.[connectorIndex];
 
@@ -434,15 +433,6 @@ const DistributorConnectorBlock: React.FC<DistributorConnectorBlockProps> = ({
   const distributorFailed = distributorResult?.status === 'failed';
   const distributorPending = !distributorResult;
   const distributorCurrent = distributorIndex === run.current_checkpoint && !isTerminal;
-
-  const connectorComplete = connectorResult?.status === 'completed';
-  const connectorFailed = connectorResult?.status === 'failed';
-  const connectorPending = !connectorResult;
-  const connectorCurrent = connectorIndex === run.current_checkpoint && !isTerminal;
-
-  const hasSceneReferences =
-    Boolean(connectorResult?.output) &&
-    toConnectorSceneReferenceEntries(connectorResult.output).length > 0;
 
   // Group child IDs into rows of 3
   const rows: string[][] = [];

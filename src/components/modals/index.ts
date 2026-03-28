@@ -8,3 +8,4 @@ export { default as MediaPreviewModal } from './MediaPreviewModal';
 export { default as ProxyModal } from './ProxyModal';
 export { default as ConfirmationModal } from './ConfirmationModal';
 export { default as PromptEnhancerSettingsModal } from './PromptEnhancerSettingsModal';
+export { default as LipSyncModal } from './LipSyncModal';

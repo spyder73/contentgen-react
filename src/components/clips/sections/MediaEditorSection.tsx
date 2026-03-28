@@ -4,7 +4,7 @@ import { MediaProfile, MediaOutputSpec } from '../../../api/structs/media-spec';
 import { ClipStyleSchema, createEmptyClipStyleSchema } from '../../../api/clipstyleSchema';
 import API from '../../../api/api';
 import { MediaSection } from '../../ui';
-import { AddMediaModal, MediaPreviewModal } from '../../modals';
+import { AddMediaModal, MediaPreviewModal, LipSyncModal } from '../../modals';
 
 interface MediaEditorSectionProps {
   clipId: string;
@@ -29,6 +29,7 @@ const MediaEditorSection: React.FC<MediaEditorSectionProps> = ({
   const [addMediaType, setAddMediaType] = useState<MediaType>('image');
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewType, setPreviewType] = useState<'image' | 'video'>('image');
+  const [lipSyncVideo, setLipSyncVideo] = useState<MediaItem | null>(null);
   const [styleSchema, setStyleSchema] = useState<ClipStyleSchema>(() => createEmptyClipStyleSchema(clipStyle));
 
   React.useEffect(() => {
@@ -93,6 +94,7 @@ const MediaEditorSection: React.FC<MediaEditorSectionProps> = ({
           outputSpec={getOutputSpec('ai_video')}
           onPreview={(url) => handlePreview(url, 'ai_video')}
           onAdd={() => openAddMedia('ai_video')}
+          onLipSync={(item) => setLipSyncVideo(item)}
         />
 
         <MediaSection
@@ -122,6 +124,17 @@ const MediaEditorSection: React.FC<MediaEditorSectionProps> = ({
         mediaUrl={previewUrl || ''}
         mediaType={previewType}
       />
+
+      {lipSyncVideo && (
+        <LipSyncModal
+          isOpen={!!lipSyncVideo}
+          onClose={() => setLipSyncVideo(null)}
+          clipId={clipId}
+          video={lipSyncVideo}
+          audios={audios}
+          onSuccess={onRefresh}
+        />
+      )}
     </>
   );
 };

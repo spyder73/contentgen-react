@@ -3,9 +3,10 @@ import PipelineAPI from '../../../api/pipeline';
 import { constructMediaUrl } from '../../../api/helpers';
 import { MediaLibraryItem } from '../../../api/media';
 import { PipelineRun, PipelineTemplate } from '../../../api/structs';
-import { CheckpointInjectionMode } from '../../../api/structs/pipeline';
+import { CheckpointInjectionMode, ChainConnection, MediaAttachment } from '../../../api/structs/pipeline';
 import AttachmentLibraryModal from '../AttachmentLibraryModal';
-import ConnectorSceneReferences, { toConnectorSceneReferenceEntries } from './ConnectorSceneReferences';
+import { toConnectorSceneReferenceEntries } from './ConnectorSceneReferences';
+import SceneChainCablesEditor from './SceneChainCablesEditor';
 import { mediaLibraryItemToAttachment } from './helpers';
 
 interface DistributorConnectorBlockProps {
@@ -290,6 +291,108 @@ const ChildPipelineCard: React.FC<ChildPipelineCardProps> = ({ runId, sceneNumbe
   );
 };
 
+// --- SceneChainSection ---
+
+function buildScenesFromAttachments(attachments: MediaAttachment[] | undefined) {
+  if (!attachments) return [];
+  const seen = new Set<string>();
+  const nodes: { scene_id: string; order: number; reference_url?: string }[] = [];
+  for (const att of attachments) {
+    const sceneId = att.scene_id?.trim();
+    const url = att.url?.trim();
+    if (!sceneId || !url || seen.has(sceneId)) continue;
+    const role = (att.role || '').toLowerCase();
+    const type = (att.type || '').toLowerCase();
+    if (!type.includes('image') || (role !== 'reference_frame' && role !== 'seed_image')) continue;
+    seen.add(sceneId);
+    nodes.push({
+      scene_id: sceneId,
+      order: (att.metadata as Record<string, unknown> | undefined)?.['order'] as number ?? 0,
+      reference_url: constructMediaUrl(url),
+    });
+  }
+  return nodes.sort((a, b) => a.order - b.order || a.scene_id.localeCompare(b.scene_id));
+}
+
+interface SceneChainSectionProps {
+  attachments: MediaAttachment[] | undefined;
+  connectorOutput?: string;
+  template: PipelineTemplate;
+  onSave: (connections: ChainConnection[]) => Promise<void>;
+  saving: boolean;
+}
+
+const SceneChainSection: React.FC<SceneChainSectionProps> = ({
+  attachments,
+  connectorOutput,
+  template,
+  onSave,
+  saving,
+}) => {
+  const scenes = React.useMemo(() => {
+    // Prefer distributor attachments (available during distributor pause)
+    const fromAttachments = buildScenesFromAttachments(attachments);
+    if (fromAttachments.length >= 2) return fromAttachments;
+    // Fall back to connector output if available
+    if (connectorOutput) {
+      const entries = toConnectorSceneReferenceEntries(connectorOutput);
+      return entries
+        .filter((e) => e.scene_id)
+        .map((e) => ({
+          scene_id: e.scene_id,
+          order: e.order ?? 0,
+          reference_url: e.reference_url || undefined,
+        }));
+    }
+    return [];
+  }, [attachments, connectorOutput]);
+
+  const initialConnections = React.useMemo((): ChainConnection[] => {
+    for (const cp of template.checkpoints) {
+      if (cp.chain_connections && cp.chain_connections.length > 0) {
+        return cp.chain_connections;
+      }
+    }
+    return [];
+  }, [template]);
+
+  const [connections, setConnections] = React.useState<ChainConnection[]>(initialConnections);
+  const [saveStatus, setSaveStatus] = React.useState<'idle' | 'saved'>('idle');
+
+  React.useEffect(() => {
+    setConnections(initialConnections);
+  }, [initialConnections]);
+
+  const handleSave = async () => {
+    await onSave(connections);
+    setSaveStatus('saved');
+    setTimeout(() => setSaveStatus('idle'), 2000);
+  };
+
+  if (scenes.length < 2) return null;
+
+  return (
+    <div className="p-2.5 rounded border border-white/10 bg-black/20 space-y-2">
+      <div className="flex items-center justify-between">
+        <p className="text-[11px] text-zinc-300 font-medium">Scene Connections</p>
+        <button
+          className="btn btn-sm btn-secondary text-[10px] px-2 py-0.5"
+          onClick={() => void handleSave()}
+          disabled={saving}
+        >
+          {saving ? 'Saving…' : saveStatus === 'saved' ? 'Saved ✓' : 'Save'}
+        </button>
+      </div>
+      <SceneChainCablesEditor
+        scenes={scenes}
+        connections={connections}
+        onChange={setConnections}
+        saving={saving}
+      />
+    </div>
+  );
+};
+
 // --- DistributorConnectorBlock ---
 
 const DistributorConnectorBlock: React.FC<DistributorConnectorBlockProps> = ({
@@ -303,9 +406,24 @@ const DistributorConnectorBlock: React.FC<DistributorConnectorBlockProps> = ({
   onConnectorContinue,
 }) => {
   const [isExpanded, setIsExpanded] = useState(true);
+  const [chainSaving, setChainSaving] = useState(false);
+
+  const handleSaveChainConnections = async (newConnections: ChainConnection[]) => {
+    setChainSaving(true);
+    try {
+      const updatedCheckpoints = template.checkpoints.map((cp, idx) => {
+        if (idx === connectorIndex) {
+          return { ...cp, chain_connections: newConnections, chain_last_frames: false };
+        }
+        return cp;
+      });
+      await PipelineAPI.updatePipelineTemplate(template.id, { checkpoints: updatedCheckpoints });
+    } finally {
+      setChainSaving(false);
+    }
+  };
 
   const distributorCheckpoint = template.checkpoints[distributorIndex];
-  const connectorCheckpoint = template.checkpoints[connectorIndex];
   const distributorResult = run.results?.[distributorIndex];
   const connectorResult = run.results?.[connectorIndex];
 
@@ -315,16 +433,6 @@ const DistributorConnectorBlock: React.FC<DistributorConnectorBlockProps> = ({
   const distributorFailed = distributorResult?.status === 'failed';
   const distributorPending = !distributorResult;
   const distributorCurrent = distributorIndex === run.current_checkpoint && !isTerminal;
-
-  const connectorComplete = connectorResult?.status === 'completed';
-  const connectorFailed = connectorResult?.status === 'failed';
-  const connectorPending = !connectorResult;
-  const connectorCurrent = connectorIndex === run.current_checkpoint && !isTerminal;
-
-  const hasSceneReferences =
-    connectorComplete &&
-    Boolean(connectorResult?.output) &&
-    toConnectorSceneReferenceEntries(connectorResult.output).length > 0;
 
   // Group child IDs into rows of 3
   const rows: string[][] = [];
@@ -403,69 +511,24 @@ const DistributorConnectorBlock: React.FC<DistributorConnectorBlockProps> = ({
             </div>
           )}
 
-          {/* Distributor continue (paused for scene review) */}
-          {isPaused && distributorCurrent && (
-            <div className="space-y-2 p-3 border-b border-white/10">
-              <p className="text-xs text-zinc-300">Review and regenerate scenes, then continue.</p>
-              <button
-                className="btn btn-sm btn-primary w-full"
-                onClick={() => void onConnectorContinue()}
-                disabled={connectorInteraction.progressionLoading}
-              >
-                {connectorInteraction.progressionLoading ? 'Continuing…' : 'Continue'}
-              </button>
-              {connectorInteraction.progressionError && (
-                <p className="text-[10px] text-red-300">{connectorInteraction.progressionError}</p>
-              )}
+          {/* Cable editor — shown as soon as scene cards are visible */}
+          {rows.length > 0 && (
+            <div className="px-3 pb-2 border-b border-white/10">
+              <SceneChainSection
+                attachments={distributorResult?.attachments}
+                connectorOutput={connectorResult?.output}
+                template={template}
+                onSave={handleSaveChainConnections}
+                saving={chainSaving}
+              />
             </div>
           )}
 
-          {/* Connector section */}
-          <div className={`px-2.5 py-2 space-y-2 ${connectorCurrent ? 'bg-white/5' : ''}`}>
-            <div className="flex items-center gap-2">
-              <span
-                className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0 ${
-                  connectorComplete
-                    ? 'bg-white text-black'
-                    : connectorFailed
-                    ? 'bg-zinc-500 text-black'
-                    : connectorCurrent
-                    ? 'bg-zinc-200 text-black animate-pulse'
-                    : 'bg-zinc-700 text-zinc-300'
-                }`}
-              >
-                {connectorComplete
-                  ? 'OK'
-                  : connectorFailed
-                  ? 'X'
-                  : connectorPending
-                  ? '-'
-                  : connectorIndex + 1}
-              </span>
-              <span className="text-white font-medium text-xs">{connectorCheckpoint.name}</span>
-              <span className="text-[10px] uppercase tracking-wide bg-zinc-800 border border-white/20 text-zinc-200 px-1.5 py-0.5 rounded">
-                Connector
-              </span>
-            </div>
-
-            {hasSceneReferences && <ConnectorSceneReferences output={connectorResult.output} />}
-
-            {connectorResult && !hasSceneReferences && connectorResult.output && (
-              <pre className="text-[11px] text-slate-300 bg-black/70 p-2 rounded overflow-auto max-h-56 border border-white/10">
-                {connectorResult.output}
-              </pre>
-            )}
-
-            {connectorResult?.status === 'failed' && connectorResult.error && (
-              <div className="attachment-surface space-y-1 border-amber-400/30">
-                <p className="attachment-state">Connector Error</p>
-                <p className="attachment-meta text-amber-100">{connectorResult.error}</p>
-              </div>
-            )}
-
-            {isPaused && connectorCurrent && (
-              <div className="space-y-2 p-2 border border-white/20 bg-white/5 rounded">
-                <p className="text-xs text-zinc-300">Review scene references before continuing.</p>
+          {/* Continue / error */}
+          <div className="px-2.5 py-2 space-y-2">
+            {isPaused && distributorCurrent && (
+              <div className="space-y-2">
+                <p className="text-xs text-zinc-300">Review scenes and draw connections, then continue.</p>
                 <button
                   className="btn btn-sm btn-primary w-full"
                   onClick={() => void onConnectorContinue()}
@@ -476,6 +539,13 @@ const DistributorConnectorBlock: React.FC<DistributorConnectorBlockProps> = ({
                 {connectorInteraction.progressionError && (
                   <p className="text-[10px] text-red-300">{connectorInteraction.progressionError}</p>
                 )}
+              </div>
+            )}
+
+            {connectorResult?.status === 'failed' && connectorResult.error && (
+              <div className="attachment-surface space-y-1 border-amber-400/30">
+                <p className="attachment-state">Connector Error</p>
+                <p className="attachment-meta text-amber-100">{connectorResult.error}</p>
               </div>
             )}
           </div>

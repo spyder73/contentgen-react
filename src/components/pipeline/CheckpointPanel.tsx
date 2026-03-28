@@ -60,7 +60,7 @@ const CheckpointPanel: React.FC<CheckpointPanelProps> = ({
   };
 
   const handleFlagChange = (
-    field: 'requires_confirm' | 'allow_regenerate' | 'chain_last_frames',
+    field: 'requires_confirm' | 'allow_regenerate',
     value: boolean
   ) => {
     updateCheckpoint({ [field]: value } as Pick<CheckpointConfig, typeof field>);
@@ -277,7 +277,6 @@ const CheckpointPanel: React.FC<CheckpointPanelProps> = ({
         <FlagsSection
           requiresConfirm={checkpoint.requires_confirm}
           allowRegenerate={checkpoint.allow_regenerate}
-          chainLastFrames={checkpoint.chain_last_frames ?? false}
           onChange={handleFlagChange}
         />
       )}

@@ -15,6 +15,7 @@ interface MediaSectionProps {
   outputSpec?: MediaOutputSpec;
   onPreview?: (url: string) => void;
   onAdd?: () => void;
+  onLipSync?: (item: MediaItem) => void;
 }
 
 const MediaSection: React.FC<MediaSectionProps> = ({
@@ -27,12 +28,13 @@ const MediaSection: React.FC<MediaSectionProps> = ({
   outputSpec,
   onPreview,
   onAdd,
+  onLipSync,
 }) => {
   return (
     <div>
       <div className="flex items-center justify-between mb-2">
         <h4 className="text-sm font-medium text-slate-300">
-          {icon ? `${icon} ` : ''}{title} ({items.length})
+          {icon ? `${icon} ` : ''}{title} ({items.filter(i => !i.metadata?.lip_sync_source_id).length})
         </h4>
         {onAdd && (
           <Button size="sm" variant="ghost" onClick={onAdd}>
@@ -45,17 +47,20 @@ const MediaSection: React.FC<MediaSectionProps> = ({
         <p className="text-xs text-slate-500 italic">None yet</p>
       ) : (
         <div className="space-y-2">
-          {items.map((item) => (
-            <MediaItemComponent
-              key={item.id}
-              item={item}
-              clipStyle={clipStyle}
-              metadataFields={mediaMetadataFields?.[item.type] || []}
-              onRefresh={onRefresh}
-              outputSpec={item.output_spec ?? outputSpec}
-              onPreview={onPreview}
-            />
-          ))}
+          {items
+            .filter((item) => !item.metadata?.lip_sync_source_id)
+            .map((item) => (
+              <MediaItemComponent
+                key={item.id}
+                item={item}
+                clipStyle={clipStyle}
+                metadataFields={mediaMetadataFields?.[item.type] || []}
+                onRefresh={onRefresh}
+                outputSpec={item.output_spec ?? outputSpec}
+                onPreview={onPreview}
+                onLipSync={onLipSync}
+              />
+            ))}
         </div>
       )}
     </div>

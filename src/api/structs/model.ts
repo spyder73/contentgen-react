@@ -87,6 +87,7 @@ export interface ModelsResponse {
   recommended: AIModel[];
   openrouter?: AIModel[];
   runware?: AIModel[];
+  suno?: AIModel[];
   [key: string]: AIModel[] | undefined;
 }
 

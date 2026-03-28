@@ -174,6 +174,19 @@ const shouldFallbackToLegacyRoute = (error: unknown): boolean => {
   return status === 404 || status === 405;
 };
 
+// ==================== Lip Sync Request Types ====================
+
+export interface LipSyncAudioRequest {
+  audio_media_id: string;
+}
+
+export interface LipSyncSpeechRequest {
+  text: string;
+  voice: string;
+  speed: number;
+  pitch: number;
+}
+
 // ==================== API Functions ====================
 
 const getMediaItem = (mediaId: string) =>
@@ -375,6 +388,15 @@ const replaceMediaMetadata = (mediaId: string, metadata: Record<string, any>) =>
 const deleteMediaItem = (mediaId: string) =>
   axios.delete(`${BASE_URL}/media/${mediaId}`).then((res) => res.data);
 
+const lipSyncMedia = (
+  clipId: string,
+  mediaId: string,
+  request: LipSyncAudioRequest | LipSyncSpeechRequest
+) =>
+  axios
+    .post(`${BASE_URL}/clips/${clipId}/media/${mediaId}/lipsync`, request)
+    .then((res) => res.data);
+
 // ==================== Export ====================
 
 const MediaAPI = {
@@ -392,6 +414,7 @@ const MediaAPI = {
   editMediaMetadata,
   replaceMediaMetadata,
   deleteMediaItem,
+  lipSyncMedia,
 };
 
 export default MediaAPI;

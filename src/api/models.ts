@@ -23,6 +23,7 @@ const dedupeById = (models: AIModel[]): AIModel[] =>
 const getProviderResponseKey = (provider: string): string | undefined => {
   if (provider === 'openrouter') return 'openrouter';
   if (provider === 'runware') return 'runware';
+  if (provider === 'suno') return 'suno';
   return undefined;
 };
 

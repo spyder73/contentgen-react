@@ -168,6 +168,11 @@ export interface CheckpointRequiredAsset {
   media_id?: string;
 }
 
+export interface ChainConnection {
+  from_scene_id: string;
+  to_scene_id: string;
+}
+
 export interface CheckpointConfig {
   id: string;
   name: string;
@@ -184,6 +189,7 @@ export interface CheckpointConfig {
   upload?: UploadCheckpointConfig;
   required_assets?: CheckpointRequiredAsset[];
   chain_last_frames?: boolean;
+  chain_connections?: ChainConnection[];
 }
 
 export interface PipelineOutputFormat {

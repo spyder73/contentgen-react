@@ -5,6 +5,7 @@ import { ClipAssemblyDraft, RunAssemblyState } from './types';
 import { buildAssembledClipPromptPayload } from './assemblyPayload';
 import { getBlockingReferenceCount } from './assemblyErrors';
 import SceneReferenceBindingRow from './SceneReferenceBindingRow';
+import AssemblyScenePreview from './AssemblyScenePreview';
 
 interface AssemblyDraftCardProps {
   run: PipelineRun;
@@ -76,8 +77,14 @@ const AssemblyDraftCard: React.FC<AssemblyDraftCardProps> = ({
         </div>
       )}
 
+      {previewPayload ? (
+        <AssemblyScenePreview payload={previewPayload} />
+      ) : (
+        <p className="attachment-meta text-red-200">Unable to generate scene preview for this draft.</p>
+      )}
+
       <details className="attachment-item space-y-2">
-        <summary className="cursor-pointer text-xs text-zinc-100 uppercase tracking-wide">Output JSON Preview</summary>
+        <summary className="cursor-pointer text-xs text-zinc-500 uppercase tracking-wide">Advanced · View JSON</summary>
         {previewPayload ? (
           <div className="space-y-2">
             <div className="flex justify-end">
@@ -92,9 +99,7 @@ const AssemblyDraftCard: React.FC<AssemblyDraftCardProps> = ({
               {JSON.stringify(previewPayload, null, 2)}
             </pre>
           </div>
-        ) : (
-          <p className="attachment-meta text-red-200">Unable to generate JSON preview for this draft.</p>
-        )}
+        ) : null}
       </details>
 
       {draft.errorMessage && <p className="attachment-meta text-red-200">{draft.errorMessage}</p>}

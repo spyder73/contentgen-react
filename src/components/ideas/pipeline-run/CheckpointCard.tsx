@@ -160,8 +160,25 @@ const CheckpointCard: React.FC<CheckpointCardProps> = ({
             <ConnectorSceneReferences output={result.output} />
           ) : null}
 
-          {result && (!hasStructuredConnectorOutput || checkpointType !== 'connector') && (
-            <pre className="text-[11px] text-slate-300 bg-black/70 p-2 rounded overflow-auto max-h-56 border border-white/10">{formatOutput(result.output)}</pre>
+          {result && (!hasStructuredConnectorOutput || checkpointType !== 'connector') &&
+            checkpointType !== 'upload' && checkpointType !== 'generator' && (
+            (() => {
+              const text = formatOutput(result.output).trim();
+              if (!text) return null;
+              let parsed: unknown = null;
+              try { parsed = JSON.parse(text); } catch { /* not JSON */ }
+              if (parsed !== null && typeof parsed === 'object') {
+                return (
+                  <details>
+                    <summary className="cursor-pointer text-[10px] text-zinc-500 uppercase tracking-wide">Output</summary>
+                    <pre className="text-[11px] text-slate-300 bg-black/70 p-2 rounded overflow-auto max-h-56 border border-white/10 mt-1">{text}</pre>
+                  </details>
+                );
+              }
+              return (
+                <p className="text-xs text-zinc-300 leading-relaxed whitespace-pre-wrap">{text}</p>
+              );
+            })()
           )}
 
           {(result?.attachments || []).length > 0 && (

@@ -108,6 +108,10 @@ export const buildAssembledClipPromptPayload = (
 
   metadata.scene_reference_mapping = sceneReferenceMapping;
 
+  if (run.cost_summary) {
+    metadata.pipeline_cost_summary = run.cost_summary;
+  }
+
   if (mergedReferenceAssets.length > 0) {
     metadata.reference_assets = mergedReferenceAssets;
   } else {

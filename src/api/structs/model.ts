@@ -3,10 +3,13 @@
 export type ModelType = 'chat' | 'image' | 'video' | 'audio';
 
 export interface ModelPricing {
-  prompt?: string;
-  completion?: string;
-  per_image?: string;
-  per_second?: string;
+  prompt?: string;           // per input token (OpenRouter chat)
+  completion?: string;       // per output token (OpenRouter chat)
+  per_image?: string;        // per image (OpenRouter image, Runware image)
+  per_second?: string;       // per second (Runware video/audio)
+  per_generation?: string;   // per generation (Suno)
+  web_search?: string;       // per web search call (OpenRouter :online)
+  request?: string;          // fixed per-request fee
 }
 
 export interface ModelCapabilities {
@@ -114,20 +117,35 @@ export function isChatModel(model: AIModel): boolean {
 }
 
 export function formatPrice(model: AIModel): string {
-  if (model.pricing?.per_image) {
-    const price = parseFloat(model.pricing.per_image);
-    if (price === 0) return 'Free';
-    return `$${price.toFixed(4)}/img`;
+  const p = model.pricing;
+  if (!p) return '';
+
+  if (p.per_image) {
+    const price = parseFloat(p.per_image);
+    if (price > 0) return `$${price.toFixed(4)}/img`;
   }
-  if (model.pricing?.per_second) {
-    const price = parseFloat(model.pricing.per_second);
-    if (price === 0) return 'Free';
-    return `$${price.toFixed(4)}/sec`;
+
+  if (p.per_second) {
+    const price = parseFloat(p.per_second);
+    if (price > 0) return `$${price.toFixed(4)}/sec`;
   }
-  if (model.pricing?.completion) {
-    const price = parseFloat(model.pricing.completion);
-    if (price === 0) return 'Free';
-    return `$${price.toFixed(6)}/tok`;
+
+  if (p.per_generation) {
+    const price = parseFloat(p.per_generation);
+    if (price > 0) return `$${price.toFixed(2)}/gen`;
   }
-  return 'Free';
+
+  if (p.prompt) {
+    const promptPrice = parseFloat(p.prompt);
+    if (promptPrice > 0) {
+      const per10k = promptPrice * 10_000;
+      const isOnline = model.id.endsWith(':online');
+      const wsPrice = isOnline && p.web_search ? parseFloat(p.web_search) : 0;
+      const total = per10k + wsPrice;
+      const label = isOnline ? '/10k+search' : '/10k tok';
+      return `$${total.toFixed(4)}${label}`;
+    }
+  }
+
+  return '';
 }

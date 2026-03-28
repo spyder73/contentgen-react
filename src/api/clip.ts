@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { BASE_URL } from './helpers';
 import { ClipMetadata } from './structs';
+import { ClipPrompt } from './structs/clip';
 import { MediaPrompt } from './structs/media-spec';
 import {
   normalizePromptReferenceImageUrls,
@@ -13,6 +14,15 @@ import {
   normalizeClipStyleSchema,
 } from './clipstyleSchema';
 import { isRecord, toStringValue } from './typeHelpers';
+
+// ==================== Cost Types ====================
+
+export interface ClipCostSummary {
+  total_usd: number;
+  event_count: number;
+  currency?: string;
+  providers?: Record<string, { total_usd: number; event_count: number }>;
+}
 
 // ==================== Request Types ====================
 
@@ -146,8 +156,11 @@ const normalizeCreateClipPromptRequest = (
 const getClipPrompt = (clipId: string) =>
   axios.get(`${BASE_URL}/clips/${clipId}`).then((res) => res.data.clip_prompt);
 
-const getClipPrompts = () =>
-  axios.get(`${BASE_URL}/clips`).then((res) => res.data.clip_prompts || []);
+const getClipPrompts = (): Promise<{ clips: ClipPrompt[]; costByClip: Record<string, ClipCostSummary> }> =>
+  axios.get(`${BASE_URL}/clips`).then((res) => ({
+    clips: res.data.clip_prompts || [],
+    costByClip: res.data.cost_summary_by_clip || {},
+  }));
 
 const createClipPrompt = (request: NewClipPromptRequest) =>
   axios

@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { BASE_URL } from './helpers';
+import { BASE_URL, constructMediaUrl } from './helpers';
 
 // ==================== Types ====================
 
@@ -51,10 +51,11 @@ export interface Episode {
   updated_at: string;
 }
 
-/** Returns the display URL for a character's reference image */
+/** Returns the display URL for a character's reference image, resolved via constructMediaUrl */
 export function characterImageUrl(char: Character): string | undefined {
   const url = char.metadata?.reference_image_url;
-  return typeof url === 'string' && url ? url : undefined;
+  if (typeof url !== 'string' || !url) return undefined;
+  return constructMediaUrl(url) || undefined;
 }
 
 // ==================== Series ====================

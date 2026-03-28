@@ -159,7 +159,7 @@ const EpisodeCard: React.FC<Props> = ({ episode, activeRun, onGenerate, onRetry,
       )}
 
       {/* Delete action */}
-      {onDelete && status === 'draft' && (
+      {onDelete && (
         <div className="flex justify-end">
           <button onClick={onDelete} className="text-[10px] text-slate-600 hover:text-red-400 transition-colors uppercase tracking-wider">
             Delete

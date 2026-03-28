@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Modal from '../modals/Modal';
 import AttachmentLibraryModal from '../ideas/AttachmentLibraryModal';
-import { Character, createCharacter, updateCharacter, characterImageUrl } from '../../api/series';
+import { Character, createCharacter, updateCharacter } from '../../api/series';
 import MediaAPI from '../../api/media';
 import { constructMediaUrl } from '../../api/helpers';
 
@@ -23,9 +23,11 @@ const CharacterEditorModal: React.FC<Props> = ({ isOpen, onClose, seriesId, char
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [voice, setVoice] = useState('');
-  // Track both the media_id (FK) and the display URL separately
+  // refImageUrl = display URL (constructMediaUrl applied, for <img> preview)
+  // refRawUrl   = raw URL as returned from media API (stored in DB)
   const [refMediaId, setRefMediaId] = useState<string | undefined>(undefined);
   const [refImageUrl, setRefImageUrl] = useState<string>('');
+  const [refRawUrl, setRefRawUrl] = useState<string>('');
   const [imageTab, setImageTab] = useState<ImageTab>('upload');
   const [showLibrary, setShowLibrary] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -40,12 +42,15 @@ const CharacterEditorModal: React.FC<Props> = ({ isOpen, onClose, seriesId, char
       setDescription(character.description ?? '');
       setVoice(character.voice ?? '');
       setRefMediaId(character.reference_image_media_id ?? undefined);
-      setRefImageUrl(characterImageUrl(character) ?? '');
+      const raw = String(character.metadata?.reference_image_url ?? '');
+      setRefRawUrl(raw);
+      setRefImageUrl(raw ? constructMediaUrl(raw) : '');
     } else if (isOpen) {
       setName('');
       setDescription('');
       setVoice('');
       setRefMediaId(undefined);
+      setRefRawUrl('');
       setRefImageUrl('');
     }
     setUploadError('');
@@ -59,6 +64,7 @@ const CharacterEditorModal: React.FC<Props> = ({ isOpen, onClose, seriesId, char
       const item = await MediaAPI.uploadMediaLibraryFile(file, { type: 'image', source: 'character_reference' });
       setRefMediaId(item.media_id);
       const url = item.url ?? item.preview_url ?? '';
+      setRefRawUrl(url);
       setRefImageUrl(url ? constructMediaUrl(url) : '');
     } catch {
       setUploadError('Upload failed');
@@ -82,7 +88,7 @@ const CharacterEditorModal: React.FC<Props> = ({ isOpen, onClose, seriesId, char
           description: description.trim(),
           voice,
           reference_image_media_id: refMediaId ?? null,
-          reference_image_url: refImageUrl,
+          reference_image_url: refRawUrl,
         });
       } else {
         saved = await createCharacter({
@@ -91,7 +97,7 @@ const CharacterEditorModal: React.FC<Props> = ({ isOpen, onClose, seriesId, char
           description: description.trim(),
           voice,
           reference_image_media_id: refMediaId,
-          reference_image_url: refImageUrl,
+          reference_image_url: refRawUrl,
         });
       }
       onSaved(saved);
@@ -241,6 +247,7 @@ const CharacterEditorModal: React.FC<Props> = ({ isOpen, onClose, seriesId, char
           if (item) {
             setRefMediaId(item.media_id);
             const url = item.url ?? item.preview_url ?? '';
+            setRefRawUrl(url);
             setRefImageUrl(url ? constructMediaUrl(url) : '');
           }
           setShowLibrary(false);

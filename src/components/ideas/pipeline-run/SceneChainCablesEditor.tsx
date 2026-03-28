@@ -183,20 +183,32 @@ const SceneChainCablesEditor: React.FC<Props> = ({ scenes, connections, onChange
           const toPos = portPositions[conn.to_scene_id]?.left;
           if (!fromPos || !toPos) return null;
           const isHovered = hoveredConnection === idx;
+          const d = getBezierPath(fromPos, toPos);
           return (
-            <path
-              key={idx}
-              d={getBezierPath(fromPos, toPos)}
-              stroke={isHovered ? '#ef4444' : '#2dd4bf'}
-              strokeWidth={isHovered ? 2.5 : 2}
-              fill="none"
-              strokeDasharray={isHovered ? '6 3' : undefined}
-              className="pointer-events-auto cursor-pointer transition-colors"
-              onMouseEnter={() => setHoveredConnection(idx)}
-              onMouseLeave={() => setHoveredConnection(null)}
-              onClick={() => handleDeleteConnection(idx)}
-              title="Click to delete"
-            />
+            <g key={idx}>
+              {/* Visible cable */}
+              <path
+                d={d}
+                stroke={isHovered ? '#ef4444' : '#2dd4bf'}
+                strokeWidth={isHovered ? 2.5 : 2}
+                fill="none"
+                strokeDasharray={isHovered ? '6 3' : undefined}
+                className="pointer-events-none transition-colors"
+              />
+              {/* Wide transparent hit area */}
+              <path
+                d={d}
+                stroke="transparent"
+                strokeWidth={14}
+                fill="none"
+                className="pointer-events-auto cursor-pointer"
+                onMouseEnter={() => setHoveredConnection(idx)}
+                onMouseLeave={() => setHoveredConnection(null)}
+                onClick={() => handleDeleteConnection(idx)}
+              >
+                <title>Click to delete</title>
+              </path>
+            </g>
           );
         })}
 

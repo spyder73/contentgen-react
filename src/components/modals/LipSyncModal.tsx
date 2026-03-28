@@ -16,6 +16,9 @@ interface LipSyncModalProps {
 
 type Tab = 'audio' | 'speech';
 
+const VOICES = ['emily','james','isabella','liam','chloe','adrian','harper','ava','sophia','julia','mason','jack','oliver','ethan'];
+const pickRandomVoice = () => VOICES[Math.floor(Math.random() * VOICES.length)];
+
 const LipSyncModal: React.FC<LipSyncModalProps> = ({
   isOpen,
   onClose,
@@ -27,9 +30,13 @@ const LipSyncModal: React.FC<LipSyncModalProps> = ({
   const toast = useToast();
   const [tab, setTab] = useState<Tab>('speech');
   const [text, setText] = useState<string>(
-    typeof video.metadata?.subtitles === 'string' ? video.metadata.subtitles : ''
+    typeof video.metadata?.text === 'string' ? video.metadata.text : ''
   );
-  const [voice, setVoice] = useState('auto');
+  const [voice, setVoice] = useState(() => pickRandomVoice());
+
+  useEffect(() => {
+    setText(typeof video.metadata?.text === 'string' ? video.metadata.text : '');
+  }, [video.id]);
   const [speed, setSpeed] = useState(1.0);
   const [pitch, setPitch] = useState(0.0);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -124,9 +131,9 @@ const LipSyncModal: React.FC<LipSyncModalProps> = ({
               value={voice}
               onChange={(e) => setVoice(e.target.value)}
             >
-              <option value="auto">Auto</option>
-              <option value="male">Male</option>
-              <option value="female">Female</option>
+              {VOICES.map((v) => (
+                <option key={v} value={v}>{v.charAt(0).toUpperCase() + v.slice(1)}</option>
+              ))}
             </select>
           </div>
 

@@ -13,6 +13,7 @@ import {
 import { AIModel, formatPrice } from '../../api/structs/model';
 import { Select, Dropdown } from '../ui';
 
+
 type SelectorModality = 'chat' | 'image' | 'video' | 'audio';
 
 interface CheckpointProviderSelectorProps {
@@ -28,6 +29,7 @@ interface CheckpointProviderSelectorProps {
   providerAriaLabel?: string;
   modelAriaLabel?: string;
   onValidationChange?: (message: string) => void;
+  onSelectedPrice?: (price: string) => void;
 }
 
 const PROVIDER_OPTIONS_BY_MODALITY: Record<SelectorModality, ProviderDefinition[]> = {
@@ -56,6 +58,7 @@ const CheckpointProviderSelector: React.FC<CheckpointProviderSelectorProps> = ({
   providerAriaLabel,
   modelAriaLabel,
   onValidationChange,
+  onSelectedPrice,
 }) => {
   const [models, setModels] = useState<AIModel[]>([]);
   const [loading, setLoading] = useState(false);
@@ -180,6 +183,12 @@ const CheckpointProviderSelector: React.FC<CheckpointProviderSelectorProps> = ({
   useEffect(() => {
     onValidationChange?.(validationMessage);
   }, [onValidationChange, validationMessage]);
+
+  useEffect(() => {
+    if (!onSelectedPrice) return;
+    const selectedModel = models.find((m) => m.id === model);
+    onSelectedPrice(selectedModel ? formatPrice(selectedModel) : '');
+  }, [model, models, onSelectedPrice]);
 
   const dropdownOptions = models.map((m) => ({
     value: m.id,

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { ClipCostSummary } from '../../api/clip';
 import { ClipPrompt } from '../../api/structs/clip';
 import { getFileType } from '../../api/structs/clip';
 import { MediaProfile } from '../../api/structs/media-spec';
@@ -12,6 +13,7 @@ import API from '../../api/api';
 
 interface ClipPromptItemProps {
   clip: ClipPrompt;
+  costSummary: ClipCostSummary | null;
   isExpanded: boolean;
   onToggleExpand: () => void;
   onRefresh: () => void;
@@ -35,8 +37,20 @@ const extractCaption = (clip: ClipPrompt): string => {
   return toCaptionString(caption);
 };
 
+const formatClipCost = (summary: ClipCostSummary): string => {
+  const usd = summary.total_usd ?? 0;
+  const formatted = new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 4,
+  }).format(usd);
+  return formatted;
+};
+
 const ClipPromptItem: React.FC<ClipPromptItemProps> = ({
   clip,
+  costSummary,
   isExpanded,
   onToggleExpand,
   onRefresh,
@@ -91,6 +105,9 @@ const ClipPromptItem: React.FC<ClipPromptItemProps> = ({
               {getStatusBadge()}
               <span className="text-slate-400 text-sm">{totalMedia} media</span>
               <Badge variant="gray">{clipStyle}</Badge>
+              {costSummary && costSummary.total_usd > 0 && (
+                <span className="text-slate-400 text-sm">{formatClipCost(costSummary)}</span>
+              )}
             </div>
 
             <div className="flex flex-wrap items-center gap-1 justify-start lg:justify-end">

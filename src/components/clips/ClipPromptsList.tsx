@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import API from '../../api/api';
+import { ClipCostSummary } from '../../api/clip';
 import { ClipPrompt } from '../../api/structs/clip';
 import { Account } from '../../api/structs/user';
 import { MediaProfile } from '../../api/structs/media-spec';
@@ -17,13 +18,15 @@ const ClipPromptsList: React.FC<ClipPromptsListProps> = ({
   activeAccount,
 }) => {
   const [clips, setClips] = useState<ClipPrompt[]>([]);
+  const [costByClip, setCostByClip] = useState<Record<string, ClipCostSummary>>({});
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
 
   const fetchClips = async () => {
     try {
-      const data = await API.getClipPrompts();
-      setClips(data || []);
+      const { clips: fetched, costByClip: costs } = await API.getClipPrompts();
+      setClips(fetched);
+      setCostByClip(costs);
     } catch (error) {
       console.error('Failed to fetch clips:', error);
     } finally {
@@ -65,6 +68,7 @@ const ClipPromptsList: React.FC<ClipPromptsListProps> = ({
             <ClipPromptItem
               key={clip.id}
               clip={clip}
+              costSummary={costByClip[clip.id] ?? null}
               isExpanded={expandedId === clip.id}
               onToggleExpand={() => setExpandedId(expandedId === clip.id ? null : clip.id)}
               onRefresh={fetchClips}

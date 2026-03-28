@@ -8,7 +8,6 @@ import {
   normalizeAssetSource,
   pipelineAttachmentToPoolItem,
 } from './assetPool';
-import AttachmentSurface from './pipeline-run/AttachmentSurface';
 import CheckpointList from './pipeline-run/CheckpointList';
 import PricingSummary from './pipeline-run/PricingSummary';
 import { getRunProgressPercent } from './pipeline-run/helpers';
@@ -107,7 +106,6 @@ const PipelineRunItem: React.FC<Props> = ({
     <div className="pipeline-run-item bg-black/50 border border-white/15 overflow-hidden">
       <RunHeader
         run={run}
-        template={template}
         templateName={template.name}
         checkpointCount={template.checkpoints.length}
         isExpanded={isExpanded}
@@ -129,13 +127,6 @@ const PipelineRunItem: React.FC<Props> = ({
         <div>
           <div className="p-3 space-y-2">
             <PricingSummary run={run} />
-
-            <AttachmentSurface
-              heading="Initial Attachments"
-              attachments={[]}
-              emptyText="No initial attachments."
-              unavailableText="Attachment payload unavailable in this run response."
-            />
 
             <CheckpointList
               run={run}

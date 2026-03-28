@@ -1,6 +1,7 @@
 import React from 'react';
 import ModelsAPI from '../../api/models';
 import { ModelConstraintsResponse } from '../../api/structs/model';
+
 import { MediaOutputSpec } from '../../api/structs/media-spec';
 import { Modal } from '../modals';
 import CheckpointProviderSelector from '../selectors/CheckpointProviderSelector';
@@ -51,6 +52,7 @@ const PipelineOutputSettingsModal: React.FC<PipelineOutputSettingsModalProps> = 
   const [constraints, setConstraints] = React.useState<ModelConstraintsResponse | null>(null);
   const [error, setError] = React.useState<string | null>(null);
   const [isLoading, setIsLoading] = React.useState(false);
+  const [selectedModelPrice, setSelectedModelPrice] = React.useState('');
 
   React.useEffect(() => {
     if (!isOpen) return;
@@ -120,15 +122,20 @@ const PipelineOutputSettingsModal: React.FC<PipelineOutputSettingsModalProps> = 
             setLocalProvider(value);
             setLocalModel('');
             setLocalSettings({});
+            setSelectedModelPrice('');
           }}
           onModelChange={(value) => {
             setLocalModel(value);
             setLocalSettings({});
           }}
+          onSelectedPrice={setSelectedModelPrice}
         />
 
-        <div className="rounded border border-white/10 bg-black/40 px-3 py-2 text-xs uppercase tracking-wide text-slate-500">
-          <span className="font-medium">Model:</span> {localModel || 'No model selected'}
+        <div className="rounded border border-white/10 bg-black/40 px-3 py-2 text-xs uppercase tracking-wide text-slate-500 flex items-center justify-between">
+          <span><span className="font-medium">Model:</span> {localModel || 'No model selected'}</span>
+          {selectedModelPrice && (
+            <span className="text-green-400 font-medium normal-case">{selectedModelPrice}</span>
+          )}
         </div>
 
         {isLoading && <div className="py-8 text-center text-sm text-slate-400">Loading constraints...</div>}

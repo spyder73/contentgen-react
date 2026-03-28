@@ -16,7 +16,6 @@ interface MediaItemComponentProps {
   outputSpec?: MediaOutputSpec;
   onPreview?: (url: string) => void;
   onLipSync?: (item: MediaItem) => void;
-  lipSyncedItem?: MediaItem;
 }
 
 const MediaItemComponent: React.FC<MediaItemComponentProps> = ({
@@ -27,13 +26,15 @@ const MediaItemComponent: React.FC<MediaItemComponentProps> = ({
   outputSpec,
   onPreview,
   onLipSync,
-  lipSyncedItem,
 }) => {
   const toast = useToast();
   const [isEditing, setIsEditing] = useState(false);
   const [isRegenerating, setIsRegenerating] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [showSynced, setShowSynced] = useState(!!lipSyncedItem);
+  const [showSynced, setShowSynced] = useState(true);
+
+  const originalUrl = item.metadata?.original_url as string | undefined;
+  const isPending = !!item.metadata?.lip_sync_pending;
 
   const handleRegenerate = async () => {
     setIsRegenerating(true);
@@ -62,7 +63,8 @@ const MediaItemComponent: React.FC<MediaItemComponentProps> = ({
   };
 
   const spec = item.output_spec ?? outputSpec;
-  const displayItem = lipSyncedItem && showSynced ? lipSyncedItem : item;
+  const displayFileUrl = originalUrl && !showSynced ? originalUrl : item.file_url;
+  const displayItem = { ...item, file_url: displayFileUrl };
 
   return (
     <>
@@ -70,7 +72,7 @@ const MediaItemComponent: React.FC<MediaItemComponentProps> = ({
         {/* Thumbnail */}
         {displayItem.file_url && displayItem.type !== 'audio' && (
           <div
-            className="shrink-0 cursor-pointer"
+            className="shrink-0 cursor-pointer relative"
             onClick={() => onPreview?.(constructMediaUrl(displayItem.file_url))}
           >
             <Thumbnail
@@ -78,6 +80,11 @@ const MediaItemComponent: React.FC<MediaItemComponentProps> = ({
               alt={displayItem.prompt}
               size="sm"
             />
+            {isPending && (
+              <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded text-[10px] text-white font-medium">
+                Syncing...
+              </div>
+            )}
           </div>
         )}
 
@@ -121,7 +128,7 @@ const MediaItemComponent: React.FC<MediaItemComponentProps> = ({
           >
             {isDeleting ? '...' : 'Delete'}
           </Button>
-          {lipSyncedItem && (
+          {originalUrl && (
             <Button
               size="sm"
               variant="ghost"

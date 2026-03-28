@@ -34,7 +34,7 @@ const MediaSection: React.FC<MediaSectionProps> = ({
     <div>
       <div className="flex items-center justify-between mb-2">
         <h4 className="text-sm font-medium text-slate-300">
-          {icon ? `${icon} ` : ''}{title} ({items.length})
+          {icon ? `${icon} ` : ''}{title} ({items.filter(i => !i.metadata?.lip_sync_source_id).length})
         </h4>
         {onAdd && (
           <Button size="sm" variant="ghost" onClick={onAdd}>
@@ -47,11 +47,9 @@ const MediaSection: React.FC<MediaSectionProps> = ({
         <p className="text-xs text-slate-500 italic">None yet</p>
       ) : (
         <div className="space-y-2">
-          {items.map((item) => {
-            const lipSyncedItem = items.find(
-              (other) => other.metadata?.lip_sync_source_id === item.id
-            );
-            return (
+          {items
+            .filter((item) => !item.metadata?.lip_sync_source_id)
+            .map((item) => (
               <MediaItemComponent
                 key={item.id}
                 item={item}
@@ -61,10 +59,8 @@ const MediaSection: React.FC<MediaSectionProps> = ({
                 outputSpec={item.output_spec ?? outputSpec}
                 onPreview={onPreview}
                 onLipSync={onLipSync}
-                lipSyncedItem={lipSyncedItem}
               />
-            );
-          })}
+            ))}
         </div>
       )}
     </div>
